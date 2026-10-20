@@ -26,8 +26,10 @@ Newest first. Every session reads this after `CLAUDE.md`.
   sliders (approved by Jeff on October 20, 2026, when he asked for milestone 10; merged into `main`).
 - **Done:** Milestone 10, Table mode, Word export and the full SRD 5.2 (approved by Jeff on
   October 20, 2026, when he asked to build milestone 9; merged into `main`).
-- **Next:** Milestone 9, the AI. It is built and tested with a pretend AI; Jeff's own Claude API
-  key is only needed to try it for real.
+- **Built, waiting for Jeff to test:** Milestone 9, the AI. Tested with a pretend AI; Jeff's own
+  Claude API key is needed only to try it for real.
+- **Next:** what Jeff finds when he installs it, then the smaller AI helpers listed under
+  Milestone 9 below.
 
 ## Milestones to first playable
 
@@ -74,6 +76,27 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
   details have Ask AI, which proposes the most reasonable fix in the AI panel, with Show me other
   ideas. Live AI checking (Settings → AI, starts off, with a one-time tip) checks just what you
   changed, a few seconds after you stop, with the quick model.
+- Part 3, building with the AI: Create from a document… reads your own .txt, .md or Word file and
+  builds what it describes, part by part; Generate a whole system… builds a game from a sentence
+  in seven sections. Each part is its own proposal with its cost shown first when it is over the
+  warning, and a strip shows how far it has got, with Build next section and Stop.
+- Not built yet from the design's AI list (smaller helpers, for after Jeff's testing): "AI: decide
+  the rest" on a Rules tab section, "Ask AI to build this formula", the brick maker's
+  multiple-choice questions, AI tagging of imported content, and converting numbers after the core
+  check changes.
+
+### Milestone 9: what Jeff can test
+
+1. Without a key: the AI panel at the bottom says to add one, and everything else works.
+2. Get a key (console.anthropic.com → Billing to add a few dollars → API Keys → Create Key) and
+   paste it in Settings → AI, or the panel's Add key… button. Never paste it anywhere else.
+3. Open a monster and ask "Make it sneakier". Read the list of changes, then Accept or Reject.
+   Accept is one Ctrl+Z.
+4. Ask "All swords use Dexterity" with Working on: whole world.
+5. Press the spark at the top of the flag panel (Check for errors) after making a few things of
+   your own. Double-click a yellow flag and try Ask AI.
+6. Try Generate a whole system… in a new system from scratch, a section or two, then Stop.
+7. Settings → AI shows this month's total; your Anthropic account shows the real bill.
 
 ### Milestone 10: what Jeff can test
 
@@ -694,3 +717,9 @@ One plain line each. Jeff can overrule any of these at a milestone.
   it looked at. A check can't change anything: it has only look-up, report and World Notes actions.
 - 2026-10-20: Live checking waits 6 seconds after the last change, never runs for the AI's own
   changes or in read-only worlds, and if it fails a blue notice says so and nothing is applied.
+- 2026-10-20: Create from a document reads .txt, .md and .docx (the words only, no pictures);
+  a PDF must be saved as one of those first. Documents are cut into parts of about 12,000
+  characters at paragraph breaks, and each part is one job with its own proposal.
+- 2026-10-20: Whole-system generation uses a fixed plan of seven sections rather than letting the
+  AI plan, so the user always knows what comes next and can stop between sections. A section is
+  used up only once it runs; an estimate the user cancels leaves it waiting.

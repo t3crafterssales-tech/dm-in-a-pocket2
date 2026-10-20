@@ -113,10 +113,25 @@ export async function aiPanel(ctx: PlaceCtx, selectedName: string | null): Promi
     unavailable ? h("p", { class: "muted small ai-note" }, unavailable) : null,
     tip,
     conversation(view, ctx, st),
+    view?.build ? buildStrip(view, ctx, st) : null,
     h(
       "div",
       { class: "ai-tools" },
       h("button", { class: "button plain small-button", onClick: () => void showWorldNotes(ctx, !unavailable) }, "World Notes"),
+      h(
+        "button",
+        {
+          class: "button plain small-button",
+          disabled: !!unavailable || st.busy || !!view?.waiting || !!view?.build || ctx.view.readOnly,
+          title: "The AI reads a document you wrote (.txt, .md or Word) and builds what it describes, part by part",
+          onClick: async () => {
+            const v = await attempt(() => api.aiFromDocument());
+            if (v) await runBuildStep(ctx, st);
+          },
+        },
+        "Create from a document…",
+      ),
+      h("button", { class: "button plain small-button", disabled: !!unavailable || st.busy || !!view?.waiting || !!view?.build || ctx.view.readOnly, title: "Describe a game in a sentence; the AI builds it section by section", onClick: () => void showGenerate(ctx, st) }, "Generate a whole system…"),
       h(
         "button",
         {
@@ -197,6 +212,67 @@ function conversation(view: AiView | null | undefined, ctx: PlaceCtx, st: PanelS
   });
   if (st.busy) box.append(h("div", { class: "ai-msg ai thinking" }, st.checking ? "Checking for errors…" : "Thinking…"));
   return box;
+}
+
+/** A job done section by section: where it is, and the buttons to go on or stop. */
+function buildStrip(view: AiView, ctx: PlaceCtx, st: PanelState): HTMLElement {
+  const b = view.build!;
+  return h(
+    "div",
+    { class: "ai-build" },
+    h("strong", null, b.title),
+    h("span", { class: "muted small" }, ` ${b.done} of ${b.total} section${b.total === 1 ? "" : "s"} done. Next: ${b.next ?? "nothing"}.`),
+    h("span", { class: "spacer" }),
+    view.waiting ? h("span", { class: "muted small" }, "Accept or reject this section first.") : h("button", { class: "button primary small-button", disabled: st.busy, onClick: () => void runBuildStep(ctx, st) }, "Build next section"),
+    h("button", { class: "button plain small-button", disabled: st.busy, onClick: async () => (await attempt(() => api.aiBuildStop()), await ctx.refresh()) }, "Stop"),
+  );
+}
+
+async function runBuildStep(ctx: PlaceCtx, st: PanelState, confirmed = false): Promise<void> {
+  st.open = true;
+  st.busy = true;
+  await ctx.refresh();
+  try {
+    const r = await api.aiBuildNext(confirmed);
+    if (r.status === "estimate") {
+      st.busy = false;
+      const go = await ask("This section could cost more than usual", [r.estimate, "Each section shows what it will build before anything changes, so you can stop at any point."], [
+        { label: "Cancel", value: false },
+        { label: "Go ahead", value: true, kind: "primary" },
+      ]);
+      if (go) return runBuildStep(ctx, st, true);
+    }
+  } catch (e) {
+    notice(e instanceof Error ? e.message : String(e), "blue", undefined, 9000);
+  } finally {
+    st.busy = false;
+    await ctx.refresh();
+  }
+}
+
+function showGenerate(ctx: PlaceCtx, st: PanelState) {
+  const d = openDialog("Generate a whole system");
+  const idea = h("textarea", { class: "text-input notes-box", rows: 4, placeholder: "For example: a cyberpunk game where hackers and street samurai roll pools of d6s, gritty and fast" });
+  d.body.append(
+    h("p", { class: "muted" }, "Describe the game in a sentence or two. The AI builds it in seven sections (the core check and abilities, resources and conditions, skills, rules of play, monsters, equipment, lore). You see each section and its cost before anything changes, and you can stop at any point."),
+    idea,
+  );
+  d.footer.replaceChildren(
+    h("span", { class: "spacer" }),
+    h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"),
+    h(
+      "button",
+      {
+        class: "button primary",
+        onClick: async () => {
+          if (!(await attempt(() => Promise.resolve(api.aiGenerate(idea.value))))) return;
+          d.close();
+          await runBuildStep(ctx, st);
+        },
+      },
+      "Start",
+    ),
+  );
 }
 
 function liveTip(ctx: PlaceCtx): HTMLElement {

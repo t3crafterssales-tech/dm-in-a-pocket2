@@ -31,6 +31,7 @@ import { SettingsFile } from "./settings.ts";
 import * as assistant from "./ai/assistant.ts";
 import type { AiView, AskResult } from "./ai/assistant.ts";
 import type { AiTransport } from "./ai/job.ts";
+import { readDocument } from "./ai/documents.ts";
 import type { ModelChoice } from "./ai/models.ts";
 import { CAREFUL, QUICK, dollars } from "./ai/models.ts";
 import type { Place } from "./settings.ts";
@@ -165,6 +166,8 @@ export interface BackendOptions {
   aiTransport?: (key: string) => AiTransport;
   /** False when the computer is offline, so the AI buttons can say Offline. */
   isOnline?: () => boolean;
+  /** Show an Open dialog for the user's own document (.txt, .md, .docx); resolves to a path or null. */
+  pickDocument?: () => Promise<string | null>;
   emit: (event: BackendEvent) => void;
   now?: () => number;
   timers?: Timers;
@@ -303,6 +306,10 @@ export const BACKEND_METHODS = [
   "aiFixFlag",
   "setAiLive",
   "dismissAiTip",
+  "aiFromDocument",
+  "aiGenerate",
+  "aiBuildNext",
+  "aiBuildStop",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -559,6 +566,33 @@ export class Backend {
       : `Suggest the most reasonable fix for this ${f.color === "red" ? "red (broken)" : "yellow (looks off)"} flag: "${f.title}". ${f.detail} It is about: ${about}.`;
     const shown = other ? `Show me other ideas for "${f.title}"` : `Ask AI to fix "${f.title}"`;
     return assistant.ask(s, this.transport(), { prompt, shown, label: `AI: fixed "${f.title.length > 70 ? `${f.title.slice(0, 67)}…` : f.title}"`, workingOn: f.nodes[0]?.id ?? null, choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, confirmed: true }, (usd) => this.recordSpend(usd), this.now);
+  }
+
+  /** Create from a document I wrote: reads it and plans it part by part. The AI runs one part at a time. */
+  async aiFromDocument(path?: string): Promise<AiView | null> {
+    const s = this.aiSession();
+    const file = path ?? (this.opts.pickDocument ? await this.opts.pickDocument() : null);
+    if (!file) return null;
+    let doc: { name: string; text: string };
+    try {
+      doc = readDocument(file);
+    } catch (e) {
+      throw new LibraryError(e instanceof Error ? e.message : String(e));
+    }
+    return assistant.buildStart(s, "document", doc);
+  }
+
+  /** Whole-system generation from one idea, section by section, each previewed and costed. */
+  aiGenerate(prompt: string): AiView {
+    return assistant.buildStart(this.aiSession(), "generate", { prompt });
+  }
+
+  async aiBuildNext(confirmed = false): Promise<AskResult> {
+    return assistant.buildNext(this.aiSession(), this.transport(), { choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, confirmed }, (usd) => this.recordSpend(usd), this.now);
+  }
+
+  aiBuildStop(): AiView {
+    return assistant.buildStop(this.aiSession());
   }
 
   setAiLive(on: boolean): AiStatus {

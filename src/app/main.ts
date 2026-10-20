@@ -109,6 +109,10 @@ void app.whenReady().then(() => {
     secrets: keyStore(),
     aiTransport: claude,
     isOnline: () => net.isOnline(),
+    pickDocument: async () => {
+      const r = await dialog.showOpenDialog(win!, { title: "Create from a document you wrote", properties: ["openFile"], filters: [{ name: "Text or Word", extensions: ["txt", "md", "docx"] }] });
+      return r.canceled ? null : (r.filePaths[0] ?? null);
+    },
     pickWord: async (defaultName) => {
       const r = await dialog.showSaveDialog(win!, { title: "Save the rulebook as a Word file", defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: "Word document", extensions: ["docx"] }] });
       return r.canceled ? null : (r.filePath ?? null);

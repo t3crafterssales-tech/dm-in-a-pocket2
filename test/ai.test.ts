@@ -442,3 +442,77 @@ test("Check for errors on a starter system sends only what the user made or chan
   assert.ok(!/Adult Red Dragon/.test(sent));
   assert.ok(sent.length < 15000);
 });
+
+// ---------- Create from a document, and whole-system generation ----------
+
+import { writeFileSync } from "node:fs";
+import { docxText, splitDocument } from "../src/app/ai/documents.ts";
+
+test("documents are read from text and Word files and cut into parts at paragraph breaks", async () => {
+  const s = setup();
+  const long = Array.from({ length: 40 }, (_, i) => `Paragraph ${i}. ${"Words ".repeat(80)}`).join("\n");
+  const parts = splitDocument(long, 4000);
+  assert.ok(parts.length > 3);
+  assert.ok(parts.every((p) => p.length <= 4000 && /^Paragraph \d+\./.test(p)), "never in the middle of a paragraph");
+  assert.equal(parts.join("\n").replace(/\s+/g, " "), long.replace(/\s+/g, " ").trim(), "nothing is lost");
+  // The app's own Word export reads back.
+  s.backend.goHome();
+  s.backend.open({ type: "system", id: s.sys });
+  const docx = join(s.dir, "rules.docx");
+  await s.backend.bookWord({ type: "everything" }, docx);
+  const text = docxText(readFileSync(docx));
+  assert.match(text, /Strength/);
+  assert.ok(!text.includes("<w:"));
+  await assert.rejects(s.backend.aiFromDocument(join(s.dir, "x.pdf")), /plain text \(\.txt, \.md\) and Word/);
+});
+
+test("create from a document: part by part, each a proposal of its own, using the user's own words", async () => {
+  const s = setup();
+  s.backend.setAiKey("sk-ant-api03-abcdefghijklmnop1234");
+  const file = join(s.dir, "My game.md");
+  writeFileSync(file, `# Sanity\nEvery hero has Sanity from 1 to 10.\n${"x".repeat(11980)}\n# The Gloom\nA shadow beast with 30 hit points.`);
+  const seen: Parameters<AiTransport>[0][] = [];
+  s.t.current = pretend((p) => {
+    const sys = JSON.stringify(p.system);
+    if (typeof p.messages.at(-1)!.content !== "string") return { text: "Done." };
+    if (sys.includes("Sanity from 1 to 10")) return { tools: [{ name: "create_node", input: { kind: "abilities", name: "Sanity", text: null, category: null, variant_of: null, being_kind: null, brick_type: null, lore_template: null, values: [{ field: "rangeMin", value: 1 }, { field: "rangeMax", value: 10 }] } }] };
+    if (!sys.includes("shadow beast with 30")) return { text: "Nothing here to build." };
+    return { tools: [{ name: "create_node", input: { kind: "being", name: "The Gloom", text: "A shadow beast.", category: null, variant_of: null, being_kind: "monster", brick_type: null, lore_template: null, values: [{ field: "hp", value: 30 }] } }] };
+  }, seen);
+  const v = (await s.backend.aiFromDocument(file))!;
+  const total = splitDocument(readFileSync(file, "utf8")).length;
+  assert.ok(total >= 2);
+  assert.deepEqual(v.build, { title: 'Create from "My game"', done: 0, total, next: `Part 1 of ${total}` });
+  assert.equal(seen.length, 0, "planning costs nothing");
+  await s.backend.aiBuildNext();
+  assert.match(JSON.stringify(seen[0]!.system), /This is one section of a bigger job/);
+  assert.deepEqual(s.backend.aiView().chat.at(-1)!.lines, ["New abilities: Sanity"]);
+  await assert.rejects(s.backend.aiBuildNext(), /Accept or reject the last proposal first/);
+  s.backend.aiAccept();
+  assert.equal(s.backend.history().done[0]!.label, `AI: Create from "My game", part 1 of ${total}`);
+  assert.deepEqual(s.backend.aiView().build?.next, `Part 2 of ${total}`);
+  // The rest, accepting whatever each part proposes.
+  while (s.backend.aiView().build) {
+    await s.backend.aiBuildNext();
+    if (s.backend.aiView().waiting) s.backend.aiAccept();
+  }
+  assert.ok(s.backend.rulesTab().find((x) => x.key === "abilities")!.nodes.some((n) => n.name === "Sanity"));
+  assert.ok(s.backend.beingsList("monster").some((e) => e.name === "The Gloom"));
+});
+
+test("whole-system generation runs section by section; Stop ends it, and each section can show its cost first", async () => {
+  const s = setup();
+  s.backend.setAiKey("sk-ant-api03-abcdefghijklmnop1234");
+  const v = s.backend.aiGenerate("A cyberpunk game with a d6 dice pool");
+  assert.deepEqual([v.build!.total, v.build!.next], [7, "The core check and abilities"]);
+  s.backend.setAiOptions({ threshold: 0 });
+  const r = await s.backend.aiBuildNext();
+  assert.equal(r.status, "estimate");
+  assert.equal(s.backend.aiView().build!.done, 0, "an estimate doesn't use up the section");
+  s.t.current = pretend(() => ({ text: "Nothing to add here." }));
+  await s.backend.aiBuildNext(true);
+  assert.equal(s.backend.aiView().build!.next, "Resources and conditions", "a section with nothing to propose moves on");
+  s.backend.aiBuildStop();
+  assert.equal(s.backend.aiView().build, null);
+  assert.throws(() => s.backend.aiGenerate("  "), /Describe the game/);
+});

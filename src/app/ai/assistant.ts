@@ -10,6 +10,7 @@ import { sectionOf } from "../rules.ts";
 import type { Session } from "../session.ts";
 import type { ChangeAction } from "./actions.ts";
 import { applyActions, runReadTool } from "./actions.ts";
+import { splitDocument } from "./documents.ts";
 import { AiError, runJob } from "./job.ts";
 import type { AiTransport, JobResult } from "./job.ts";
 import { dollars, estimateCost, pickModel } from "./models.ts";
@@ -67,12 +68,101 @@ export interface AiView {
   notes: Note[];
   /** True when the last answer has a proposal waiting for Accept or Reject. */
   waiting: boolean;
+  /** A job done section by section (a document, or a whole system), if one is under way. */
+  build: { title: string; done: number; total: number; next: string | null } | null;
 }
 
 export function aiView(s: Session): AiView {
   const m = readMemory(s);
   const p = pending.get(s);
-  return { chat: m.chat, notes: m.notes, waiting: !!p };
+  const b = builds.get(s);
+  return { chat: m.chat, notes: m.notes, waiting: !!p, build: b ? { title: b.title, done: b.index, total: b.steps.length, next: b.steps[b.index]?.title ?? null } : null };
+}
+
+// ---------- Section by section: create from a document, or generate a whole system ----------
+
+interface BuildStep {
+  title: string;
+  /** What this part asks the AI to do. */
+  instruction: string;
+  /** For documents: this part of the user's text. */
+  text?: string;
+}
+
+interface Build {
+  title: string;
+  steps: BuildStep[];
+  index: number;
+}
+
+/** Kept while the world is open, like a waiting proposal. */
+const builds = new WeakMap<Session, Build>();
+
+/** The parts of a whole system, in the order a designer would build them. */
+const GENERATE_STEPS: { title: string; instruction: string }[] = [
+  { title: "The core check and abilities", instruction: "Make the core check (kind core) and the abilities (kind abilities) for this game." },
+  { title: "Resources and conditions", instruction: "Make the resources (hit points and anything like it; kind resources) and the conditions (kind conditions)." },
+  { title: "Skills", instruction: "Make the skills (kind skills), each with the ability it uses (value ability, a link to the ability)." },
+  { title: "Rules of play", instruction: "Write the main rules of play: combat, magic or powers if any, advancement, time and rest, money (kinds combat, magic, advancement, time, currency), a short text each." },
+  { title: "Monsters and characters", instruction: "Make about ten monsters and a few characters of the world (kind being), with hit points, armour, speed, challenge and a short description, and attack bricks where they fit." },
+  { title: "Equipment", instruction: "Make about fifteen items (kind item): weapons with attack bricks, armour, and useful gear, with costs that make sense against each other, filed in fitting categories." },
+  { title: "Lore", instruction: "Make a few lore pages, places and factions (kind lore) that set the scene." },
+];
+
+export function buildStart(s: Session, kind: "document" | "generate", input: { name?: string; text?: string; prompt?: string }): AiView {
+  if (s.readOnly) throw new LibraryError(`${s.readOnlyReason ?? "This is read-only."} Nothing can be changed here.`);
+  if (pending.get(s)) throw new LibraryError("Accept or reject the last proposal first.");
+  if (kind === "document") {
+    const text = String(input.text ?? "").trim();
+    if (!text) throw new LibraryError("That document has no words in it.");
+    const parts = splitDocument(text);
+    const name = String(input.name ?? "your document").slice(0, 100);
+    builds.set(s, {
+      title: `Create from "${name}"`,
+      steps: parts.map((t, i) => ({
+        title: `Part ${i + 1} of ${parts.length}`,
+        instruction: `Build what this part of the user's own document describes, using their names and numbers. Use the kinds of thing the app has (rules in the right Rules tab section, abilities, resources, skills, conditions, beings, items, bricks, lore, roll tables). Things made from earlier parts are already in the world: look them up and use or add to them rather than making them again. Only make what the text describes; don't invent extra content.`,
+        text: t,
+      })),
+      index: 0,
+    });
+  } else {
+    const idea = String(input.prompt ?? "").trim();
+    if (!idea) throw new LibraryError("Describe the game you'd like, such as \"a cyberpunk game with a d6 dice pool\".");
+    builds.set(s, { title: `Generate: ${idea.length > 60 ? `${idea.slice(0, 57)}…` : idea}`, steps: GENERATE_STEPS.map((g) => ({ ...g, instruction: `The user's idea for the game: ${idea}\n\n${g.instruction}` })), index: 0 });
+  }
+  return aiView(s);
+}
+
+/** Runs the next section; its proposal is accepted or rejected like any other. */
+export async function buildNext(s: Session, send: AiTransport, opts: { choice: ModelChoice; threshold: number; confirmed?: boolean }, record: (usd: number) => void, now: () => number): Promise<AskResult> {
+  const b = builds.get(s);
+  if (!b) throw new LibraryError("There is nothing being built.");
+  const step = b.steps[b.index];
+  if (!step) {
+    builds.delete(s);
+    throw new LibraryError("All the sections are done.");
+  }
+  const plan = b.steps.map((x, i) => `${i + 1}. ${x.title}${i < b.index ? " (done)" : i === b.index ? " (now)" : ""}`).join("\n");
+  const extra = [`This is one section of a bigger job, "${b.title}", done section by section so the user can check each one:\n${plan}`, step.instruction, step.text ? `The user's text for this part:\n"""\n${step.text}\n"""` : ""].filter(Boolean).join("\n\n");
+  const r = await ask(
+    s,
+    send,
+    { prompt: `${b.title}: ${step.title}. Please build this section.`, shown: `${b.title}: ${step.title}`, label: `AI: ${b.title}, ${step.title.toLowerCase()}`, workingOn: null, choice: opts.choice, threshold: opts.threshold, confirmed: opts.confirmed, size: "big", extra },
+    record,
+    now,
+  );
+  if (r.status === "done") {
+    b.index++;
+    if (b.index >= b.steps.length) builds.delete(s);
+    return { ...r, view: aiView(s) };
+  }
+  return r;
+}
+
+export function buildStop(s: Session): AiView {
+  builds.delete(s);
+  return aiView(s);
 }
 
 export interface AskOptions {
@@ -106,7 +196,7 @@ export async function ask(s: Session, send: AiTransport, opts: AskOptions, recor
   const m = readMemory(s);
   const target = opts.workingOn ? s.ws.peek(s.id, opts.workingOn) : null;
   const model = pickModel(opts.choice, opts.size ?? sizeOf(prompt, target ? target.id : null));
-  const guess = estimateCost(model, prompt.length + JSON.stringify(m.notes).length + m.chat.slice(-10).reduce((n, c) => n + c.text.length, 0) + 12000);
+  const guess = estimateCost(model, prompt.length + (opts.extra?.length ?? 0) + JSON.stringify(m.notes).length + m.chat.slice(-10).reduce((n, c) => n + c.text.length, 0) + 12000);
   if (!opts.confirmed && guess > opts.threshold) return { status: "estimate", estimate: `About ${dollars(guess)} with ${model.name}. Estimates are approximate.`, model: model.name };
 
   let result: JobResult;
@@ -187,6 +277,7 @@ export function setNotes(s: Session, text: string): AiView {
 
 export function clearChat(s: Session): AiView {
   pending.delete(s);
+  builds.delete(s);
   const m = readMemory(s);
   m.chat = [];
   writeMemory(s, m);
