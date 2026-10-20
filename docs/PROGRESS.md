@@ -14,9 +14,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 4, the Rules tab and sheets (approved by Jeff on October 20, 2026, when he
   asked to go on to milestone 5; merged into `main`). He hasn't installed it yet, so anything he
   finds when he does gets fixed in milestone 5.
-- **Built, waiting for Jeff to test:** Milestone 5, the flag panel, recycle bin, undo and history
-  on screen (same branch). All four steps done: the flag panel; the world's recycle bin; History;
-  world rules on screen and Edit parent from a world up to its system.
+- **Done:** Milestone 5, the flag panel, recycle bin, undo and history on screen (approved by Jeff
+  on October 20, 2026, when he asked for the next step; merged into `main`). Anything he finds when
+  he installs it gets fixed in milestone 6.
 - **Next:** Milestone 6, the rulebook export (PDF) and the small d20 starter, which completes first
   playable.
 
