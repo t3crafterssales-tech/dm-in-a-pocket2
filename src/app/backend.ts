@@ -28,6 +28,11 @@ import type { QuickStartAnswers } from "./quickstart.ts";
 import { changeInSystem, upwardView } from "./upward.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
+import * as assistant from "./ai/assistant.ts";
+import type { AiView, AskResult } from "./ai/assistant.ts";
+import type { AiTransport } from "./ai/job.ts";
+import type { ModelChoice } from "./ai/models.ts";
+import { CAREFUL, QUICK, dollars } from "./ai/models.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 
@@ -110,6 +115,19 @@ export interface SettingsView {
   author: string | null;
 }
 
+/** Settings → AI, and the corner of the AI panel. */
+export interface AiStatus {
+  hasKey: boolean;
+  /** The last four characters, so the user can tell which key it is. */
+  keyEnd: string | null;
+  online: boolean;
+  model: ModelChoice;
+  models: { quick: string; careful: string };
+  threshold: number;
+  /** This month's AI spending in words ("$1.24 this month"). */
+  spent: string;
+}
+
 /** Events sent to the window. */
 export type BackendEvent = { type: "saved" } | { type: "saveFailed"; message: string } | { type: "readOnly"; reason: string };
 
@@ -127,6 +145,12 @@ export interface BackendOptions {
   pickImport?: () => Promise<string | null>;
   /** Show a Save dialog for the rulebook as a Word file; resolves to a path or null. */
   pickWord?: (defaultName: string) => Promise<string | null>;
+  /** The Claude API key, kept in the operating system's protected storage (main.ts). */
+  secrets?: { read: () => string | null; write: (key: string | null) => void };
+  /** Makes the connection to Claude for a key. */
+  aiTransport?: (key: string) => AiTransport;
+  /** False when the computer is offline, so the AI buttons can say Offline. */
+  isOnline?: () => boolean;
   emit: (event: BackendEvent) => void;
   now?: () => number;
   timers?: Timers;
@@ -251,6 +275,16 @@ export const BACKEND_METHODS = [
   "linkTargets",
   "quickQuestions",
   "quickStart",
+  "aiStatus",
+  "setAiKey",
+  "setAiOptions",
+  "aiView",
+  "aiAsk",
+  "aiAccept",
+  "aiReject",
+  "setWorldNotes",
+  "updateWorldNotes",
+  "clearAiChat",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -403,6 +437,91 @@ export class Backend {
     return this.settings();
   }
 
+  // ---------- The AI ----------
+
+  private month(): string {
+    return new Date(this.now()).toISOString().slice(0, 7);
+  }
+
+  aiStatus(): AiStatus {
+    const key = this.opts.secrets?.read() ?? null;
+    const d = this.settingsFile.data;
+    const spent = d.aiSpend.month === this.month() ? d.aiSpend.usd : 0;
+    return { hasKey: !!key, keyEnd: key ? key.slice(-4) : null, online: this.opts.isOnline?.() ?? true, model: d.aiModel, models: { quick: QUICK.name, careful: CAREFUL.name }, threshold: d.aiThreshold, spent: `${spent > 0 ? dollars(spent) : "$0.00"} this month` };
+  }
+
+  /** Settings → AI: paste a key (kept in the operating system's protected storage), or remove it. */
+  setAiKey(key: string | null): AiStatus {
+    if (!this.opts.secrets) throw new LibraryError("Keys can't be stored on this computer.");
+    const k = typeof key === "string" ? key.trim() : "";
+    if (k && !/^sk-ant-[A-Za-z0-9_-]{10,}$/.test(k)) throw new LibraryError('That doesn\'t look like a Claude API key. It starts with "sk-ant-".');
+    this.opts.secrets.write(k || null);
+    return this.aiStatus();
+  }
+
+  setAiOptions(o: { model?: ModelChoice; threshold?: number }): AiStatus {
+    this.settingsFile.update((s) => {
+      if (o.model === "auto" || o.model === "quick" || o.model === "careful") s.aiModel = o.model;
+      if (typeof o.threshold === "number" && Number.isFinite(o.threshold) && o.threshold >= 0) s.aiThreshold = Math.min(1000, o.threshold);
+    });
+    return this.aiStatus();
+  }
+
+  private aiSession() {
+    if (!this.session) throw new LibraryError("Open a world or system first.");
+    return this.session;
+  }
+
+  private transport(): AiTransport {
+    const key = this.opts.secrets?.read() ?? null;
+    if (!key || !this.opts.aiTransport) throw new LibraryError("Add your Claude API key in Settings to use the AI. Everything else works without it.");
+    if (this.opts.isOnline && !this.opts.isOnline()) throw new LibraryError("Offline: the AI needs the internet. Everything else works as normal.");
+    return this.opts.aiTransport(key);
+  }
+
+  private recordSpend(usd: number) {
+    const month = this.month();
+    this.settingsFile.update((s) => (s.aiSpend = { month, usd: (s.aiSpend.month === month ? s.aiSpend.usd : 0) + usd }));
+  }
+
+  aiView(): AiView {
+    return assistant.aiView(this.aiSession());
+  }
+
+  /** A request in the AI panel. Big jobs over the cost threshold first return an estimate. */
+  async aiAsk(prompt: string, workingOn: Id | null, confirmed = false): Promise<AskResult> {
+    const s = this.aiSession();
+    return assistant.ask(s, this.transport(), { prompt, workingOn, choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, confirmed }, (usd) => this.recordSpend(usd), this.now);
+  }
+
+  aiAccept(): { label: string; view: AiView } {
+    return assistant.accept(this.aiSession());
+  }
+
+  aiReject(): AiView {
+    return assistant.reject(this.aiSession());
+  }
+
+  setWorldNotes(text: string): AiView {
+    return assistant.setNotes(this.aiSession(), text);
+  }
+
+  /** The Update world notes button: a quick, cheap job that only rewrites the AI's own lines. */
+  async updateWorldNotes(): Promise<AskResult> {
+    const s = this.aiSession();
+    return assistant.ask(
+      s,
+      this.transport(),
+      { prompt: "Please update the World Notes.", shown: "Update the World Notes.", workingOn: null, choice: this.settingsFile.data.aiModel === "careful" ? "careful" : "quick", threshold: this.settingsFile.data.aiThreshold, confirmed: true, size: "small", extra: "This job only updates the World Notes: look at the recent chat and, if useful, a few things in the world, then call update_world_notes once with your lines (tone, important facts, key decisions). Change nothing else." },
+      (usd) => this.recordSpend(usd),
+      this.now,
+    );
+  }
+
+  clearAiChat(): AiView {
+    return assistant.clearChat(this.aiSession());
+  }
+
   // ---------- Sharing ----------
 
   /** Import (top bar): a world or system file someone sent. Never overwrites anything. */
@@ -416,7 +535,7 @@ export class Backend {
   }
 
   /** Share (World or System settings): saves a copy to send. Saves any waiting changes first. */
-  async share(opts: { history?: boolean; snapshots?: boolean } = {}, dest?: string): Promise<string | null> {
+  async share(opts: { history?: boolean; snapshots?: boolean; chat?: boolean } = {}, dest?: string): Promise<string | null> {
     const s = this.session;
     if (!s) throw new LibraryError("Open the world or system to share first.");
     s.saveNow();

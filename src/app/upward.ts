@@ -39,7 +39,8 @@ export interface UpwardView {
   worlds: UpwardWorld[];
 }
 
-const LABELS: Record<string, string> = {
+/** Plain names for values, as the sheets show them. */
+export const FIELD_LABELS: Record<string, string> = {
   name: "Name",
   text: "Description",
   label: "Short label",
@@ -100,7 +101,7 @@ export function upwardView(lib: Library, session: Session, nodeId: Id): UpwardVi
   };
   const label = (key: string) => {
     if (key.startsWith("score_")) return ws.get(session.id, key.slice(6))?.name ?? "A score";
-    return LABELS[key] ?? key;
+    return FIELD_LABELS[key] ?? key;
   };
   const keys = ["name", "text", ...new Set([...Object.keys(inSystem.fields), ...Object.keys(inWorld.fields)].filter((k) => !HIDDEN.has(k)))];
   const value = (n: typeof inSystem, k: string): Value | null => (k === "name" ? n.name : k === "text" ? n.text : (n.fields[k] ?? null));

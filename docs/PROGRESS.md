@@ -55,6 +55,19 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 
 ## Log
 
+### 2026-10-20 (milestone 9: the AI)
+
+- Part 1, the AI panel: a prompt line at the bottom of every world and system, with "Working on:"
+  (the thing open in the editor, or the whole world; click to switch). The AI looks things up and
+  proposes changes, shown as a list in plain words with Accept and Reject. Nothing changes before
+  Accept; Accept is one undo step labelled "AI: <the request>" and marked as the AI's in History.
+  The AI can't delete (it can only suggest), uses only the named actions (change values, make
+  things, put bricks on sheets, change a brick on a sheet, file under a category, update the
+  World Notes), and a job that fails halfway changes nothing. World Notes (lines you write are
+  pinned), a chat saved with the world, cost estimates before big jobs, a monthly total, and
+  Settings → AI for the key, the model choice and the cost warning. Tested with a pretend AI in
+  the automatic tests and with a pretend Claude server in the real window.
+
 ### Milestone 10: what Jeff can test
 
 1. New system → Generic d20. Beings → Monsters lists all 341 SRD monsters; open the Adult Red
@@ -648,3 +661,20 @@ One plain line each. Jeff can overrule any of these at a milestone.
   any bonus)").
 - 2026-10-20: The engine's own look-ups read records without copying them (peek); list and
   resolve results are read-only, and changes still go through edit.
+- 2026-10-20: The AI talks to Claude through Anthropic's own library (@anthropic-ai/sdk 0.131.0,
+  pinned, bundled into the app), in the main process. The window never sees the key.
+- 2026-10-20: The key is kept with Electron's safeStorage (on Windows, protected by the user's own
+  login) in its own file in the app's data folder, never in settings or a world file. If a computer
+  has no protected storage the app refuses to store it rather than keep it in plain text.
+- 2026-10-20: Models: Claude Haiku 5.5 is "quick" and Claude Opus 5.5 is "careful". Automatic gives
+  a request about one open thing the quick model and anything about the whole world the careful
+  one. Careful requests turn on Anthropic's automatic fallback: if its safety checks decline, the
+  same request is tried on another model.
+- 2026-10-20: A proposal is checked by trying it out and putting everything back (nothing is saved
+  and nothing goes in History), so the AI hears straight away if an action can't be done and can
+  correct itself. Accept runs it again for real; if the world changed so it can't be done, nothing
+  changes and the user is told to ask again.
+- 2026-10-20: The AI is sent the World Notes, the last 10 chat messages and what it looks up; never
+  the whole world file. A proposal waiting for Accept is not saved: closing the world drops it.
+- 2026-10-20: Costs are worked out from what Claude reports for each reply. The monthly total is
+  kept in this computer's settings; the real bill is on the user's Anthropic account.

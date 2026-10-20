@@ -550,3 +550,36 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .roll-line { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-family: var(--sans); }
 .roll-table tr.hit td { background: var(--accent-soft); font-weight: 600; }
 .reading-body a, .list-panel .pad a { color: var(--accent); }
+
+/* ---------- The AI panel ---------- */
+
+.ai-panel { margin: 0 12px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 0; }
+.ai-panel.open { max-height: 42vh; }
+.ai-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.ai-bar > .icon { width: 18px; height: 18px; color: var(--accent); flex: none; }
+.ai-line { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.working-on { align-self: flex-start; border: none; background: none; padding: 0; cursor: pointer; font-size: 12.5px; color: var(--muted); }
+.working-on strong { color: var(--ink); }
+.working-on:hover strong { text-decoration: underline; }
+.ai-prompt { display: flex; gap: 8px; }
+.ai-input { flex: 1; user-select: text; }
+.ai-spent { white-space: nowrap; }
+.ai-panel.open .ai-bar > .icon-button .icon { transform: rotate(90deg); }
+.ai-panel.closed .ai-bar > .icon-button .icon { transform: rotate(-90deg); }
+.ai-note { padding: 0 12px 8px 40px; margin: 0; }
+.ai-chat { flex: 1; overflow: auto; padding: 4px 14px 8px 40px; display: flex; flex-direction: column; gap: 8px; user-select: text; }
+.ai-msg { max-width: 760px; padding: 8px 12px; border-radius: 10px; }
+.ai-msg p { margin: 0 0 6px; }
+.ai-msg.user { align-self: flex-end; background: var(--accent-soft); }
+.ai-msg.ai { align-self: flex-start; background: var(--paper); border: 1px solid var(--line); }
+.ai-msg.ai.waiting { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+.ai-msg.ai.rejected { opacity: 0.7; }
+.ai-msg.thinking { color: var(--muted); font-style: italic; }
+.ai-changes, .ai-suggest { margin: 4px 0 8px; padding-left: 20px; }
+.ai-changes li::marker { color: var(--blue); }
+.ai-suggest li::marker { content: "? "; color: var(--yellow); }
+.ai-cost { margin: 0; }
+.ai-actions { display: flex; gap: 8px; margin-top: 4px; }
+.ai-tools { display: flex; gap: 8px; align-items: center; padding: 6px 12px 10px 40px; border-top: 1px solid var(--line); }
+.notes-box { width: 100%; font: 14px/1.5 var(--sans); user-select: text; }
+.ai-settings .text-input:not(.number-input) { min-width: 280px; }

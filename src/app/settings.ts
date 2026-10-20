@@ -22,10 +22,16 @@ export interface Settings {
   place: Place | null;
   /** Optional maker's name, stored on every world, system and thing the user creates. No account. */
   author: string | null;
+  /** Which Claude model AI jobs use: Automatic, Always quick or Always careful. */
+  aiModel: "auto" | "quick" | "careful";
+  /** Jobs estimated above this many dollars show the estimate first. */
+  aiThreshold: number;
+  /** What AI jobs cost this month, for the running total in the AI panel ("2026-10"). */
+  aiSpend: { month: string; usd: number };
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 } };
 }
 
 export class SettingsFile {
@@ -47,6 +53,9 @@ export class SettingsFile {
         opened: raw.opened && typeof raw.opened === "object" ? raw.opened : d.opened,
         place: raw.place && (raw.place.type === "world" || raw.place.type === "system") && typeof raw.place.id === "string" ? raw.place : null,
         author: typeof raw.author === "string" && raw.author.trim() ? raw.author.trim().slice(0, 120) : null,
+        aiModel: raw.aiModel === "quick" || raw.aiModel === "careful" ? raw.aiModel : d.aiModel,
+        aiThreshold: typeof raw.aiThreshold === "number" && raw.aiThreshold >= 0 ? raw.aiThreshold : d.aiThreshold,
+        aiSpend: raw.aiSpend && typeof raw.aiSpend.month === "string" && typeof raw.aiSpend.usd === "number" ? raw.aiSpend : d.aiSpend,
       };
     } catch {
       return defaultSettings();

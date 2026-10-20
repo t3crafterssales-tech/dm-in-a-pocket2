@@ -17,6 +17,7 @@
     "dist": "node scripts/build.mjs && electron-builder --win --x64 --publish never"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@types/node": "^22.18.0",
     "electron": "44.5.1",
     "electron-builder": "26.15.3",

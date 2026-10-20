@@ -16,6 +16,7 @@ import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 import { drawTableMode, focusTableSearch, forgetTableData } from "./table-mode.ts";
+import { aiPanel } from "./ai-panel.ts";
 
 const TABS = ["Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
 type Tab = (typeof TABS)[number];
@@ -147,10 +148,12 @@ async function draw() {
   else if (tab === "Lore") ({ list, editor } = await lorePanels(ctx));
   else ({ list, editor } = comingSoon(tab, view));
   const flags = await flagPanel(ctx);
+  const selectedName = ctx.selected ? ((await api.node(ctx.selected).catch(() => null))?.name ?? null) : null;
+  const ai = await aiPanel(ctx, selectedName);
   if (current !== view) return; // went home while loading
 
   const workspace = h("div", { class: "workspace" }, list, editor, flags);
-  app.replaceChildren(top, ...(banner ? [banner] : []), workspace);
+  app.replaceChildren(top, ...(banner ? [banner] : []), workspace, ai);
 
   for (const [key, top] of scroll) {
     const el = document.querySelector<HTMLElement>(`[data-scroll="${CSS.escape(key)}"]`);
@@ -238,11 +241,13 @@ async function placeSettings(view: PlaceView) {
     // Share: a copy to send. Always the world, its system and its pictures; never your settings.
     const history = h("input", { type: "checkbox" });
     const snaps = h("input", { type: "checkbox" });
+    const chat = h("input", { type: "checkbox" });
     parts.push(
       h("h3", null, isWorld ? "Share this world" : "Share this system"),
-      h("p", { class: "muted" }, isWorld ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the world, its system and its pictures; never your settings." : "Saves one file with this system (and any system it is built on) to send to someone."),
+      h("p", { class: "muted" }, isWorld ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the world, its system, its pictures and its World Notes; never your settings or your API key." : "Saves one file with this system (and any system it is built on) to send to someone."),
       h("label", { class: "check" }, history, "Include undo history"),
       isWorld ? h("label", { class: "check" }, snaps, "Include snapshots") : h("span"),
+      h("label", { class: "check" }, chat, "Include the AI chat"),
       h(
         "div",
         { class: "row" },
@@ -251,7 +256,7 @@ async function placeSettings(view: PlaceView) {
           {
             class: "button plain",
             onClick: async () => {
-              const path = await attempt(() => api.share({ history: history.checked, snapshots: snaps.checked }));
+              const path = await attempt(() => api.share({ history: history.checked, snapshots: snaps.checked, chat: chat.checked }));
               if (path) notice(`Saved ${path.split(/[\\/]/).pop()}. Send it to anyone with DM in a Pocket; they use Import on their home screen.`, "green", undefined, 10000);
             },
           },

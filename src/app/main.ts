@@ -1,12 +1,14 @@
 // The Electron main process: one window, connected to the back end. Kept thin on purpose; the
 // behaviour lives in backend.ts, which is tested without Electron.
 
-import { BrowserWindow, Menu, app, dialog, ipcMain, protocol, shell } from "electron";
-import { writeFileSync } from "node:fs";
+import Anthropic from "@anthropic-ai/sdk";
+import { BrowserWindow, Menu, app, dialog, ipcMain, net, protocol, safeStorage, shell } from "electron";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { extname, join } from "node:path";
 import { Backend, BACKEND_METHODS, PICTURE_TYPES } from "./backend.ts";
 import type { BackendEvent, BackendMethod, BookRequest } from "./backend.ts";
+import type { AiTransport } from "./ai/job.ts";
 
 const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" };
 
@@ -21,6 +23,38 @@ let backend: Backend | null = null;
 
 function send(event: BackendEvent) {
   win?.webContents.send("dm:event", event);
+}
+
+/**
+ * The Claude API key, encrypted with the operating system's protected storage (on Windows, the
+ * user's own login protects it), in a file of its own. It is never in a world file or settings.
+ */
+function keyStore() {
+  const file = () => join(app.getPath("userData"), "claude-key.bin");
+  return {
+    read: () => {
+      // Window tests on a development build only; the installed app never reads this.
+      if (!app.isPackaged && process.env.DM_POCKET_TEST_KEY) return process.env.DM_POCKET_TEST_KEY;
+      try {
+        return existsSync(file()) && safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(readFileSync(file())) : null;
+      } catch {
+        return null;
+      }
+    },
+    write: (key: string | null) => {
+      if (!key) return rmSync(file(), { force: true });
+      if (!safeStorage.isEncryptionAvailable()) throw new Error("This computer has no protected storage for the key.");
+      writeFileSync(file(), safeStorage.encryptString(key));
+    },
+  };
+}
+
+/** One connection to Claude per key, through Anthropic's own library. */
+let client: { key: string; c: Anthropic } | null = null;
+function claude(key: string): AiTransport {
+  if (client?.key !== key) client = { key, c: new Anthropic({ apiKey: key, maxRetries: 2 }) };
+  const c = client.c;
+  return (params) => c.beta.messages.create(params);
 }
 
 function createWindow() {
@@ -72,6 +106,9 @@ void app.whenReady().then(() => {
       const r = await dialog.showOpenDialog(win!, { title: "Import a world or system", properties: ["openFile"], filters: [{ name: "DM in a Pocket files", extensions: ["dmworld", "dmsys"] }] });
       return r.canceled ? null : (r.filePaths[0] ?? null);
     },
+    secrets: keyStore(),
+    aiTransport: claude,
+    isOnline: () => net.isOnline(),
     pickWord: async (defaultName) => {
       const r = await dialog.showSaveDialog(win!, { title: "Save the rulebook as a Word file", defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: "Word document", extensions: ["docx"] }] });
       return r.canceled ? null : (r.filePath ?? null);

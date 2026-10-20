@@ -407,7 +407,7 @@ test("the main folder can be changed in settings, and a damaged settings file ne
     assert.equal(s.backend.home().systems.length, 1);
 
     writeFileSync(join(s.dir, "settings.json"), "{ not json");
-    assert.deepEqual(SettingsFile.read(join(s.dir, "settings.json")), { mainFolder: null, opened: {}, place: null, author: null });
+    assert.deepEqual(SettingsFile.read(join(s.dir, "settings.json")), { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 } });
   })();
 });
 

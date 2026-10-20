@@ -8,6 +8,7 @@ import { app, attempt, brand, iconButton, nav, pulseLogo, typingIn } from "./com
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
+import { aiSettings } from "./ai-panel.ts";
 import { becameReadOnly, current, leavePlace, openPlace } from "./place.ts";
 
 /** The last thing deleted from the home screen, so Ctrl+Z can put it back. */
@@ -485,7 +486,7 @@ async function showSettings() {
         return input;
       })(),
       h("h3", null, "AI"),
-      h("p", { class: "muted" }, "Your Claude API key, the cost warning and live checking will be set here once the AI is added. Everything works by hand without it."),
+      aiSettings(() => void draw()),
     );
     d.footer.replaceChildren(h("span", { class: "spacer" }), h("button", { class: "button primary", onClick: () => d.close() }, "Done"));
   };

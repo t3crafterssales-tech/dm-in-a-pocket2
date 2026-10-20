@@ -105,6 +105,15 @@ export interface LayerMeta {
   changed?: number;
   /** The flag panel's memory: ignored flags, which are seen, and the blue and green blocks. */
   flagPanel?: unknown;
+  /** The AI's memory: { notes: World Notes lines, chat: the conversation }. */
+  ai?: unknown;
+}
+
+/** What a shared file carries of the AI's memory: always the World Notes, the chat only if ticked. */
+function sharedAi(ai: unknown, chat: boolean): unknown {
+  if (!ai || typeof ai !== "object") return undefined;
+  const a = ai as { notes?: unknown; chat?: unknown };
+  return { notes: a.notes ?? [], chat: chat ? (a.chat ?? []) : [] };
 }
 
 interface FileWithMeta extends SavedFile {
@@ -472,7 +481,7 @@ export class Library {
    * Writes a copy of a world to send to someone: always the world, its whole system chain and its
    * pictures; undo history and snapshots only if ticked. Settings are never in a world file.
    */
-  exportWorld(worldId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean } = {}) {
+  exportWorld(worldId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean; chat?: boolean } = {}) {
     const path = this.worldPath(worldId);
     if (!existsSync(path)) throw new LibraryError("That world isn't in the Worlds folder.");
     const { data } = readArchive(path, "world.json", this, false);
@@ -492,7 +501,7 @@ export class Library {
       bin: opts.history ? data.bin : [],
       history: opts.history ? data.history : [],
       redo: opts.history ? data.redo : [],
-      meta: { [worldId]: { picture: data.meta?.[worldId]?.picture ?? null, changed: data.meta?.[worldId]?.changed } },
+      meta: { [worldId]: { picture: data.meta?.[worldId]?.picture ?? null, changed: data.meta?.[worldId]?.changed, ai: sharedAi(data.meta?.[worldId]?.ai, !!opts.chat) } },
     };
     const extra: { name: string; data: Buffer }[] = [];
     if (opts.snapshots) {
@@ -503,7 +512,7 @@ export class Library {
   }
 
   /** Writes a copy of a system to send to someone (with its parent systems if it is a variant). */
-  exportSystem(systemId: Id, dest: string, opts: { history?: boolean } = {}) {
+  exportSystem(systemId: Id, dest: string, opts: { history?: boolean; chat?: boolean } = {}) {
     const chain = this.loadSystemChain(systemId);
     const own = this.readSystemFile(systemId);
     const file: FileWithMeta = {
@@ -514,7 +523,7 @@ export class Library {
       bin: opts.history ? own.bin : [],
       history: opts.history ? own.history : [],
       redo: opts.history ? own.redo : [],
-      meta: { [systemId]: { picture: own.meta?.[systemId]?.picture ?? null } },
+      meta: { [systemId]: { picture: own.meta?.[systemId]?.picture ?? null, ai: sharedAi(own.meta?.[systemId]?.ai, !!opts.chat) } },
     };
     writeArchive(dest, "system.json", file, this);
   }
@@ -566,7 +575,7 @@ export class Library {
       markFromOthers(layer, me);
       ids.set(s.id, layer.id);
       const own = s.id === data.main && !isWorld;
-      const file: FileWithMeta = { format: FORMAT_VERSION, app: data.app, main: layer.id, layers: [layer], bin: own && !onShelf ? data.bin : [], history: own && !onShelf ? data.history : [], redo: own && !onShelf ? data.redo : [], meta: { [layer.id]: { picture: data.meta?.[s.id]?.picture ?? null, changed: this.now() } } };
+      const file: FileWithMeta = { format: FORMAT_VERSION, app: data.app, main: layer.id, layers: [layer], bin: own && !onShelf ? data.bin : [], history: own && !onShelf ? data.history : [], redo: own && !onShelf ? data.redo : [], meta: { [layer.id]: { picture: data.meta?.[s.id]?.picture ?? null, changed: this.now(), ai: own && !onShelf ? data.meta?.[s.id]?.ai : undefined } } };
       writeArchive(this.systemPath(layer.id), "system.json", file, this);
       result.newSystems.push(layer.name);
       if (own) Object.assign(result, { id: layer.id, name: layer.name });
@@ -594,7 +603,7 @@ export class Library {
       bin: keepHistory ? data.bin : [],
       history: keepHistory ? data.history : [],
       redo: keepHistory ? data.redo : [],
-      meta: { [world.id]: { picture: data.meta?.[main.id]?.picture ?? null, changed: this.now() } },
+      meta: { [world.id]: { picture: data.meta?.[main.id]?.picture ?? null, changed: this.now(), ai: data.meta?.[main.id]?.ai } },
     };
     writeArchive(this.worldPath(world.id), "world.json", file, this);
     if (keepHistory) {

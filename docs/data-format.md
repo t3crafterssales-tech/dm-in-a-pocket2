@@ -83,6 +83,11 @@ A node's `text` may hold several lines; each line prints as its own paragraph.
   longer new) and `log` (the blue and green blocks from the last 30 days, each with its text, time,
   the nodes it was about and the undo step it made). None of it changes how nodes or bricks are
   stored, and a file without it simply has an empty panel memory.
+- **meta** also holds `ai`, the AI's memory: `notes` (the World Notes, each `{ text, pinned }`;
+  pinned lines are the user's and the AI never changes them) and `chat` (the conversation, each
+  `{ role, text, time }`, with the proposal's plain-words lines and whether it was accepted). A
+  shared file always carries the notes, and the chat only if ticked. The API key is never in any
+  file in the main folder: it is kept in the operating system's protected storage.
 
 ## Files in the main folder
 
