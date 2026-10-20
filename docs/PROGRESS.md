@@ -17,10 +17,10 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 5, the flag panel, recycle bin, undo and history on screen (approved by Jeff
   on October 20, 2026, when he asked for the next step; merged into `main`). Anything he finds when
   he installs it gets fixed in milestone 6.
-- **Built, waiting for Jeff to test:** Milestone 6, the rulebook export (PDF) and the small d20
-  starter. With it, everything in first playable is built.
-- **Next:** Jeff tests first playable. After that, the rest of version 1 (the AI, the full SRD 5.2
-  content, sharing and import, snapshots, Quick start, roll tables and more; see docs/design.md).
+- **Done:** Milestone 6, the rulebook export (PDF) and the small d20 starter (approved by Jeff on
+  October 20, 2026, when he asked for the next step; merged into `main`). **First playable is
+  complete.** Jeff hasn't installed it yet; anything he finds gets fixed in the next milestone.
+- **Next:** Milestone 7, sharing and snapshots (see the table below).
 
 ## Milestones to first playable
 
@@ -35,6 +35,16 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 4 | Rules tab and sheets: core check, abilities, resources, skills, conditions, free-text rules; Beings and Items with the library, drag and drop, Shift and Ctrl selection, Edit parent | Build a small system and a few monsters by hand |
 | 5 | Flag panel, recycle bin, undo and history on screen; basic free yellow checks | Delete Strength, fix it, undo, restore |
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
+
+After first playable, the rest of version 1 (order proposed by Claude on October 20, 2026; the
+free, no-AI work first, since the AI needs Jeff's API key and costs money on it; Jeff can reorder):
+
+| # | Milestone | What Jeff can test |
+| --- | --- | --- |
+| 7 | Sharing and snapshots: Import, Share a world or system, named snapshots with restore and clean-up, author name and the From others filter | Send a world to yourself and import it; snapshot, change, restore |
+| 8 | Quick start, roll tables, lore pages and templates, check categories with on/off and sliders | Build a quick game in 15 minutes; roll on a table |
+| 9 | The AI: chat, Check for errors, bulk changes, World Notes, create from a prompt | Needs Jeff's Claude API key |
+| 10 | The full SRD 5.2, Table mode and Word export | Run a game from the app |
 
 ## Log
 
