@@ -99,6 +99,14 @@ export class Session {
     this.events.saved?.();
   }
 
+  /** Saves anything waiting right now (before other worlds read the system file). */
+  saveNow() {
+    if (!this.readOnly) {
+      this.saver.changed();
+      this.saver.flush();
+    }
+  }
+
   /** For changes the engine doesn't announce (emptying the recycle bin): save soon. */
   markChanged() {
     if (!this.readOnly) this.saver.changed();

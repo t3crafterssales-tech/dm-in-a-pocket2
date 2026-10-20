@@ -16,6 +16,8 @@ import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
 import { ensureCategories } from "./sheets.ts";
+import { changeInSystem, upwardView } from "./upward.ts";
+import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
@@ -28,6 +30,7 @@ export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } fr
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
 export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 export type { FlagBlock, FlagPanelView, MissingDetail, BrokenSlot } from "./flagpanel.ts";
+export type { UpwardRow, UpwardView, UpwardWorld } from "./upward.ts";
 
 export interface SystemCard {
   id: Id;
@@ -197,6 +200,8 @@ export const BACKEND_METHODS = [
   "rollBackTo",
   "redoTo",
   "rollBackAll",
+  "upwardView",
+  "changeInSystem",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -636,6 +641,17 @@ export class Backend {
   }
   rollBackAll(): StepResult {
     return this.editing.rollBackAll();
+  }
+
+  /** Edit parent from a world up to its system: the system's version beside this world's. */
+  upwardView(nodeId: Id): UpwardView {
+    if (!this.session) throw new LibraryError("Open a world first.");
+    return upwardView(this.lib, this.session, nodeId);
+  }
+  /** Makes the change at the system; unticked worlds keep the old value as their own. */
+  changeInSystem(nodeId: Id, changes: Record<string, Value | null>, ticked: Id[]): { label: string; kept: string[]; couldNot: string[] } {
+    if (!this.session) throw new LibraryError("Open a world first.");
+    return changeInSystem(this.lib, this.session, nodeId, changes, ticked);
   }
 
   /** The app is closing normally. */

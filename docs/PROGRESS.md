@@ -14,9 +14,11 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 4, the Rules tab and sheets (approved by Jeff on October 20, 2026, when he
   asked to go on to milestone 5; merged into `main`). He hasn't installed it yet, so anything he
   finds when he does gets fixed in milestone 5.
-- **In progress:** Milestone 5, the flag panel, recycle bin, undo and history on screen (same
-  branch). Steps 1 to 3 of 4 done: the flag panel, the world's recycle bin, and History. Next: world
-  rules on screen, and Edit parent from a world up to its system.
+- **Built, waiting for Jeff to test:** Milestone 5, the flag panel, recycle bin, undo and history
+  on screen (same branch). All four steps done: the flag panel; the world's recycle bin; History;
+  world rules on screen and Edit parent from a world up to its system.
+- **Next:** Milestone 6, the rulebook export (PDF) and the small d20 starter, which completes first
+  playable.
 
 ## Milestones to first playable
 
@@ -33,6 +35,33 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 5, step 4: world rules, and editing the system from a world)
+
+- World rules have their own section at the end of the Rules tab: "Nothing may have [Material]
+  equal to [Metal]" (or damage type, size, kind of being, or a value named by the user), with the
+  deliberate exceptions listed and removable. Everything that breaks one is red, including things
+  added later. Items' basic sheet gained a Material box for this.
+- Edit in the system (beside "From the system" on rules, sheets and library bricks, inside a
+  world): the system's version beside this world's, with Use my version, then a checklist of the
+  system's worlds with this one ticked. Unticked worlds keep the old value as their own (written
+  into their own files, with a pencil mark); values a world set itself are never touched; a world
+  open on another computer right now can't be protected, so the checklist says it will get the
+  change. The change is one undo step in this world.
+- 154 automatic tests pass (6 new). Driven in the real window here.
+
+### Milestone 5: what Jeff can test
+
+Delete Strength, fix it, undo, restore: delete Strength in the Rules tab, double-click the red
+flag, tick some, point them at another ability, leave the rest; then restore Strength from the
+recycle bin (the bin button in the top bar) and reconnect. Make a new "Strength" while the old one
+is in the bin. Open History (the clock button) and roll back. Add a "No metal" world rule and an
+Iron Helm made of metal. In a world, use Edit in the system on a rule and untick another world.
+
+Not in this milestone, still to come:
+- Changes from a world reaching the worlds of a system's variants (Edit in the system covers the
+  worlds directly on the system).
+- AI-found flags, the check categories with on/off and sliders (after first playable).
 
 ### 2026-10-20 (milestone 5, step 3: History)
 
@@ -416,3 +445,9 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: A green block's Undo only works while its change is the latest one, because undo
   goes back in order; otherwise it says to use History.
 - 2026-10-20: In the reconnect checklist, things changed again since the fix start unticked.
+- 2026-10-20 (Jeff may want to check): Items' basic sheet has a Material box, so "No metal" has
+  something to check (the design's Longsword carries a Material of Metal).
+- 2026-10-20: World rules match words without caring about capitals (Metal, metal, METAL).
+- 2026-10-20: When the system is changed from inside a world, unticked worlds are protected by
+  writing the old value into their own files at once. Undoing the change in this world puts the
+  system back; the protected worlds then simply match the system again.

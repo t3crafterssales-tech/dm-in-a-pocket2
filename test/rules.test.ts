@@ -31,7 +31,7 @@ test("a new system's Rules tab shows every section from the design, empty", () =
   const tab = backend.rulesTab();
   assert.deepEqual(
     tab.map((s) => s.title),
-    ["Core check", "Abilities", "Resources", "Skills", "Conditions", "Combat", "Magic and powers", "Advancement", "Time and rest", "Currency and economy"],
+    ["Core check", "Abilities", "Resources", "Skills", "Conditions", "Combat", "Magic and powers", "Advancement", "Time and rest", "Currency and economy", "World rules"],
   );
   assert.ok(tab.every((s) => s.nodes.length === 0));
 });
@@ -181,4 +181,23 @@ test("every built-in section has a kind that the add button creates", () => {
     assert.equal(backend.node(id).kind, s.kind);
     assert.equal(backend.node(id).sectionKey, s.key);
   }
+});
+
+test("a world rule in the World rules section flags everything that breaks it, including things added later", () => {
+  const { backend } = setup();
+  const rule = backend.addRule("world", "No metal");
+  assert.equal(backend.node(rule).sectionKey, "world");
+  assert.match(backend.node(rule).summary, /^World rule: choose what nothing may be/);
+  backend.setField(rule, "forbid", { field: "material", equals: "Metal" });
+  assert.equal(backend.node(rule).summary, "World rule: nothing may have the material Metal. Anything added later is checked too.");
+  const helm = backend.addItem({ name: "Iron Helm", categoryId: null, variantOf: null });
+  assert.ok(backend.node(helm).sheet!.header.some((f) => f.key === "material"), "items have a Material box");
+  backend.setField(helm, "material", "Metal");
+  assert.ok(backend.flagPanel().blocks.some((b) => b.color === "red" && b.title === '1 thing breaks "No metal"'));
+  const bridle = backend.addItem({ name: "Bridle", categoryId: null, variantOf: null });
+  backend.setField(bridle, "material", "metal");
+  assert.ok(backend.flagPanel().blocks.some((b) => b.title === '2 things break "No metal"'), "a bridle added next year is flagged too");
+  backend.meantThat(backend.flagPanel().blocks.find((b) => b.kind === "rule")!.key, [helm]);
+  assert.match(backend.node(rule).summary, /except 1 deliberate exception/);
+  assert.equal(section(backend, "world").nodes[0]!.name, "No metal");
 });

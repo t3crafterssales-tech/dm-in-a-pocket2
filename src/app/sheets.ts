@@ -45,7 +45,16 @@ export const SHEETS: Record<BeingKind | "item", SheetDef> = {
   character: { header: [{ key: "level", label: "Level", type: "number" }, HP, AC, SPEED], scores: true, sections: ["Attacks and actions", "Features", "Spells", "Gear"] },
   race: { header: [{ key: "size", label: "Size", type: "text", placeholder: "Medium" }, SPEED], scores: false, sections: ["Traits", "Ability bonuses", "Languages"] },
   class: { header: [{ key: "hitDie", label: "Hit die", type: "text", placeholder: "d8" }], scores: false, sections: ["Features", "Choices", "Proficiencies"] },
-  item: { header: [{ key: F.cost, label: "Cost", type: "text", placeholder: "15 gp" }, { key: F.weight, label: "Weight", type: "text", placeholder: "3 lb." }], scores: false, sections: ["Attacks", "Properties", "Enchantments"] },
+  item: {
+    header: [
+      { key: F.cost, label: "Cost", type: "text", placeholder: "15 gp" },
+      { key: F.weight, label: "Weight", type: "text", placeholder: "3 lb." },
+      // What it's made of, so world rules such as "No metal" can check it.
+      { key: "material", label: "Material", type: "text", placeholder: "Metal" },
+    ],
+    scores: false,
+    sections: ["Attacks", "Properties", "Enchantments"],
+  },
 };
 
 export function sheetFor(n: NodeRecord, fields: Record<string, Value>): SheetDef | null {
