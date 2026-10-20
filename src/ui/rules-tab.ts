@@ -9,6 +9,8 @@ import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { FieldMaker, asLink, isObj } from "./fields.ts";
 import type { Link, Value } from "./fields.ts";
+import { openEditSystem } from "./edit-system.ts";
+import { offerRestore } from "./flag-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 
 const collapsed = new Set<string>();
@@ -79,7 +81,7 @@ function listPanel(sections: RulesSection[], ctx: PlaceCtx) {
                   n.fromBelow ? h("span", { class: "from-below", title: "From the system" }, svg(ICONS.layers)) : null,
                 ),
               ),
-              adding === s.key ? h("li", { class: "item adding" }, newNameBox(`Name of the new ${s.noun}`, `new-${s.key}`, (name) => addRule(s.key, name, ctx))) : null,
+              adding === s.key ? h("li", { class: "item adding" }, newNameBox(`Name of the new ${s.noun}`, `new-${s.key}`, (name) => addRule(s.key, s.kind, name, ctx))) : null,
               !s.nodes.length && adding !== s.key ? h("li", { class: "empty muted small" }, "None yet.") : null,
             )
           : null,
@@ -116,8 +118,9 @@ export function newNameBox(placeholder: string, key: string, create: (name: stri
   return input;
 }
 
-async function addRule(sectionKey: string, name: string, ctx: PlaceCtx) {
+async function addRule(sectionKey: string, kind: string, name: string, ctx: PlaceCtx) {
   adding = null;
+  if (!(await offerRestore(name, kind, ctx))) return ctx.refresh();
   const id = await attempt(() => api.addRule(sectionKey, name));
   if (id) ctx.select(id);
   else await ctx.refresh();
@@ -180,6 +183,7 @@ function editorPanel(view: NodeView | null, choices: Choices, moveTo: { key: str
           ? h("span", { class: "chip muted" }, view.sectionTitle)
           : null,
       view.fromBelow ? h("span", { class: "chip muted", title: "This comes from the system. Changes you make here stay in this world, marked with a pencil." }, svg(ICONS.layers), "From the system") : null,
+      view.fromBelow && !ro && ctx.view.type === "world" ? h("button", { class: "link small", title: "Change the system's version, and choose which worlds get it", onClick: () => void openEditSystem(view.id, ctx) }, "Edit in the system") : null,
     ),
   );
 
@@ -324,9 +328,64 @@ function kindFields(view: NodeView, c: Choices, ed: FieldMaker, isCore: boolean)
       };
     }
     default:
+      if (view.sectionKey === "world") return { main: worldRuleFields(view, ed), more: [] };
       if (!isCore) return { main: [], more: [] };
       return { main: coreFields(view, ed), more: [] };
   }
+}
+
+/** The values a world rule can be about (the same list as WORLD_RULE_VALUES in src/app/rules.ts). */
+const WORLD_VALUES = [
+  { value: "material", label: "Material" },
+  { value: "damageType", label: "Damage type" },
+  { value: "size", label: "Size" },
+  { value: "beingKind", label: "Kind of being" },
+];
+
+/** World rules where the user picked "Something else", so its name box shows. */
+const otherValue = new Set<string>();
+
+/** "No metal": nothing may have [Material] equal to [Metal], with its deliberate exceptions. */
+function worldRuleFields(view: NodeView, ed: FieldMaker): HTMLElement[] {
+  const forbid = isObj(view.fields.forbid) ? view.fields.forbid : { field: "material", equals: "" };
+  const field = typeof forbid.field === "string" ? forbid.field : "material";
+  const known = WORLD_VALUES.some((v) => v.value === field) && !otherValue.has(view.id);
+  const save = (next: { field?: string; equals?: string }) => ed.save(() => api.setField(view.id, "forbid", { field, equals: typeof forbid.equals === "string" ? forbid.equals : "", ...next }));
+  const which = ed.plainSelect(known ? field : "__other", [...WORLD_VALUES, { value: "__other", label: "Something else (name it)" }], async (v) => {
+    if (v === "__other") otherValue.add(view.id);
+    else {
+      otherValue.delete(view.id);
+      await save({ field: v });
+    }
+  }, "f-forbid-field");
+  const other = h("input", { class: "text-input", value: known ? "" : field, placeholder: "The value's name on the sheet, for example weight", "data-key": "f-forbid-other", disabled: view.readOnly });
+  other.addEventListener("change", () => other.value.trim() && void save({ field: other.value.trim() }));
+  const value = h("input", { class: "text-input", value: typeof forbid.equals === "string" ? forbid.equals : "", placeholder: "For example Metal", "data-key": "f-forbid-equals", disabled: view.readOnly });
+  value.addEventListener("change", () => void save({ equals: value.value.trim() }));
+  value.addEventListener("keydown", (e) => e.key === "Enter" && value.blur());
+  const exceptions = (Array.isArray(view.fields.exceptions) ? view.fields.exceptions : []).filter((x): x is Link => isObj(x) && typeof x.link === "string");
+  return [
+    ed.row("Nothing may have", "forbid", h("div", { class: "inline wrap" }, which, known ? null : other, h("span", null, "equal to"), value)),
+    h("p", { class: "muted small" }, "Matching ignores capitals, so Metal, metal and METAL are the same. Bricks on a sheet count too: a sword with a Metal material brick breaks No metal."),
+    ed.row(
+      "Deliberate exceptions",
+      "exceptions",
+      exceptions.length
+        ? h(
+            "div",
+            { class: "thresholds" },
+            exceptions.map((x) =>
+              h(
+                "div",
+                { class: "inline" },
+                h("span", null, view.names[x.link] ?? `[missing: ${view.missing[x.link] ?? "removed"}]`),
+                view.readOnly ? null : h("button", { class: "icon-button small", title: "It's no longer an exception", "aria-label": "Remove this exception", onClick: () => void ed.save(() => api.setField(view.id, "exceptions", exceptions.filter((e) => e.link !== x.link))) }, svg(ICONS.close)),
+              ),
+            ),
+          )
+        : h("p", { class: "muted small" }, "None. Things that break this rule on purpose can be marked with I meant that on the red flag."),
+    ),
+  ];
 }
 
 const FAMILIES = [

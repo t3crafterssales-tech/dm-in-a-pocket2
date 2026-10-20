@@ -4,28 +4,33 @@
 import { readFileSync, statSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { DEFAULT_CHECKS, newId, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Activation, Id, Uses, Value } from "../engine/index.ts";
+import type { Activation, Id, NodeKind, Slot, Uses, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import type { RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
-import type { Choices, FlagView, NodeView, StepResult } from "./editing.ts";
+import type { BinView, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
+import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
 import { ensureCategories } from "./sheets.ts";
+import { changeInSystem, upwardView } from "./upward.ts";
+import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
-export type { Choices, FlagView, NodeView, Option, StepResult } from "./editing.ts";
+export type { BinView, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
 export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
+export type { FlagBlock, FlagPanelView, MissingDetail, BrokenSlot } from "./flagpanel.ts";
+export type { UpwardRow, UpwardView, UpwardWorld } from "./upward.ts";
 
 export interface SystemCard {
   id: Id;
@@ -175,6 +180,28 @@ export const BACKEND_METHODS = [
   "templates",
   "copyNode",
   "setTemplate",
+  "flagPanel",
+  "missingDetail",
+  "fixMissing",
+  "meantThat",
+  "ignoreFlag",
+  "ignoreKind",
+  "unignore",
+  "markGood",
+  "markSeen",
+  "undoLog",
+  "clearLog",
+  "bin",
+  "binnedNamed",
+  "restoreNode",
+  "reconnect",
+  "emptyNodeBin",
+  "history",
+  "rollBackTo",
+  "redoTo",
+  "rollBackAll",
+  "upwardView",
+  "changeInSystem",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -544,6 +571,87 @@ export class Backend {
   }
   changeParent(parentId: Id, changes: Record<string, Value | null>, ticked: Id[] | null): StepResult {
     return this.editing.changeParent(parentId, changes, ticked);
+  }
+
+  flagPanel(): FlagPanelView {
+    return this.editing.flagPanel();
+  }
+  missingDetail(key: string): MissingDetail {
+    return this.editing.missingDetail(key);
+  }
+  fixMissing(key: string, slots: Slot[], to: Id | null): StepResult {
+    return this.editing.fixMissing(key, slots, to);
+  }
+  meantThat(key: string, nodes: Id[]): StepResult {
+    return this.editing.meantThat(key, nodes);
+  }
+  ignoreFlag(key: string): true {
+    this.editing.ignoreFlag(key);
+    return true;
+  }
+  ignoreKind(kind: string): true {
+    this.editing.ignoreKind(kind);
+    return true;
+  }
+  unignore(keyOrKind: string): true {
+    this.editing.unignore(keyOrKind);
+    return true;
+  }
+  markGood(key: string): StepResult {
+    return this.editing.markGood(key);
+  }
+  markSeen(keys: string[] | null): true {
+    this.editing.markSeen(keys);
+    return true;
+  }
+  undoLog(logKey: string): StepResult | null {
+    return this.editing.undoLog(logKey);
+  }
+  clearLog(): true {
+    this.editing.clearLog();
+    return true;
+  }
+
+  bin(): BinView[] {
+    return this.editing.bin();
+  }
+  binnedNamed(name: string, kind: NodeKind | null = null): BinView | null {
+    return this.editing.binnedNamed(name, kind);
+  }
+  restoreNode(binId: Id): RestoreResult {
+    return this.editing.restoreNode(binId);
+  }
+  reconnect(nodeId: Id, slots: Slot[]): StepResult {
+    return this.editing.reconnect(nodeId, slots);
+  }
+  /** Permanent: the window always asks first. */
+  emptyNodeBin(binIds: Id[] | null): true {
+    this.editing.emptyNodeBin(binIds);
+    return true;
+  }
+
+  history(): HistoryView {
+    return this.editing.history();
+  }
+  rollBackTo(stepId: Id): StepResult {
+    return this.editing.rollBackTo(stepId);
+  }
+  redoTo(stepId: Id): StepResult {
+    return this.editing.redoTo(stepId);
+  }
+  rollBackAll(): StepResult {
+    return this.editing.rollBackAll();
+  }
+
+  /** Edit parent from a world up to its system: the system's version beside this world's. */
+  upwardView(nodeId: Id): UpwardView {
+    if (!this.session) throw new LibraryError("Open a world first.");
+    return upwardView(this.lib, this.session, nodeId);
+  }
+  /** Makes the change at the system; unticked worlds keep the old value as their own. */
+  changeInSystem(nodeId: Id, changes: Record<string, Value | null>, ticked: Id[]): { label: string; kept: string[]; couldNot: string[] } {
+    if (!this.session) throw new LibraryError("Open a world first.");
+    return changeInSystem(this.lib, this.session, nodeId, changes, ticked);
   }
 
   /** The app is closing normally. */

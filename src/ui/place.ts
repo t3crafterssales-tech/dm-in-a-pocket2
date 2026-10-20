@@ -1,13 +1,15 @@
 // Inside an open world or system: the tab bar, the list, editor and flag panels, undo and redo,
 // and World settings.
 
-import type { FlagView, PlaceView } from "../app/backend.ts";
+import type { PlaceView } from "../app/backend.ts";
 import type { Place } from "../app/settings.ts";
 import { api } from "./api.ts";
 import { app, attempt, brand, iconButton, nav, typingIn } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
+import { flagPanel, showNodeBin } from "./flag-panel.ts";
+import { showHistory } from "./history-dialog.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 
@@ -118,6 +120,8 @@ async function draw() {
       { class: "top-actions" },
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
+      iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
+      iconButton(ICONS.bin, "Recycle bin", () => void showNodeBin(ctx), { iconOnly: true, title: "Recycle bin: restore deleted things" }),
       iconButton(ICONS.home, "Home", () => void goHome()),
       iconButton(ICONS.gear, isWorld ? "World settings" : "System settings", () => void placeSettings(view)),
     ),
@@ -130,10 +134,10 @@ async function draw() {
   else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
   else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
   else ({ list, editor } = comingSoon(tab, view));
-  const flags = (await attempt(() => api.flags())) ?? [];
+  const flags = await flagPanel(ctx);
   if (current !== view) return; // went home while loading
 
-  const workspace = h("div", { class: "workspace" }, list, editor, flagPanel(flags, ctx));
+  const workspace = h("div", { class: "workspace" }, list, editor, flags);
   app.replaceChildren(top, ...(banner ? [banner] : []), workspace);
 
   for (const [key, top] of scroll) {
@@ -162,37 +166,6 @@ function comingSoon(t: Tab, view: PlaceView) {
     list: h("aside", { class: "panel list-panel", "aria-label": "List" }, h("div", { class: "panel-head" }, t), h("p", { class: "muted small pad" }, "Nothing here yet.")),
     editor: h("section", { class: "panel editor" }, h("div", { class: "empty-editor" }, h("h2", null, view.name), h("p", { class: "muted" }, coming[t]))),
   };
-}
-
-function flagPanel(flags: FlagView[], ctx: PlaceCtx) {
-  const red = flags.filter((f) => f.color === "red").length;
-  const yellow = flags.length - red;
-  const counter = flags.length ? [red ? `${red} red` : "", yellow ? `${yellow} yellow` : ""].filter(Boolean).join(" · ") : "";
-  return h(
-    "aside",
-    { class: "panel flag-panel", "aria-label": "Flags", "data-scroll": "flags" },
-    h("div", { class: "panel-head" }, "Flags", counter ? h("span", { class: "muted small head-count" }, counter) : null),
-    flags.length
-      ? h(
-          "ul",
-          { class: "flag-list" },
-          flags.map((f) =>
-            h(
-              "li",
-              {
-                class: `flag ${f.color}`,
-                tabindex: 0,
-                title: f.nodes.length ? "Click to open the first thing it affects" : "",
-                onClick: () => f.nodes[0] && ctx.select(f.nodes[0]),
-                onKeydown: (e: KeyboardEvent) => e.key === "Enter" && f.nodes[0] && ctx.select(f.nodes[0]),
-              },
-              h("div", { class: "flag-title" }, f.title),
-              f.detail ? h("div", { class: "muted small" }, f.detail) : null,
-            ),
-          ),
-        )
-      : h("p", { class: "muted small pad" }, "No flags. Everything checks out."),
-  );
 }
 
 // ---------- Undo and redo ----------

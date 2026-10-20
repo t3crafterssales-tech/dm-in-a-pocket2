@@ -34,6 +34,8 @@ export class Session {
   private heartbeat: unknown = null;
   private stopListening: () => void;
   private closed = false;
+  /** The flag panel's memory, saved with the world (see flagpanel.ts). Plain JSON. */
+  flagPanel: unknown;
 
   private constructor(lib: Library, type: "world" | "system", id: Id, ws: Workspace, world: OpenWorld | null, events: SessionEvents, timers: Timers) {
     this.lib = lib;
@@ -46,6 +48,7 @@ export class Session {
     this.recovered = world?.recovered ?? false;
     this.events = events;
     this.timers = timers;
+    this.flagPanel = lib.readMeta(type, id).flagPanel ?? null;
     this.saver = new Autosaver(() => this.save(), { onSaved: () => events.saved?.(), onError: (e) => this.saveError(e) }, timers);
     this.stopListening = ws.onChange(() => {
       if (!this.readOnly) this.saver.changed();
@@ -96,9 +99,29 @@ export class Session {
     this.events.saved?.();
   }
 
+  /** Saves anything waiting right now (before other worlds read the system file). */
+  saveNow() {
+    if (!this.readOnly) {
+      this.saver.changed();
+      this.saver.flush();
+    }
+  }
+
+  /** For changes the engine doesn't announce (emptying the recycle bin): save soon. */
+  markChanged() {
+    if (!this.readOnly) this.saver.changed();
+  }
+
+  /** Changes the flag panel's memory and saves it with the next constant save. */
+  setFlagPanel(state: unknown) {
+    this.flagPanel = state;
+    if (!this.readOnly) this.saver.changed();
+  }
+
   private save() {
-    if (this.world) this.lib.saveWorld(this.world);
-    else this.lib.saveSystem(this.ws, this.id);
+    const extra = { flagPanel: this.flagPanel ?? undefined };
+    if (this.world) this.lib.saveWorld(this.world, {}, extra);
+    else this.lib.saveSystem(this.ws, this.id, {}, extra);
   }
 
   private saveError(e: unknown) {

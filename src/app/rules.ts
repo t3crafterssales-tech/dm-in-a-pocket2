@@ -4,7 +4,7 @@
 import { F, formulaText, link } from "../engine/index.ts";
 import type { Id, NodeKind, NodeRecord, Value, Workspace } from "../engine/index.ts";
 
-export type SectionKey = "core" | "abilities" | "resources" | "skills" | "conditions" | "combat" | "magic" | "advancement" | "time" | "currency";
+export type SectionKey = "core" | "abilities" | "resources" | "skills" | "conditions" | "combat" | "magic" | "advancement" | "time" | "currency" | "world";
 
 export interface SectionDef {
   key: SectionKey;
@@ -26,6 +26,8 @@ export const RULE_SECTIONS: SectionDef[] = [
   { key: "advancement", title: "Advancement", kind: "rule", noun: "rule" },
   { key: "time", title: "Time and rest", kind: "rule", noun: "rule" },
   { key: "currency", title: "Currency and economy", kind: "rule", noun: "rule" },
+  // Permanent constraints such as "No metal": anything that breaks one is flagged red, now or later.
+  { key: "world", title: "World rules", kind: "rule", noun: "world rule" },
 ];
 
 const KIND_SECTION: Partial<Record<NodeKind, SectionKey>> = { ability: "abilities", resource: "resources", skill: "skills", condition: "conditions" };
@@ -37,6 +39,7 @@ export function defaultsFor(kind: NodeKind, section: string | null): Record<stri
   if (kind === "skill") return { [F.ability]: null };
   if (kind === "condition") return { [F.stages]: 1, [F.duration]: "", [F.save]: null };
   if (kind === "rule" && section === "core") return { [F.family]: "rollOver", [F.die]: "d20", [F.target]: "" };
+  if (kind === "rule" && section === "world") return { [F.forbid]: { field: "material", equals: "" }, [F.exceptions]: [] };
   return {};
 }
 
@@ -103,6 +106,7 @@ export function sectionOf(ws: Workspace, layerId: Id, n: NodeRecord): string {
     if (custom.some((x) => x.id === c.id)) return c.id;
   }
   if (n.fields.section === "Core check") return "core";
+  if (n.fields[F.forbid]) return "world";
   return KIND_SECTION[n.kind] ?? "combat";
 }
 
@@ -112,7 +116,7 @@ export function rulesTab(ws: Workspace, layerId: Id): RulesSection[] {
   const below = ws.layer(layerId).base;
   const nodes = ws
     .list(layerId)
-    .filter((n) => RULE_KINDS.includes(n.kind) && !n.fields[F.forbid] && !n.template)
+    .filter((n) => RULE_KINDS.includes(n.kind) && !n.template)
     // Abilities keep the order they were made in, like a character sheet (STR, DEX, CON...).
     .sort((a, b) => (a.kind === "ability" && b.kind === "ability" ? a.created - b.created : a.name.localeCompare(b.name)));
   const entry = (n: NodeRecord) => ({
@@ -151,6 +155,14 @@ export function createSection(ws: Workspace, layerId: Id, title: string): Id {
     return ws.create(layerId, "category", title, { fields: { [F.under]: link(root.id) } });
   });
 }
+
+/** The values a world rule can be about. "Other" lets the user name any value. */
+export const WORLD_RULE_VALUES: { key: string; label: string }[] = [
+  { key: "material", label: "Material" },
+  { key: "damageType", label: "Damage type" },
+  { key: "size", label: "Size" },
+  { key: "beingKind", label: "Kind of being" },
+];
 
 // ---------- Plain-English summaries ----------
 
@@ -219,6 +231,14 @@ export function ruleSummary(ws: Workspace, layerId: Id, nodeId: Id): string {
     }
     default:
       if (sectionOf(ws, layerId, n) === "core") return coreSummary(f);
+      if (f[F.forbid] && typeof f[F.forbid] === "object" && !Array.isArray(f[F.forbid])) {
+        const fb = f[F.forbid] as Record<string, Value>;
+        const what = WORLD_RULE_VALUES.find((v) => v.key === fb.field)?.label.toLowerCase() ?? String(fb.field ?? "?");
+        const ex = Array.isArray(f[F.exceptions]) ? (f[F.exceptions] as Value[]).length : 0;
+        const value = str(fb.equals);
+        if (!value) return `World rule: choose what nothing may be (for example, nothing may have the ${what} Metal).`;
+        return `World rule: nothing may have the ${what} ${value}${ex ? `, except ${ex} deliberate exception${ex === 1 ? "" : "s"}` : ""}. Anything added later is checked too.`;
+      }
       return n.text.trim() ? `${n.name}: written out in its text.` : `${n.name}: nothing written yet.`;
   }
 }

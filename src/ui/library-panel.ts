@@ -9,6 +9,8 @@ import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
+import { openEditSystem } from "./edit-system.ts";
+import { offerRestore } from "./flag-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 import { newNameBox } from "./rules-tab.ts";
 
@@ -154,6 +156,7 @@ function select(id: string, ev: MouseEvent, visible: LibraryEntry[], ctx: PlaceC
 
 async function addBrick(type: BrickType, name: string, ctx: PlaceCtx) {
   adding = null;
+  if (!(await offerRestore(name, "brick", ctx))) return ctx.refresh();
   const id = await attempt(() => api.addBrick(type, name));
   if (id) {
     librarySelection.clear();
@@ -265,6 +268,7 @@ export function brickEditor(view: NodeView, choices: Choices, ctx: PlaceCtx, onR
           { class: "chips" },
           h("span", { class: "chip" }, `Library brick · ${BRICK_LABELS[type] ?? "Brick"}`),
           view.fromBelow ? h("span", { class: "chip muted" }, svg(ICONS.layers), "From the system") : null,
+          view.fromBelow && !ro && ctx.view.type === "world" ? h("button", { class: "link small", title: "Change the system's version, and choose which worlds get it", onClick: () => void openEditSystem(view.id, ctx) }, "Edit in the system") : null,
         ),
       ),
       h("p", { class: "summary" }, view.summary),

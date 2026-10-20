@@ -10,7 +10,9 @@ import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
 import { openDrill } from "./drill-dialog.ts";
 import { openEditParent } from "./edit-parent.ts";
+import { openEditSystem } from "./edit-system.ts";
 import { DRAG_TYPE, brickEditor, drop, libraryPanel } from "./library-panel.ts";
+import { offerRestore } from "./flag-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 
 export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
@@ -267,6 +269,10 @@ async function createNew(which: "beings" | "items", existing: ListEntry[], categ
     if (!name.value.trim()) return;
     create.disabled = true;
     const [how, from] = start.value ? (start.value.split(":") as ["variant" | "copy", string]) : [null, null];
+    if (!how) {
+      d.close();
+      if (!(await offerRestore(name.value, which === "beings" ? "being" : "item", ctx))) return;
+    }
     const id = await attempt(async () => {
       if (how === "copy") return api.copyNode(from!, name.value);
       const variantOf = how === "variant" ? from : null;
@@ -392,6 +398,7 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
             ? h("span", { class: "chip broken-chip" }, "Its parent was removed")
             : null,
         view.fromBelow ? h("span", { class: "chip muted", title: "This comes from the system. Changes you make here stay in this world, marked with a pencil." }, svg(ICONS.layers), "From the system") : null,
+        view.fromBelow && !ro && ctx.view.type === "world" ? h("button", { class: "link small", title: "Change the system's version, and choose which worlds get it", onClick: () => void openEditSystem(view.id, ctx) }, "Edit in the system") : null,
       ),
       h(
         "div",
