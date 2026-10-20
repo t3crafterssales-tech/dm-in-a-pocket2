@@ -20,7 +20,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 6, the rulebook export (PDF) and the small d20 starter (approved by Jeff on
   October 20, 2026, when he asked for the next step; merged into `main`). **First playable is
   complete.** Jeff hasn't installed it yet; anything he finds gets fixed in the next milestone.
-- **Built, waiting for Jeff to test:** Milestone 7, sharing and snapshots.
+- **Done:** Milestone 7, sharing and snapshots (approved by Jeff on October 20, 2026, when he said
+  "next"; merged into `main`).
 - **Next:** Milestone 8, Quick start, roll tables, lore pages, and the check categories with sliders.
 
 ## Milestones to first playable
