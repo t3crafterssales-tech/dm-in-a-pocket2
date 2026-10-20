@@ -28,6 +28,19 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 - Repo set up: hard rules (`CLAUDE.md`), full design (`docs/design.md`), data format
   (`docs/data-format.md`), this log, README.
 - Started milestone 1 on branch `milestone-1-engine`.
+- Milestone 1 engine written: `src/engine/` (types, ids, links, workspace, flags, file).
+  36 automatic tests pass, covering: links and Used by; systems, variants and worlds as layers;
+  changes staying in a world; changes flowing down every generation; the checklist (unticked
+  keeps the old value, branches protected, a grandchild ticked on its own); no variant loops;
+  inherited bricks; deleting a parent promotes its variants; brick originals with unticked
+  sheets; deleting Strength gives one grouped red flag for 214 links; fixing 214 is one undo
+  step; fixes from a world stay in that world; restore and reconnect (flagging what changed
+  since); undo of a delete; all-or-nothing steps; AI-labelled history; emptying the bin is
+  permanent; history age limit; save and reopen with undo history; a power cut mid-save keeps
+  the last good save; half-written saves ignored; newer files open read-only; damaged files
+  give a clear message.
+- Not yet in milestone 1: red flags for the user's own world rules ("no metal"); these come
+  with the flag panel in milestone 5.
 
 ## Decisions
 
@@ -48,6 +61,18 @@ One plain line each. Jeff can overrule any of these at a milestone.
   bulk change of 214 things is still one small step.
 - 2026-10-20: Saving writes to a new file next to the old one, then swaps it in. A crash or power
   cut mid-save leaves the old file whole.
+- 2026-10-20: When a world un-sets a field it had changed, the world stores "removed" for that
+  field, so it follows its system again.
+- 2026-10-20: Fixing a red flag from inside a world writes the fix into that world only; fixing it
+  from the system fixes it for every world.
+- 2026-10-20: Removing a broken link that is the brick of an attachment removes that attachment
+  (the attack has nothing left to be a copy of). Undo puts it back.
+- 2026-10-20 (Jeff may want to check): Emptying the recycle bin also clears undo history up to
+  the last step that touched an emptied item, so undo can't quietly bring it back. This keeps
+  "emptying the bin is the only truly permanent action" true.
+- 2026-10-20: Undo history is kept for 30 days or 5,000 steps, whichever is smaller.
+- 2026-10-20: Node's type definitions are borrowed from tools already on the build machine until
+  packages can be installed; `package.json` lists them for any normal machine.
 - 2026-10-20: The cloud session used for building cannot reach the npm package registry, so
   Electron (milestone 3) waits until a session can install packages. Milestones 1 and 2 need no
   installs.
