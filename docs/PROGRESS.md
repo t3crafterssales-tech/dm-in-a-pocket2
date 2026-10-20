@@ -53,6 +53,13 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 
 ## Log
 
+### 2026-10-20 (milestone 10: Table mode, Word export, full SRD 5.2)
+
+- Part 1, Word export: the Rulebook tab has Save as Word… beside Save as PDF. The file has the
+  cover, contents with page numbers, chapters (Word's own Heading styles, so the navigation pane
+  works), stat lines, pictures, "See Poisoned (page 42)", the index and the credits. Checked by
+  opening it in LibreOffice, which filled in every page number.
+
 ### 2026-10-20 (milestone 8: Quick start, lore, roll tables, check settings)
 
 - Check settings (World or System settings): Balance, Economy and Filing each switch on or off,
@@ -582,3 +589,7 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: Lore page headings are stored with the page; the page's one text box is still there
   for anything else, and there are no secret notes.
 - 2026-10-20: Rolling a table changes nothing, so it isn't an undo step and works in read-only worlds.
+- 2026-10-20: The Word file is written by the app itself (a .docx is a ZIP of XML), with no outside
+  library. Page numbers are Word fields that fill in when the file opens; Word may ask once to
+  update fields, and Yes fills them in. Pictures go in if they are PNG, JPEG or GIF (WebP is left
+  out of the Word file because older Word can't show it).
