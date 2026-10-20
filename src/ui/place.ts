@@ -11,6 +11,7 @@ import { ICONS } from "./icons.ts";
 import { flagPanel, showNodeBin } from "./flag-panel.ts";
 import { showHistory } from "./history-dialog.ts";
 import { lorePanels } from "./lore-tab.ts";
+import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
@@ -32,7 +33,7 @@ export interface PlaceCtx {
   refresh: () => Promise<void>;
 }
 
-export async function openPlace(place: Place, mode: "normal" | "read-only" | "take-over" = "normal", name?: string) {
+export async function openPlace(place: Place, mode: "normal" | "read-only" | "take-over" = "normal", name?: string, then?: "quickstart") {
   const res = await attempt(() => api.open(place, mode));
   if (!res) {
     await nav.home();
@@ -52,6 +53,7 @@ export async function openPlace(place: Place, mode: "normal" | "read-only" | "ta
   for (const t of TABS) selected[t] = null;
   await renderPlace();
   if (res.view.recovered) notice("Recovered after an unexpected close.", "blue", undefined, 0);
+  if (then === "quickstart") await showQuickStart(() => renderPlace());
 }
 
 export function leavePlace() {

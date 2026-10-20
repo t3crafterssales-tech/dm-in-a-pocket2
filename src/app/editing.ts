@@ -18,6 +18,8 @@ import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { createLore, loreList, rollTable } from "./lore.ts";
+import { buildQuickStart } from "./quickstart.ts";
+import type { QuickStartAnswers } from "./quickstart.ts";
 import type { LoreSection } from "./lore.ts";
 import { describeSlot, fixMissing, liveFlags, meantThat, missingDetail, panelView, readPanel, tidy } from "./flagpanel.ts";
 import type { FlagPanelView, MissingDetail, PanelState } from "./flagpanel.ts";
@@ -451,6 +453,13 @@ export class Editing {
     this.writable();
     this.ws.emptyBin(binIds ?? undefined);
     this.session.markChanged();
+  }
+
+  // ---------- Quick start ----------
+
+  /** Builds the answers to Quick start's six questions into this system, as one undo step. */
+  quickStart(answers: QuickStartAnswers): string[] {
+    return this.run(() => buildQuickStart(this.ws, this.layer, answers));
   }
 
   // ---------- Lore ----------

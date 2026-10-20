@@ -11,6 +11,7 @@ import { FieldMaker, asLink, isObj } from "./fields.ts";
 import type { Link, Value } from "./fields.ts";
 import { openEditSystem } from "./edit-system.ts";
 import { offerRestore } from "./flag-panel.ts";
+import { showQuickStart } from "./quickstart-dialog.ts";
 import type { PlaceCtx } from "./place.ts";
 
 const collapsed = new Set<string>();
@@ -160,6 +161,7 @@ function editorPanel(view: NodeView | null, choices: Choices, moveTo: { key: str
         h("h2", null, ctx.view.name),
         h("p", { class: "muted" }, "Pick a rule on the left to open it, or press + beside a section to add one."),
         h("p", { class: "muted small" }, "Nothing here is required: every rule starts with sensible defaults, and you can build in any order."),
+        !ctx.view.readOnly && ctx.view.type === "system" ? h("button", { class: "button plain", title: "Six big questions that set up the basics", onClick: () => void showQuickStart(() => ctx.refresh()) }, "Quick start…") : null,
       ),
     );
   const ro = view.readOnly;

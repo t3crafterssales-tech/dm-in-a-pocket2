@@ -21,6 +21,8 @@ import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
 import { ensureCategories } from "./sheets.ts";
 import { buildD20Starter } from "./starters/d20.ts";
+import { QUICK_QUESTIONS } from "./quickstart.ts";
+import type { QuickStartAnswers } from "./quickstart.ts";
 import { changeInSystem, upwardView } from "./upward.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
@@ -241,6 +243,8 @@ export const BACKEND_METHODS = [
   "addLore",
   "rollTable",
   "linkTargets",
+  "quickQuestions",
+  "quickStart",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -805,6 +809,12 @@ export class Backend {
   }
   linkTargets(): { id: Id; name: string; group: string }[] {
     return this.editing.linkTargets();
+  }
+  quickQuestions() {
+    return QUICK_QUESTIONS;
+  }
+  quickStart(answers: QuickStartAnswers): string[] {
+    return this.editing.quickStart(answers);
   }
 
   /** The app is closing normally. */

@@ -22,7 +22,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
   complete.** Jeff hasn't installed it yet; anything he finds gets fixed in the next milestone.
 - **Done:** Milestone 7, sharing and snapshots (approved by Jeff on October 20, 2026, when he said
   "next"; merged into `main`).
-- **Next:** Milestone 8, Quick start, roll tables, lore pages, and the check categories with sliders.
+- **Built, waiting for Jeff to test:** Milestone 8, Quick start, roll tables, lore pages, and the
+  check categories with sliders.
+- **Next:** Milestone 9, the AI (needs Jeff's own Claude API key; see the table below).
 
 ## Milestones to first playable
 
@@ -49,6 +51,28 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 | 10 | The full SRD 5.2, Table mode and Word export | Run a game from the app |
 
 ## Log
+
+### 2026-10-20 (milestone 8: Quick start, lore, roll tables, check settings)
+
+- Check settings (World or System settings): Balance, Economy and Filing each switch on or off,
+  with a Relaxed / Normal / Strict slider. Red flags can't be switched off. The flag panel can show
+  all flags, red only, or one kind. The home screen's counts follow each world's settings.
+- The Lore tab: lore pages, places and factions (places and factions start with headings from
+  their templates; headings can be renamed, added and removed), book pages (How to play, a
+  foreword) with which books they appear in and the chapter they come before, and roll tables
+  (dice such as d6, 2d6 or d100; rows with ranges, words and an optional link to anything; a Roll
+  button). Lore and roll tables print in the rulebook's "The world" chapter.
+- Quick start (`src/app/quickstart.ts`): after making a system from scratch, six questions, one
+  click each, skippable: how checks work, which abilities, how harm works, heroic or gritty, grid
+  or theatre of the mind, and magic. It builds ordinary rules in one undo step. It is also on the
+  Rules tab of a system while nothing is picked.
+- 177 automatic tests pass (9 new). Driven once in the real window here.
+
+### Milestone 8: what Jeff can test
+
+Make a new system From scratch and answer Quick start (try the underwater d100 game from the
+design: d100, four abilities, wound boxes, gritty, theatre of the mind, mana). Add a faction and
+a roll table in the Lore tab and press Roll. In System settings, switch a check off.
 
 ### 2026-10-20 (milestone 7: sharing and snapshots)
 
@@ -550,3 +574,10 @@ One plain line each. Jeff can overrule any of these at a milestone.
   as the design says (no right-click menus).
 - 2026-10-20: Clean up removes only the snapshots the app took itself ("Before restoring …"); the
   user's own snapshots are kept until deleted, as Part 2 says.
+- 2026-10-20: Check settings are kept with each world or system, with the flag panel's memory.
+- 2026-10-20 (Jeff may want to check): Quick start has six questions (check, abilities, harm, heroic
+  or gritty, grid or theatre, magic) and opens straight after New system From scratch; Generic d20
+  doesn't need it.
+- 2026-10-20: Lore page headings are stored with the page; the page's one text box is still there
+  for anything else, and there are no secret notes.
+- 2026-10-20: Rolling a table changes nothing, so it isn't an undo step and works in read-only worlds.
