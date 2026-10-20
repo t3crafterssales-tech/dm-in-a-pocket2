@@ -20,7 +20,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 6, the rulebook export (PDF) and the small d20 starter (approved by Jeff on
   October 20, 2026, when he asked for the next step; merged into `main`). **First playable is
   complete.** Jeff hasn't installed it yet; anything he finds gets fixed in the next milestone.
-- **Next:** Milestone 7, sharing and snapshots (see the table below).
+- **Done:** Milestone 7, sharing and snapshots (approved by Jeff on October 20, 2026, when he said
+  "next"; merged into `main`).
+- **Next:** Milestone 8, Quick start, roll tables, lore pages, and the check categories with sliders.
 
 ## Milestones to first playable
 
@@ -47,6 +49,30 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 | 10 | The full SRD 5.2, Table mode and Word export | Run a game from the app |
 
 ## Log
+
+### 2026-10-20 (milestone 7: sharing and snapshots)
+
+- Share (in World settings or System settings): saves one file to send. A world always carries
+  its system chain and its pictures; undo history and snapshots only if ticked; never settings.
+- Import (home screen top bar): never overwrites. A system identical to one on the shelf is shared;
+  one with the same id that differs arrives as its own copy, "d20 Basic (from Jeff)"; a world
+  already on the shelf arrives as "Greyhollow (copy)". Undo history only travels when nothing had
+  to be renamed. Damaged files and files from a newer app are refused with a plain message, and
+  nothing is half-imported.
+- Your name (Settings): optional, no account. It goes on every world, system and thing you make
+  and on the rulebook's Created by line. Imported things keep their maker's name and are marked
+  as from others, unless they carry your own name (a file from your laptop).
+- Lists in Beings and Items can show Everything, Homemade, From a starter or From others; sheets
+  say "By Jeff" for things from others and "From the starter" for starter content.
+- Snapshots (World settings): take one with a name, restore (a snapshot of now is taken first),
+  delete, how much space history uses, and Clean up for the snapshots the app took by itself.
+- 168 automatic tests pass (7 new). Driven in the real window here.
+
+### Milestone 7: what Jeff can test
+
+Put your name in Settings. In a world, take a snapshot, delete something, restore the snapshot.
+Share the world, then Import the file on the home screen (it arrives as a copy). Send a file to
+another computer if you have one.
 
 ### 2026-10-20 (milestone 6, step 2: the small d20 starter; first playable complete)
 
@@ -517,3 +543,10 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: The damage check counts natural attacks together but carried weapons one at a time.
 - 2026-10-20: Light melee weapons have their own category (Weapon → Melee → Light) in the starter,
   because their prices are only fair when compared with each other.
+- 2026-10-20 (Jeff may want to check): Imported worlds and systems go on the normal shelves for now,
+  marked as from others, rather than in the Imported folder, because the home screen layout for
+  "Other worlds" is still to be designed.
+- 2026-10-20: Share and Import are in World or System settings and the home screen's Import button,
+  as the design says (no right-click menus).
+- 2026-10-20: Clean up removes only the snapshots the app took itself ("Before restoring …"); the
+  user's own snapshots are kept until deleted, as Part 2 says.

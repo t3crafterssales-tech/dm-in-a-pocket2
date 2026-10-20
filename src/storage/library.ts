@@ -77,6 +77,16 @@ export interface OpenWorld {
   upgradedFrom: string | null;
 }
 
+export interface ImportResult {
+  type: "world" | "system";
+  id: Id;
+  name: string;
+  /** Systems that were already on the shelf, identical, so they are shared. */
+  sharedSystems: string[];
+  /** Systems added to the shelf (as copies if a different version was already there). */
+  newSystems: string[];
+}
+
 export interface BackupInfo {
   file: string;
   time: number;
@@ -456,6 +466,154 @@ export class Library {
     }
   }
 
+  // ---------- Sharing and importing ----------
+
+  /**
+   * Writes a copy of a world to send to someone: always the world, its whole system chain and its
+   * pictures; undo history and snapshots only if ticked. Settings are never in a world file.
+   */
+  exportWorld(worldId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean } = {}) {
+    const path = this.worldPath(worldId);
+    if (!existsSync(path)) throw new LibraryError("That world isn't in the Worlds folder.");
+    const { data } = readArchive(path, "world.json", this, false);
+    const world = data.layers.find((l) => l.id === data.main);
+    if (!world) throw new LibraryError("That world file is damaged.");
+    let chain = data.layers.filter((l) => l.type === "system");
+    try {
+      if (world.base) chain = this.loadSystemChain(world.base); // the shelf's systems are the newest
+    } catch {
+      // A system missing from the shelf: the copy inside the world file goes along instead.
+    }
+    const file: FileWithMeta = {
+      format: FORMAT_VERSION,
+      app: data.app,
+      main: worldId,
+      layers: [...chain, world].map((l) => structuredClone(l)),
+      bin: opts.history ? data.bin : [],
+      history: opts.history ? data.history : [],
+      redo: opts.history ? data.redo : [],
+      meta: { [worldId]: { picture: data.meta?.[worldId]?.picture ?? null, changed: data.meta?.[worldId]?.changed } },
+    };
+    const extra: { name: string; data: Buffer }[] = [];
+    if (opts.snapshots) {
+      const dir = this.snapshotDir(worldId);
+      if (existsSync(dir)) for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) extra.push({ name: `snapshots/${f}`, data: readFileSync(join(dir, f)) });
+    }
+    writeArchive(dest, "world.json", file, this, {}, extra);
+  }
+
+  /** Writes a copy of a system to send to someone (with its parent systems if it is a variant). */
+  exportSystem(systemId: Id, dest: string, opts: { history?: boolean } = {}) {
+    const chain = this.loadSystemChain(systemId);
+    const own = this.readSystemFile(systemId);
+    const file: FileWithMeta = {
+      format: FORMAT_VERSION,
+      app: own.app,
+      main: systemId,
+      layers: chain.map((l) => structuredClone(l)),
+      bin: opts.history ? own.bin : [],
+      history: opts.history ? own.history : [],
+      redo: opts.history ? own.redo : [],
+      meta: { [systemId]: { picture: own.meta?.[systemId]?.picture ?? null } },
+    };
+    writeArchive(dest, "system.json", file, this);
+  }
+
+  /**
+   * Brings in a world or system file someone sent. Importing never overwrites: a system identical
+   * to one on the shelf is shared, a different one arrives as its own copy ("d20 Basic (from Dave)"),
+   * and a world already on the shelf arrives as a copy. Imported things are marked as from others.
+   */
+  importFile(src: string, me: string | null = null): ImportResult {
+    let files: Map<string, Buffer>;
+    try {
+      files = readZip(readFileSync(src));
+    } catch {
+      throw new LibraryError("That file is damaged, or isn't a DM in a Pocket file.");
+    }
+    const json = files.get("world.json") ?? files.get("system.json");
+    if (!json) throw new LibraryError("That isn't a DM in a Pocket world or system file.");
+    const isWorld = files.has("world.json");
+    let data: FileWithMeta;
+    try {
+      data = JSON.parse(json.toString("utf8")) as FileWithMeta;
+    } catch {
+      throw new LibraryError("That file is damaged, or isn't a DM in a Pocket file.");
+    }
+    if (data.format > FORMAT_VERSION) throw new LibraryError("That file was made with a newer version of DM in a Pocket. Update the app to import it.");
+    if (data.format < FORMAT_VERSION) data = { ...upgrade(data), meta: data.meta };
+    const main = data.layers.find((l) => l.id === data.main);
+    if (!main) throw new LibraryError("That file is damaged.");
+    for (const [name, bytes] of files) if (name.startsWith("pictures/")) this.addPictureNamed(name.slice(9), bytes);
+
+    // Systems, bottom first: shared if identical to the shelf's, else installed (as a copy if the id is taken).
+    const ids = new Map<Id, Id>();
+    const result: ImportResult = { type: isWorld ? "world" : "system", id: "", name: "", sharedSystems: [], newSystems: [] };
+    const systems = orderChain(data.layers.filter((l) => l.type === "system"));
+    for (const s of systems) {
+      const layer: Layer = { ...structuredClone(s), base: s.base ? (ids.get(s.base) ?? s.base) : null };
+      if (layer.base && !existsSync(this.systemPath(layer.base))) throw new LibraryError(`That file needs the system it is built on, which isn't on this computer.`);
+      const onShelf = existsSync(this.systemPath(s.id)) ? this.readSystemFile(s.id).layers.find((l) => l.id === s.id) : null;
+      if (onShelf && JSON.stringify(onShelf) === JSON.stringify(layer)) {
+        ids.set(s.id, s.id);
+        result.sharedSystems.push(s.name);
+        continue;
+      }
+      if (onShelf) {
+        layer.id = newId();
+        layer.name = `${s.name} (from ${s.author ?? "someone else"})`;
+      }
+      markFromOthers(layer, me);
+      ids.set(s.id, layer.id);
+      const own = s.id === data.main && !isWorld;
+      const file: FileWithMeta = { format: FORMAT_VERSION, app: data.app, main: layer.id, layers: [layer], bin: own && !onShelf ? data.bin : [], history: own && !onShelf ? data.history : [], redo: own && !onShelf ? data.redo : [], meta: { [layer.id]: { picture: data.meta?.[s.id]?.picture ?? null, changed: this.now() } } };
+      writeArchive(this.systemPath(layer.id), "system.json", file, this);
+      result.newSystems.push(layer.name);
+      if (own) Object.assign(result, { id: layer.id, name: layer.name });
+    }
+    if (!isWorld) {
+      if (!result.id) Object.assign(result, { id: main.id, name: main.name });
+      return result;
+    }
+
+    // The world: a copy if it is already on the shelf. Undo history only travels if nothing moved.
+    const world: Layer = { ...structuredClone(main), base: main.base ? (ids.get(main.base) ?? main.base) : null };
+    const copied = existsSync(this.worldPath(world.id));
+    if (copied) {
+      world.id = newId();
+      world.name = `${main.name} (copy)`;
+    }
+    markFromOthers(world, me);
+    const keepHistory = !copied && [...ids].every(([a, b]) => a === b);
+    const chain = this.loadSystemChain(world.base!);
+    const file: FileWithMeta = {
+      format: FORMAT_VERSION,
+      app: data.app,
+      main: world.id,
+      layers: [...chain, world],
+      bin: keepHistory ? data.bin : [],
+      history: keepHistory ? data.history : [],
+      redo: keepHistory ? data.redo : [],
+      meta: { [world.id]: { picture: data.meta?.[main.id]?.picture ?? null, changed: this.now() } },
+    };
+    writeArchive(this.worldPath(world.id), "world.json", file, this);
+    if (keepHistory) {
+      for (const [name, bytes] of files) {
+        if (!name.startsWith("snapshots/") || !/^[A-Za-z0-9._-]+\.json$/.test(name.slice(10))) continue;
+        const target = join(this.snapshotDir(world.id), name.slice(10));
+        if (!existsSync(target)) atomicWrite(target, bytes);
+      }
+    }
+    Object.assign(result, { id: world.id, name: world.name });
+    return result;
+  }
+
+  /** Puts a picture from an imported file into the store under its own (content) name. */
+  private addPictureNamed(name: string, bytes: Buffer) {
+    const target = join(this.dir(".pictures"), safeName(name));
+    if (!existsSync(target)) atomicWrite(target, bytes);
+  }
+
   // ---------- Backups ----------
 
   backupDir(worldId: Id) {
@@ -603,8 +761,27 @@ function picturesIn(layers: Layer[], meta: Record<Id, LayerMeta> | undefined): S
   return out;
 }
 
-function writeArchive(path: string, jsonName: string, data: FileWithMeta, lib: Library, hooks: WriteHooks = {}) {
-  const entries: { name: string; data: Buffer }[] = [{ name: jsonName, data: Buffer.from(JSON.stringify(data), "utf8") }];
+/** Systems in a file, parents before the variants built on them. */
+function orderChain(systems: Layer[]): Layer[] {
+  const out: Layer[] = [];
+  const left = [...systems];
+  while (left.length) {
+    const i = left.findIndex((s) => !s.base || !left.some((x) => x.id === s.base));
+    out.push(...left.splice(i < 0 ? 0 : i, 1));
+  }
+  return out;
+}
+
+/**
+ * Homemade things in someone else's file arrive marked as from others, keeping their maker's name.
+ * Things with your own name on them (a file from your laptop) stay yours.
+ */
+function markFromOthers(layer: Layer, me: string | null) {
+  for (const n of Object.values(layer.nodes)) if (n.source === "mine" && (!me || n.author !== me)) n.source = "others";
+}
+
+function writeArchive(path: string, jsonName: string, data: FileWithMeta, lib: Library, hooks: WriteHooks = {}, extra: { name: string; data: Buffer }[] = []) {
+  const entries: { name: string; data: Buffer }[] = [{ name: jsonName, data: Buffer.from(JSON.stringify(data), "utf8") }, ...extra];
   for (const pic of picturesIn(data.layers, data.meta)) {
     const bytes = lib.readPicture(pic);
     if (bytes) entries.push({ name: `pictures/${pic}`, data: bytes });

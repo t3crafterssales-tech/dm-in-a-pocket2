@@ -499,3 +499,6 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .book-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .book-preview { display: flex; flex-direction: column; overflow: hidden; }
 .book-frame { flex: 1; width: 100%; border: none; background: #e8e2d8; border-radius: 0 0 var(--radius) var(--radius); }
+.others-chip { background: #dfeee0; color: #2c5e33; }
+.source-select { width: 100%; }
+.dialog-body > .check { display: flex; margin: 4px 0; }

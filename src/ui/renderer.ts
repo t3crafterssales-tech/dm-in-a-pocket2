@@ -40,7 +40,7 @@ function renderHome(home: HomeData, highlight?: string) {
     h(
       "nav",
       { class: "top-actions" },
-      iconButton(ICONS.import, "Import", () => {}, { disabled: true, title: "Import (open a world or system file) is coming with sharing, after first playable" }),
+      iconButton(ICONS.import, "Import", () => void importFile(), { title: "Import a world or system file someone sent you" }),
       iconButton(ICONS.bin, "Recycle bin", () => void showRecycleBin(), { badge: home.binCount }),
       iconButton(ICONS.gear, "Settings", () => void showSettings()),
     ),
@@ -422,6 +422,18 @@ async function showRecycleBin() {
   await draw();
 }
 
+// ---------- Import ----------
+
+/** Importing never overwrites: the result says what arrived and what was shared. */
+async function importFile() {
+  const r = await attempt(() => api.importFile());
+  if (!r) return;
+  const what = r.type === "world" ? "Worlds" : "Systems";
+  const notes = [r.newSystems.length && r.type === "world" ? `Its system came along: ${r.newSystems.join(", ")}.` : "", r.sharedSystems.length ? `It uses your ${r.sharedSystems.join(", ")}, which is identical.` : ""].filter(Boolean).join(" ");
+  notice(`${r.name} is on the ${what} shelf. ${notes}`.trim(), "green", undefined, 10000);
+  await showHome(r.id);
+}
+
 // ---------- Settings ----------
 
 async function showSettings() {
@@ -461,6 +473,15 @@ async function showSettings() {
             ),
       ),
       h("p", { class: "muted small" }, "Changing the folder doesn't move anything; the home screen shows whatever is in the folder you pick."),
+      h("h3", null, "Your name"),
+      h("p", { class: "muted" }, "Optional, and no account is needed. It goes on every world, system and thing you make, and on the rulebook's Created by line. Things others made keep their maker's name."),
+      (() => {
+        const input = h("input", { class: "text-input", value: s.author ?? "", placeholder: "For example: Jeff", maxlength: 120, "aria-label": "Your name" });
+        input.addEventListener("change", async () => {
+          if (await attempt(() => api.setAuthor(input.value))) notice(input.value.trim() ? `Things you make now say they were made by ${input.value.trim()}.` : "Your name was cleared.", "green", undefined, 4000);
+        });
+        return input;
+      })(),
       h("h3", null, "AI"),
       h("p", { class: "muted" }, "Your Claude API key, the cost warning and live checking will be set here once the AI is added. Everything works by hand without it."),
     );
