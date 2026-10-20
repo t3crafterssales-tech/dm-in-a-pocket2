@@ -149,6 +149,8 @@ export function chapterOf(ws: Workspace, layerId: Id, n: NodeRecord): ChapterId 
       return "items";
     case "lore":
       return f[F.bookPage] === true ? null : "lore";
+    case "table":
+      return "lore";
     case "being":
       return ({ race: "races", class: "classes", monster: "monsters", npc: "npcs", character: null } as Record<string, ChapterId | null>)[String(f[F.beingKind])] ?? null;
     default:
@@ -270,6 +272,18 @@ function describeFields(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<str
       const sections = f.sections;
       if (!sections || typeof sections !== "object" || Array.isArray(sections) || isLink(sections)) return [];
       return Object.entries(sections as Record<string, Value>).filter(([, v]) => typeof v === "string" && v).map(([k, v]) => `${k}. ${v}`);
+    }
+    case "table": {
+      // "d6: 1-2 Goblins; 3-5 Wolves; 6 An ogre"
+      const rows = Array.isArray(f.rows) ? f.rows : [];
+      const lines = rows.flatMap((r) => {
+        if (!r || typeof r !== "object" || Array.isArray(r) || isLink(r)) return [];
+        const x = r as Record<string, Value>;
+        const range = x.from === x.to || x.to === undefined ? String(x.from ?? "?") : `${x.from}-${x.to}`;
+        const what = [typeof x.text === "string" ? x.text : "", isLink(x.result) ? name(x.result) : ""].filter(Boolean).join(": ");
+        return [`${range}. ${what}`];
+      });
+      return lines.length ? [`Roll ${typeof f.die === "string" ? f.die : "a die"}.`, ...lines] : [];
     }
     default: {
       const origin = f.origin;

@@ -3,8 +3,9 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { basename, extname } from "node:path";
-import { DEFAULT_CHECKS, newId, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Activation, Id, NodeKind, Slot, Uses, Value } from "../engine/index.ts";
+import { newId } from "../engine/index.ts";
+import { panelView, readPanel } from "./flagpanel.ts";
+import type { Activation, CheckCategory, CheckSettings, Id, NodeKind, Sensitivity, Slot, Uses, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import { SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
 import type { ImportResult, RecycledInfo, Timers } from "../storage/index.ts";
@@ -14,6 +15,7 @@ import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
+import type { LoreSection } from "./lore.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
@@ -34,6 +36,7 @@ export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./
 export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 export type { FlagBlock, FlagPanelView, MissingDetail, BrokenSlot } from "./flagpanel.ts";
 export type { UpwardRow, UpwardView, UpwardWorld } from "./upward.ts";
+export type { LoreKind, LoreSection, TableRow } from "./lore.ts";
 
 export interface SystemCard {
   id: Id;
@@ -232,6 +235,12 @@ export const BACKEND_METHODS = [
   "restoreSnapshot",
   "deleteSnapshot",
   "cleanUpSnapshots",
+  "checkSettings",
+  "setCheck",
+  "loreList",
+  "addLore",
+  "rollTable",
+  "linkTargets",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -294,7 +303,10 @@ export class Backend {
   private flagCounts(worldId: Id): { red: number; yellow: number } {
     try {
       const ws = this.lib.peekWorld(worldId);
-      return { red: redFlags(ws, worldId).length + worldRuleFlags(ws, worldId).length, yellow: yellowFlags(ws, worldId, DEFAULT_CHECKS).length };
+      // The world's own check settings (World settings), and its ignored flags, count here too.
+      const panel = readPanel(this.lib.readMeta("world", worldId).flagPanel);
+      const v = panelView(ws, worldId, panel, this.now());
+      return { red: v.counts.red, yellow: v.counts.yellow };
     } catch {
       return { red: 0, yellow: 0 };
     }
@@ -772,6 +784,27 @@ export class Backend {
       types: Object.entries(BOOK_TITLES).map(([id, title]) => ({ id, title, chapters: BOOK_CHAPTERS[id as keyof typeof BOOK_CHAPTERS] })),
       chapters: Object.entries(CHAPTER_TITLES).map(([id, title]) => ({ id, title })),
     };
+  }
+
+  checkSettings(): CheckSettings {
+    return this.editing.checkSettings();
+  }
+  setCheck(category: CheckCategory, change: { on?: boolean; level?: Sensitivity }): true {
+    this.editing.setCheck(category, change);
+    return true;
+  }
+
+  loreList(): LoreSection[] {
+    return this.editing.loreList();
+  }
+  addLore(name: string, template: string): Id {
+    return this.editing.addLore(name, template);
+  }
+  rollTable(id: Id): { roll: number; text: string; result: { id: Id; name: string } | null } {
+    return this.editing.rollTable(id);
+  }
+  linkTargets(): { id: Id; name: string; group: string }[] {
+    return this.editing.linkTargets();
   }
 
   /** The app is closing normally. */

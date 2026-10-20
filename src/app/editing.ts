@@ -3,7 +3,7 @@
 // things only through these.
 
 import { BOOK_CHAPTERS, CHAPTER_TITLES, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Book, BookType, ChapterId } from "../engine/index.ts";
+import type { Book, BookType, ChapterId, CheckCategory, CheckSettings, Sensitivity } from "../engine/index.ts";
 
 const BOOK_TYPES = Object.keys(BOOK_CHAPTERS) as BookType[];
 import type { Activation, Id, NodeKind, Uses, Value, Workspace } from "../engine/index.ts";
@@ -17,6 +17,8 @@ import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, li
 import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
+import { createLore, loreList, rollTable } from "./lore.ts";
+import type { LoreSection } from "./lore.ts";
 import { describeSlot, fixMissing, liveFlags, meantThat, missingDetail, panelView, readPanel, tidy } from "./flagpanel.ts";
 import type { FlagPanelView, MissingDetail, PanelState } from "./flagpanel.ts";
 import { newId } from "../engine/index.ts";
@@ -451,6 +453,55 @@ export class Editing {
     this.session.markChanged();
   }
 
+  // ---------- Lore ----------
+
+  loreList(): LoreSection[] {
+    return loreList(this.ws, this.layer);
+  }
+
+  addLore(name: string, template: string): Id {
+    const n = cleanName(name);
+    return this.run(() => createLore(this.ws, this.layer, n, template));
+  }
+
+  /** Things a link can point at (roll table results), grouped by kind. Not categories or library bricks. */
+  linkTargets(): { id: Id; name: string; group: string }[] {
+    const group: Partial<Record<NodeKind, string>> = { being: "Beings", item: "Items", lore: "Lore", table: "Roll tables", rule: "Rules", condition: "Conditions", ability: "Abilities", resource: "Resources", skill: "Skills" };
+    return this.ws
+      .list(this.layer)
+      .filter((n) => group[n.kind] && !n.template)
+      .map((n) => ({ id: n.id, name: n.name, group: group[n.kind]! }))
+      .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
+  }
+
+  /** Rolls a roll table. Nothing changes, so it isn't an undo step (and works read-only too). */
+  rollTable(id: Id): { roll: number; text: string; result: { id: Id; name: string } | null } {
+    try {
+      const r = rollTable(this.ws, this.layer, id);
+      const target = r.row?.result ? this.ws.get(this.layer, r.row.result.link) : null;
+      return { roll: r.roll, text: r.row?.text ?? "", result: target ? { id: target.id, name: target.name } : null };
+    } catch (e) {
+      throw new LibraryError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** World settings: which yellow checks run and how sensitive they are. Red flags can't be switched off. */
+  checkSettings(): CheckSettings {
+    return this.panel.checks;
+  }
+
+  setCheck(category: CheckCategory, change: { on?: boolean; level?: Sensitivity }) {
+    this.writable();
+    const p = this.panel;
+    if (!(category in p.checks)) throw new LibraryError("That isn't a kind of check.");
+    if (change.on !== undefined) p.checks[category].on = !!change.on;
+    if (change.level !== undefined) {
+      if (!["relaxed", "normal", "strict"].includes(change.level)) throw new LibraryError("Choose Relaxed, Normal or Strict.");
+      p.checks[category].level = change.level;
+    }
+    this.setPanel(p);
+  }
+
   /** Clears the blue and green blocks (the red and yellow ones clear only when fixed). */
   clearLog() {
     const p = this.panel;
@@ -541,7 +592,7 @@ export class Editing {
       ...redFlags(ws, this.layer).map((f) => ({ color: "red" as const, title: f.title, detail: f.inBin ? "It's in the recycle bin and can be restored." : "", nodes: [...new Set(f.slots.map((s) => s.node))] })),
       ...worldRuleFlags(ws, this.layer).map((f) => ({ color: "red" as const, title: f.title, detail: "", nodes: f.offenders })),
     ];
-    const yellow: FlagView[] = yellowFlags(ws, this.layer, DEFAULT_CHECKS).map((f) => ({ color: "yellow" as const, title: f.title, detail: f.detail, nodes: f.nodes }));
+    const yellow: FlagView[] = yellowFlags(ws, this.layer, this.panel.checks ?? DEFAULT_CHECKS).map((f) => ({ color: "yellow" as const, title: f.title, detail: f.detail, nodes: f.nodes }));
     return [...red, ...yellow];
   }
 
