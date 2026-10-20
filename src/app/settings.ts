@@ -20,10 +20,12 @@ export interface Settings {
    * close the app normally, so finding it at start-up means the app was closed unexpectedly.
    */
   place: Place | null;
+  /** Optional maker's name, stored on every world, system and thing the user creates. No account. */
+  author: string | null;
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null };
+  return { mainFolder: null, opened: {}, place: null, author: null };
 }
 
 export class SettingsFile {
@@ -44,6 +46,7 @@ export class SettingsFile {
         mainFolder: typeof raw.mainFolder === "string" ? raw.mainFolder : d.mainFolder,
         opened: raw.opened && typeof raw.opened === "object" ? raw.opened : d.opened,
         place: raw.place && (raw.place.type === "world" || raw.place.type === "system") && typeof raw.place.id === "string" ? raw.place : null,
+        author: typeof raw.author === "string" && raw.author.trim() ? raw.author.trim().slice(0, 120) : null,
       };
     } catch {
       return defaultSettings();

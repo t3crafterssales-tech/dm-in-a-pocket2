@@ -12,7 +12,7 @@ import { createRuleNode, createSection, ensureSections, ruleSummary, rulesTab, s
 import type { RulesSection, SectionKey } from "./rules.ts";
 import type { Session } from "./session.ts";
 import { beingsList, categoryTree, copyNode, createBeing, createCategory, createItem, detach, itemsList, scoreKey, scoresOf, scoreValue, setTemplate, sheetFor, templatesList } from "./sheets.ts";
-import type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
+import type { BeingKind, CategoryOption, ListEntry, SheetDef, SourceFilter, TemplateEntry } from "./sheets.ts";
 import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, librarySections } from "./library.ts";
 import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
@@ -54,6 +54,9 @@ export interface NodeView {
   favourite: boolean;
   /** A template parent: not a real thing, just the shared parts its children inherit. */
   template: boolean;
+  /** "mine" (homemade), "template" (from a starter) or "others" (imported), and its maker's name. */
+  source: "mine" | "template" | "others";
+  author: string | null;
   categoryId: Id | null;
   /** The node this is a variant of. */
   parent: { id: Id; name: string } | null;
@@ -504,6 +507,8 @@ export class Editing {
       picture: n.picture,
       favourite: n.favourite,
       template: n.template,
+      source: n.source,
+      author: n.author,
       categoryId: n.category?.link ?? null,
       parent: parent ? { id: parent.id, name: parent.name } : null,
       parentMissing: r.parentMissing,
@@ -608,8 +613,8 @@ export class Editing {
 
   // ---------- Beings and items ----------
 
-  beingsList(kind: BeingKind, sort: "name" | "challenge" = "name"): ListEntry[] {
-    return beingsList(this.ws, this.layer, kind, sort === "challenge" ? "challenge" : "name");
+  beingsList(kind: BeingKind, sort: "name" | "challenge" = "name", source: SourceFilter = "all"): ListEntry[] {
+    return beingsList(this.ws, this.layer, kind, sort === "challenge" ? "challenge" : "name", source);
   }
 
   templates(): TemplateEntry[] {
@@ -625,8 +630,8 @@ export class Editing {
     this.run(() => setTemplate(this.ws, this.layer, id, !!on));
   }
 
-  itemsList(): ListEntry[] {
-    return itemsList(this.ws, this.layer);
+  itemsList(source: SourceFilter = "all"): ListEntry[] {
+    return itemsList(this.ws, this.layer, source);
   }
 
   categories(): CategoryOption[] {

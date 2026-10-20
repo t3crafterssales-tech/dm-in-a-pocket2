@@ -24,7 +24,7 @@ export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
 ];
 
 let beingTab: BeingKind = "monster";
-const filters: Record<string, { text: string; favourites: boolean }> = {};
+const filters: Record<string, { text: string; favourites: boolean; source: "all" | "mine" | "template" | "others" }> = {};
 /** The left panel shows the tab's list or the library. */
 const leftMode: Record<string, "list" | "library"> = {};
 /** Sheets selected in each list with Ctrl-click and Shift-click; dropping adds to all of them. */
@@ -37,7 +37,10 @@ const listKey = (which: "beings" | "items") => (which === "beings" ? `beings-${b
 
 export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Promise<{ list: HTMLElement; editor: HTMLElement }> {
   const [entries, categories, choices] = await Promise.all([
-    attempt(() => (which === "beings" ? api.beingsList(beingTab, beingTab === "monster" || beingTab === "npc" ? sortBy : "name") : api.itemsList())),
+    attempt(() => {
+      const source = filters[listKey(which)]?.source ?? "all";
+      return which === "beings" ? api.beingsList(beingTab, beingTab === "monster" || beingTab === "npc" ? sortBy : "name", source) : api.itemsList(source);
+    }),
     attempt(() => api.categories()),
     attempt(() => api.choices()),
   ]);
@@ -79,10 +82,10 @@ export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Pro
 function listPanel(which: "beings" | "items", all: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx, library: HTMLElement | null) {
   const key = listKey(which);
   const sel = listSelection.get(key)!;
-  const f = (filters[key] ??= { text: "", favourites: false });
+  const f = (filters[key] ??= { text: "", favourites: false, source: "all" });
   const noun = which === "beings" ? BEING_TABS.find((t) => t.id === beingTab)!.label.toLowerCase() : "item";
   const match = (e: ListEntry) => (!f.text || e.name.toLowerCase().includes(f.text.toLowerCase())) && (!f.favourites || e.favourite);
-  const filtering = !!f.text || f.favourites;
+  const filtering = !!f.text || f.favourites || f.source !== "all";
   // While filtering, a match is shown even if its parent isn't.
   const entries = filtering ? all.filter(match).map((e) => ({ ...e, depth: 0 })) : all;
 
@@ -208,6 +211,20 @@ function listPanel(which: "beings" | "items", all: ListEntry[], categories: Cate
         )
       : null,
     h("div", { class: "filter-row" }, filterBox, sortSelect, star),
+    (() => {
+      const src = h(
+        "select",
+        { class: "text-input select small-select source-select", "aria-label": "Show", title: "Homemade, from a starter, or from other people" },
+        [
+          ["all", "Everything"],
+          ["mine", "Homemade"],
+          ["template", "From a starter"],
+          ["others", "From others"],
+        ].map(([v, l]) => h("option", { value: v, selected: f.source === v }, l)),
+      );
+      src.addEventListener("change", () => ((f.source = src.value as typeof f.source), void ctx.refresh()));
+      return h("div", { class: "filter-row" }, src);
+    })(),
     body,
   );
 }
@@ -376,6 +393,8 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
         "div",
         { class: "chips" },
         h("span", { class: "chip" }, kindLabel),
+        view.source === "others" ? h("span", { class: "chip others-chip", title: "Made by someone else and imported" }, view.author ? `By ${view.author}` : "From others") : null,
+        view.source === "template" ? h("span", { class: "chip muted", title: "Came with the starter this system began from" }, "From the starter") : null,
         view.template ? h("span", { class: "chip template-chip", title: "A parent that holds shared parts. It stays out of the lists and the rulebook, and lives in the library's Templates group." }, "Template") : null,
         h("label", { class: "chip-select" }, "Filed under ", categorySelect),
         ro

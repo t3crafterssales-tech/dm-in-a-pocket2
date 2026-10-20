@@ -144,7 +144,11 @@ export interface ListEntry {
   favourite: boolean;
   /** Challenge as a number, for sorting monsters ("1/4" is 0.25). */
   cr: number | null;
+  /** "mine" (homemade), "template" (from a starter) or "others" (imported). */
+  source: "mine" | "template" | "others";
 }
+
+export type SourceFilter = "all" | "mine" | "template" | "others";
 
 /** Things of one kind, with variants indented under their parents (any depth). */
 /** Templates stay out of the lists (they live in the library's Templates group). */
@@ -154,13 +158,14 @@ export function sheetList(
   filter: (n: NodeRecord, fields: Record<string, Value>) => boolean,
   note: (fields: Record<string, Value>) => string | null,
   sort: "name" | "challenge" = "name",
+  source: SourceFilter = "all",
 ): ListEntry[] {
   const below = ws.layer(layerId).base;
   const tree = categoryTree(ws, layerId);
   const nodes = ws
     .list(layerId)
     .map((n) => ({ n, f: ws.resolve(layerId, n.id)!.fields }))
-    .filter(({ n, f }) => !n.template && filter(n, f));
+    .filter(({ n, f }) => !n.template && filter(n, f) && (source === "all" || n.source === source));
   const ids = new Set(nodes.map((x) => x.n.id));
   // By challenge: lowest first, things with no challenge last; then by name.
   const cmp = (a: { n: NodeRecord; f: Record<string, Value> }, b: { n: NodeRecord; f: Record<string, Value> }) => {
@@ -177,7 +182,7 @@ export function sheetList(
     for (const { n, f } of kids) {
       if (seen.has(n.id)) continue;
       seen.add(n.id);
-      out.push({ id: n.id, name: n.name, parent, depth, note: note(f), categoryPath: tree.find((c) => c.id === n.category?.link)?.path ?? null, fromBelow: !!below && ws.owner(layerId, n.id) !== layerId, favourite: n.favourite, cr: challenge(f[F.cr]) });
+      out.push({ id: n.id, name: n.name, parent, depth, note: note(f), categoryPath: tree.find((c) => c.id === n.category?.link)?.path ?? null, fromBelow: !!below && ws.owner(layerId, n.id) !== layerId, favourite: n.favourite, cr: challenge(f[F.cr]), source: n.source });
       add(n.id, depth + 1, seen);
     }
   };
@@ -185,18 +190,19 @@ export function sheetList(
   return out;
 }
 
-export function beingsList(ws: Workspace, layerId: Id, kind: BeingKind, sort: "name" | "challenge" = "name"): ListEntry[] {
+export function beingsList(ws: Workspace, layerId: Id, kind: BeingKind, sort: "name" | "challenge" = "name", source: SourceFilter = "all"): ListEntry[] {
   return sheetList(
     ws,
     layerId,
     (n, f) => n.kind === "being" && (f[F.beingKind] ?? "monster") === kind,
     (f) => (kind === "monster" || kind === "npc" ? (f[F.cr] !== undefined && f[F.cr] !== "" ? `CR ${String(f[F.cr])}` : null) : kind === "character" && typeof f.level === "number" ? `Level ${f.level}` : null),
     sort,
+    source,
   );
 }
 
-export function itemsList(ws: Workspace, layerId: Id): ListEntry[] {
-  return sheetList(ws, layerId, (n) => n.kind === "item", (f) => (typeof f[F.cost] === "string" && f[F.cost] ? (f[F.cost] as string) : null));
+export function itemsList(ws: Workspace, layerId: Id, source: SourceFilter = "all"): ListEntry[] {
+  return sheetList(ws, layerId, (n) => n.kind === "item", (f) => (typeof f[F.cost] === "string" && f[F.cost] ? (f[F.cost] as string) : null), "name", source);
 }
 
 export interface TemplateEntry {

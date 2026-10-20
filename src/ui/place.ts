@@ -211,51 +211,168 @@ async function goHome() {
 }
 
 async function placeSettings(view: PlaceView) {
-  const d = openDialog(view.type === "world" ? "World settings" : "System settings", { wide: true });
-  const backups = view.type === "world" ? ((await attempt(() => api.backups())) ?? []) : [];
-  d.body.append(
-    h("dl", { class: "facts" }, h("dt", null, "Name"), h("dd", null, view.name), ...(view.type === "world" ? [h("dt", null, "Game system"), h("dd", null, view.systemName ?? "")] : [])),
-    h("p", { class: "muted small" }, "Renaming, the card picture and copying a world arrive here in later milestones."),
-  );
-  if (view.type === "world") {
-    d.body.append(h("h3", null, "Backups"), h("p", { class: "muted" }, "Kept automatically: one a day for the last week and one a week for the last month. Restoring one first takes a snapshot of how the world is now, so a restore can be undone."));
-    if (!backups.length) d.body.append(h("p", { class: "muted small" }, "No backups yet. The first one is made the first time the world is opened each day."));
-    else
-      d.body.append(
+  const isWorld = view.type === "world";
+  const d = openDialog(isWorld ? "World settings" : "System settings", { wide: true, onClose: () => void renderPlace() });
+  const draw = async () => {
+    const parts: HTMLElement[] = [
+      h("dl", { class: "facts" }, h("dt", null, "Name"), h("dd", null, view.name), ...(isWorld ? [h("dt", null, "Game system"), h("dd", null, view.systemName ?? "")] : [])),
+      h("p", { class: "muted small" }, "Renaming and the card picture arrive here in a later milestone."),
+    ];
+
+    // Share: a copy to send. Always the world, its system and its pictures; never your settings.
+    const history = h("input", { type: "checkbox" });
+    const snaps = h("input", { type: "checkbox" });
+    parts.push(
+      h("h3", null, isWorld ? "Share this world" : "Share this system"),
+      h("p", { class: "muted" }, isWorld ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the world, its system and its pictures; never your settings." : "Saves one file with this system (and any system it is built on) to send to someone."),
+      h("label", { class: "check" }, history, "Include undo history"),
+      isWorld ? h("label", { class: "check" }, snaps, "Include snapshots") : h("span"),
+      h(
+        "div",
+        { class: "row" },
         h(
-          "ul",
-          { class: "bin-list" },
-          backups.map((b) =>
-            h(
-              "li",
-              null,
-              svg(ICONS.folder),
-              h("div", { class: "bin-text" }, h("div", { class: "bin-name" }, b.label), h("div", { class: "muted small" }, new Date(b.time).toLocaleDateString())),
-              h(
+          "button",
+          {
+            class: "button plain",
+            onClick: async () => {
+              const path = await attempt(() => api.share({ history: history.checked, snapshots: snaps.checked }));
+              if (path) notice(`Saved ${path.split(/[\\/]/).pop()}. Send it to anyone with DM in a Pocket; they use Import on their home screen.`, "green", undefined, 10000);
+            },
+          },
+          "Share…",
+        ),
+      ),
+    );
+
+    if (isWorld) {
+      // Snapshots: named save points, kept until deleted.
+      const snapshots = await attempt(() => api.snapshots());
+      const name = h("input", { class: "text-input", placeholder: "Name it, for example: before I removed Strength", maxlength: 200, disabled: view.readOnly });
+      const take = h("button", { class: "button plain", disabled: view.readOnly }, "Take snapshot");
+      const doTake = async () => {
+        if ((await attempt(() => api.takeSnapshot(name.value))) !== undefined) {
+          notice(`Snapshot "${name.value.trim()}" saved.`, "green", undefined, 4000);
+          await draw();
+        }
+      };
+      take.addEventListener("click", () => void doTake());
+      name.addEventListener("keydown", (e) => e.key === "Enter" && void doTake());
+      const kb = Math.max(1, Math.round((snapshots?.bytes ?? 0) / 1024));
+      parts.push(
+        h("h3", null, "Snapshots"),
+        h("p", { class: "muted" }, "Save points you name yourself. They hold the world and its system together and are kept until you delete them. Restoring one takes a snapshot of how things are now first, so a restore can be undone."),
+        h("div", { class: "inline" }, name, take),
+        snapshots?.list.length
+          ? h(
+              "ul",
+              { class: "bin-list" },
+              snapshots.list.map((x) =>
+                h(
+                  "li",
+                  null,
+                  svg(ICONS.clock),
+                  h("div", { class: "bin-text" }, h("div", { class: "bin-name" }, x.name), h("div", { class: "muted small" }, `${x.label}, ${new Date(x.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}${x.auto ? " · taken by the app" : ""}`)),
+                  h(
+                    "button",
+                    {
+                      class: "button plain",
+                      disabled: view.readOnly,
+                      onClick: async () => {
+                        const ok = await ask(`Restore "${x.name}"?`, ["The world and its system go back to how they were then. A snapshot of how they are now is taken first, so nothing is lost."], [
+                          { label: "Cancel", value: false },
+                          { label: "Restore", value: true, kind: "primary" },
+                        ]);
+                        if (ok && (await attempt(() => api.restoreSnapshot(x.id)))) {
+                          notice(`Restored "${x.name}". A snapshot of before was taken first.`, "green", undefined, 6000);
+                          await draw();
+                        }
+                      },
+                    },
+                    "Restore",
+                  ),
+                  h(
+                    "button",
+                    {
+                      class: "icon-button",
+                      title: "Delete this snapshot",
+                      "aria-label": `Delete snapshot ${x.name}`,
+                      onClick: async () => {
+                        const ok = await ask(`Delete the snapshot "${x.name}"?`, ["The world itself isn't changed. The snapshot can't be brought back."], [
+                          { label: "Cancel", value: false },
+                          { label: "Delete snapshot", value: true, kind: "danger" },
+                        ]);
+                        if (ok && (await attempt(() => api.deleteSnapshot(x.id)))) await draw();
+                      },
+                    },
+                    svg(ICONS.trash),
+                  ),
+                ),
+              ),
+            )
+          : h("p", { class: "muted small" }, "No snapshots yet."),
+        h(
+          "div",
+          { class: "inline" },
+          h("span", { class: "muted small" }, `History (backups and snapshots) uses about ${kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`}. Pictures are stored once and shared, never copied into each one.`),
+          snapshots?.list.some((x) => x.auto)
+            ? h(
                 "button",
                 {
-                  class: "button plain",
-                  disabled: view.readOnly,
+                  class: "link small",
+                  title: "Removes the snapshots the app took by itself before restores; yours are kept",
                   onClick: async () => {
-                    const ok = await ask(`Restore the backup from ${b.label.toLowerCase()}?`, ["The world goes back to how it was then. A snapshot of how it is now is taken first, so nothing is lost."], [
-                      { label: "Cancel", value: false },
-                      { label: "Restore", value: true, kind: "primary" },
-                    ]);
-                    if (!ok) return;
-                    if ((await attempt(() => api.restoreBackup(b.file))) !== undefined) {
-                      d.close();
-                      notice(`Restored the backup from ${b.label.toLowerCase()}. A snapshot of before was saved first.`, "green");
-                      await renderPlace();
-                    }
+                    const n = await attempt(() => api.cleanUpSnapshots());
+                    if (n !== undefined) notice(`Cleaned up ${n} snapshot${n === 1 ? "" : "s"} the app had taken.`, "green", undefined, 4000);
+                    await draw();
                   },
                 },
-                "Restore",
+                "Clean up",
+              )
+            : null,
+        ),
+      );
+
+      // Backups.
+      const backups = (await attempt(() => api.backups())) ?? [];
+      parts.push(h("h3", null, "Backups"), h("p", { class: "muted" }, "Kept automatically: one a day for the last week and one a week for the last month. Restoring one first takes a snapshot of how the world is now, so a restore can be undone."));
+      if (!backups.length) parts.push(h("p", { class: "muted small" }, "No backups yet. The first one is made the first time the world is opened each day."));
+      else
+        parts.push(
+          h(
+            "ul",
+            { class: "bin-list" },
+            backups.map((b) =>
+              h(
+                "li",
+                null,
+                svg(ICONS.folder),
+                h("div", { class: "bin-text" }, h("div", { class: "bin-name" }, b.label), h("div", { class: "muted small" }, new Date(b.time).toLocaleDateString())),
+                h(
+                  "button",
+                  {
+                    class: "button plain",
+                    disabled: view.readOnly,
+                    onClick: async () => {
+                      const ok = await ask(`Restore the backup from ${b.label.toLowerCase()}?`, ["The world goes back to how it was then. A snapshot of how it is now is taken first, so nothing is lost."], [
+                        { label: "Cancel", value: false },
+                        { label: "Restore", value: true, kind: "primary" },
+                      ]);
+                      if (!ok) return;
+                      if ((await attempt(() => api.restoreBackup(b.file))) !== undefined) {
+                        notice(`Restored the backup from ${b.label.toLowerCase()}. A snapshot of before was saved first.`, "green");
+                        await draw();
+                      }
+                    },
+                  },
+                  "Restore",
+                ),
               ),
             ),
           ),
-        ),
-      );
-  }
+        );
+    }
+    d.body.replaceChildren(...parts);
+  };
+  await draw();
   d.footer.append(h("span", { class: "spacer" }), h("button", { class: "button primary", onClick: () => d.close() }, "Done"));
 }
-

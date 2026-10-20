@@ -6,12 +6,13 @@ import { basename, extname } from "node:path";
 import { DEFAULT_CHECKS, newId, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
 import type { Activation, Id, NodeKind, Slot, Uses, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
-import type { RecycledInfo, Timers } from "../storage/index.ts";
+import { SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
+import type { ImportResult, RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
 import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
 import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
-import type { BeingKind, CategoryOption, ListEntry, TemplateEntry } from "./sheets.ts";
+import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
@@ -25,10 +26,10 @@ import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
-export type { RecycledInfo } from "../storage/index.ts";
+export type { ImportResult, RecycledInfo } from "../storage/index.ts";
 export type { BinView, BookData, BookRequest, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
-export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
+export type { BeingKind, CategoryOption, ListEntry, SheetDef, SourceFilter, TemplateEntry } from "./sheets.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
 export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 export type { FlagBlock, FlagPanelView, MissingDetail, BrokenSlot } from "./flagpanel.ts";
@@ -99,6 +100,7 @@ export interface SettingsView {
   folder: string;
   defaultFolder: string;
   isDefault: boolean;
+  author: string | null;
 }
 
 /** Events sent to the window. */
@@ -112,10 +114,26 @@ export interface BackendOptions {
   pickPicture: () => Promise<string | null>;
   /** Show the folder chooser; resolves to a folder path or null. */
   pickFolder: () => Promise<string | null>;
+  /** Show a Save dialog for a file to share; resolves to a path or null. */
+  pickSave?: (defaultName: string, kind: "world" | "system") => Promise<string | null>;
+  /** Show an Open dialog for a world or system file to import; resolves to a path or null. */
+  pickImport?: () => Promise<string | null>;
   emit: (event: BackendEvent) => void;
   now?: () => number;
   timers?: Timers;
 }
+
+export interface SnapshotView {
+  id: Id;
+  name: string;
+  time: number;
+  bytes: number;
+  label: string;
+  /** Taken by the app itself before a restore (Clean up removes these). */
+  auto: boolean;
+}
+
+const AUTO_SNAPSHOT = /^Before restoring/;
 
 export const PICTURE_TYPES = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
 const MAX_PICTURE_BYTES = 25 * 1024 * 1024;
@@ -206,6 +224,14 @@ export const BACKEND_METHODS = [
   "changeInSystem",
   "book",
   "bookChoices",
+  "setAuthor",
+  "importFile",
+  "share",
+  "snapshots",
+  "takeSnapshot",
+  "restoreSnapshot",
+  "deleteSnapshot",
+  "cleanUpSnapshots",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -288,7 +314,7 @@ export class Backend {
     const start = STARTING_POINTS.find((s) => s.id === input.start);
     if (!start) throw new LibraryError("Choose a starting point.");
     if (!start.ready) throw new LibraryError(`${start.label} isn't ready yet. Choose From scratch for now.`);
-    const id = this.lib.createSystem(name);
+    const id = this.lib.createSystem(name, null, this.settingsFile.data.author);
     // From scratch starts with the small set of categories from the design. It is the starting
     // point, not a change, so it isn't an undo step.
     const { ws } = this.lib.openSystem(id);
@@ -304,7 +330,7 @@ export class Backend {
   createWorld(input: { name: string; picture: Id | null; systemId: Id }): Id {
     const name = cleanName(input.name);
     if (!input.systemId) throw new LibraryError("Choose a game system.");
-    const id = this.lib.createWorld(name, input.systemId);
+    const id = this.lib.createWorld(name, input.systemId, this.settingsFile.data.author);
     if (input.picture) this.lib.setPicture("world", id, input.picture);
     this.markOpened(id);
     return id;
@@ -345,7 +371,84 @@ export class Backend {
   // ---------- Settings ----------
 
   settings(): SettingsView {
-    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null };
+    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author };
+  }
+
+  /** The optional author name ("Created by"); empty clears it. */
+  setAuthor(name: string | null): SettingsView {
+    const n = String(name ?? "").trim().slice(0, 120);
+    this.settingsFile.update((s) => (s.author = n || null));
+    return this.settings();
+  }
+
+  // ---------- Sharing ----------
+
+  /** Import (top bar): a world or system file someone sent. Never overwrites anything. */
+  async importFile(path?: string): Promise<ImportResult | null> {
+    if (this.session) throw new LibraryError("Go back to the home screen first.");
+    const file = path ?? (this.opts.pickImport ? await this.opts.pickImport() : null);
+    if (!file) return null;
+    const r = this.lib.importFile(file, this.settingsFile.data.author);
+    this.markOpened(r.id);
+    return r;
+  }
+
+  /** Share (World or System settings): saves a copy to send. Saves any waiting changes first. */
+  async share(opts: { history?: boolean; snapshots?: boolean } = {}, dest?: string): Promise<string | null> {
+    const s = this.session;
+    if (!s) throw new LibraryError("Open the world or system to share first.");
+    s.saveNow();
+    const name = `${s.name.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Shared"}${s.type === "world" ? WORLD_EXT : SYSTEM_EXT}`;
+    const path = dest ?? (this.opts.pickSave ? await this.opts.pickSave(name, s.type) : null);
+    if (!path) return null;
+    if (s.type === "world") this.lib.exportWorld(s.id, path, opts);
+    else this.lib.exportSystem(s.id, path, opts);
+    return path;
+  }
+
+  // ---------- Snapshots (World settings) ----------
+
+  snapshots(): { list: SnapshotView[]; bytes: number } {
+    const s = this.worldSession();
+    const now = this.now();
+    return { list: this.lib.listSnapshots(s.id).map((x) => ({ ...x, label: whenLabel(x.time, now), auto: AUTO_SNAPSHOT.test(x.name) })), bytes: this.lib.historyBytes(s.id) };
+  }
+
+  takeSnapshot(name: string): Id {
+    const s = this.worldSession();
+    const n = String(name ?? "").trim();
+    if (!n) throw new LibraryError("Give the snapshot a name, such as \"before I removed Strength\".");
+    s.saveNow();
+    return this.lib.snapshot(s.world!, n.slice(0, 200));
+  }
+
+  /** Restores a snapshot. A snapshot of how things are now is taken first, so it can be undone. */
+  restoreSnapshot(id: Id): true {
+    const s = this.worldSession();
+    if (s.readOnly) throw new LibraryError(s.readOnlyReason ?? "This world is read-only.");
+    s.saveNow();
+    this.lib.restoreSnapshot(s.world!, id);
+    this.opts.emit({ type: "saved" });
+    return true;
+  }
+
+  deleteSnapshot(id: Id): true {
+    this.lib.deleteSnapshot(this.worldSession().id, id);
+    return true;
+  }
+
+  /** Clean up: removes the snapshots the app took by itself before restores. Yours are kept. */
+  cleanUpSnapshots(): number {
+    const s = this.worldSession();
+    const auto = this.lib.listSnapshots(s.id).filter((x) => AUTO_SNAPSHOT.test(x.name));
+    for (const x of auto) this.lib.deleteSnapshot(s.id, x.id);
+    return auto.length;
+  }
+
+  private worldSession(): Session {
+    const s = this.session;
+    if (!s || s.type !== "world" || !s.world) throw new LibraryError("Snapshots belong to worlds. Open a world first.");
+    return s;
   }
 
   async chooseFolder(): Promise<SettingsView> {
@@ -492,8 +595,8 @@ export class Backend {
     return this.editing.redo();
   }
 
-  beingsList(kind: BeingKind, sort: "name" | "challenge" = "name"): ListEntry[] {
-    return this.editing.beingsList(kind, sort);
+  beingsList(kind: BeingKind, sort: "name" | "challenge" = "name", source: SourceFilter = "all"): ListEntry[] {
+    return this.editing.beingsList(kind, sort, source);
   }
   templates(): TemplateEntry[] {
     return this.editing.templates();
@@ -505,8 +608,8 @@ export class Backend {
     this.editing.setTemplate(id, on);
     return true;
   }
-  itemsList(): ListEntry[] {
-    return this.editing.itemsList();
+  itemsList(source: SourceFilter = "all"): ListEntry[] {
+    return this.editing.itemsList(source);
   }
   categories(): CategoryOption[] {
     return this.editing.categories();

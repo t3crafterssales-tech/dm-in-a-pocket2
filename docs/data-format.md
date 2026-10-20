@@ -89,7 +89,9 @@ The field names that checks, sentences and the rulebook rely on (`beingKind`, `h
 | `Backups/<worldId>/<YYYY-MM-DD>.json` | Automatic backups: the world JSON only, pictures are not copied. |
 | `Snapshots/<worldId>/<id>.json` | Named snapshots: name, time, and the world with its system chain. Pictures are not copied. |
 | `.pictures/<hash>.<ext>` | Every picture, once, named by its content. |
-| `Imported/` | Worlds and systems from other people. |
+| `Imported/` | Kept for worlds and systems from other people (not used yet: imported files go on the normal shelves for now, with their things marked as from others). |
+| A shared `.dmworld` file | The same as a world file, made by Share: the world, its whole system chain, its pictures, and only if ticked its undo history (`history`, `redo`, `bin`) and a `snapshots/` folder of its snapshots. Never settings. |
+| A shared `.dmsys` file | A system file with its parent systems in `layers`, so a variant can travel on its own. |
 | `Recycle bin/<entryId>/` | Worlds and systems deleted from the home screen: an `entry.json` (what was deleted, when, and everything that went in with it) beside the moved `.dmworld` and `.dmsys` files. Deleting a system takes the worlds that use it, and the systems built on it, into the same entry, so they are restored together. Emptying the bin removes the entry and those worlds' backups and snapshots. |
 
 Files and folders use permanent IDs as names, so renaming a world never moves a file.
