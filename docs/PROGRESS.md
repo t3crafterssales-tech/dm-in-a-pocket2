@@ -6,6 +6,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
 
 - **Done:** Milestone 1, the engine core (approved by Jeff, merged into `main`).
 - **Now:** Milestone 2, files and saving (branch `milestone-2-files`), waiting for Jeff's approval.
+- **Also done, waiting for approval:** engine parts of milestones 5 and 6 (branch
+  `engine-checks-and-book`): world-rule red flags, free yellow checks, plain-English sentences,
+  and the rulebook builder. Built early because they need no installs.
 - **Next:** Milestone 3, the desktop app shell. Needs a session that can install packages (Electron).
 
 ## Milestones to first playable
@@ -23,6 +26,18 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (checks and rulebook engine)
+
+- While waiting for package access, built the engine parts of milestones 5 and 6:
+  `src/engine/conventions.ts` (field names), `checks.ts` (world-rule red flags with "I meant
+  that" exceptions; yellow checks for balance, economy and filing, with relaxed, normal and
+  strict, each category switchable), `text.ts` (plain-English sentences, including nested
+  bricks, saving throws, several triggers joined by or/and, uses with formulas, choices and
+  upgrade tiers), `book.ts` (book types with their chapters, book pages placed between
+  chapters, variants printed as differences or in full, monsters by challenge, links listed per
+  entry for page references, index, and automatic credits including the SRD 5.2 line).
+- 72 automatic tests pass.
 
 ### 2026-10-20 (milestone 2)
 
@@ -110,6 +125,17 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: Backups are taken the first time a world is opened each day.
 - 2026-10-20: Undo refuses, with a plain message, if something the step changed was changed
   again elsewhere (for example the system edited from another world). It never overwrites.
+- 2026-10-20: Balance compares a monster with the middle value (median) of other monsters at the
+  same challenge, so one odd monster doesn't make the normal ones look odd. It stays quiet until
+  there are at least 3 others at that challenge.
+- 2026-10-20: Sensitivity: a monster is flagged at 2.5x normal (relaxed), 1.75x (normal) or 1.3x
+  (strict). A weaker weapon is flagged when it costs 2x (relaxed), 1.2x (normal) or 1x (strict)
+  more than a stronger one in the same category.
+- 2026-10-20: Duplicate names, empty sheets and oddly filed things are part of the Filing check
+  category.
+- 2026-10-20: World rules check the things in the world, not the library's original bricks.
+- 2026-10-20: The SRD 5.2 credit line used is the standard Creative Commons wording; check it
+  against the official SRD 5.2 document before the first public release.
 - 2026-10-20: The cloud session used for building cannot reach the npm package registry, so
   Electron (milestone 3) waits until a session can install packages. Milestones 1 and 2 need no
   installs.
