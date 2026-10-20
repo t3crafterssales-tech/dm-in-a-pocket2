@@ -156,3 +156,22 @@ test("world rules: 'No metal' flags the Iron Helm in red, and I meant that makes
   backend.undo();
   assert.equal(red(backend).length, 1, "undo takes the exception away again");
 });
+
+test("check categories: each can be switched off or made stricter in World settings, and red never switches off", () => {
+  const { backend, sys, make, goblin } = setup();
+  const boss = backend.addBeing({ name: "Goblin Boss", kind: "monster", variantOf: null });
+  const yellow = (b: Backend) => b.flagPanel().blocks.filter((x) => x.color === "yellow");
+  assert.ok(yellow(backend).some((f) => f.category === "filing"));
+  backend.setCheck("filing", { on: false });
+  assert.ok(!yellow(backend).some((f) => f.category === "filing"), "Filing switched off");
+  assert.equal(backend.checkSettings().filing.on, false);
+  assert.throws(() => backend.setCheck("filing", { level: "extreme" as never }), /Relaxed, Normal or Strict/);
+  backend.setCheck("balance", { level: "strict" });
+  backend.goHome();
+  const again = make();
+  again.open({ type: "system", id: sys });
+  assert.deepEqual(again.checkSettings().filing, { on: false, level: "normal" }, "kept with the system");
+  assert.equal(again.checkSettings().balance.level, "strict");
+  void goblin;
+  void boss;
+});

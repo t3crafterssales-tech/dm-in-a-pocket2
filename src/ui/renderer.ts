@@ -261,7 +261,9 @@ async function newSystem(home: HomeData) {
       if (!id) return false;
       d.close();
       notice(`${state.name.trim()} is on the Systems shelf.`, "green");
-      await showHome(id);
+      // A system from scratch is offered Quick start straight away (skippable).
+      if (state.start === "scratch") await openPlace({ type: "system", id }, "normal", state.name.trim(), "quickstart");
+      else await showHome(id);
       return true;
     },
   );

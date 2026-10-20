@@ -3,7 +3,7 @@
 // world every time, so they clear themselves; blue and green are a short log kept with the world.
 
 import { DEFAULT_CHECKS, HISTORY_MAX_AGE_MS, getAt, isLink, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Id, NodeKind, Slot, Workspace } from "../engine/index.ts";
+import type { CheckSettings, Id, NodeKind, Slot, Workspace } from "../engine/index.ts";
 
 export interface LogEntry {
   id: string;
@@ -24,7 +24,11 @@ export interface PanelState {
   /** Flags the user has looked at, so they no longer count as new. */
   seen: string[];
   log: LogEntry[];
+  /** Which yellow check categories run, and how sensitive each is (World settings). */
+  checks: CheckSettings;
 }
+
+const LEVELS = ["relaxed", "normal", "strict"];
 
 export function readPanel(raw: unknown): PanelState {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<PanelState>;
@@ -32,7 +36,15 @@ export function readPanel(raw: unknown): PanelState {
   const log = Array.isArray(r.log)
     ? r.log.filter((e): e is LogEntry => !!e && typeof e === "object" && (e.color === "blue" || e.color === "green") && typeof e.title === "string" && typeof e.time === "number")
     : [];
-  return { ignored: strings(r.ignored), ignoredKinds: strings(r.ignoredKinds), seen: strings(r.seen), log };
+  const checks = structuredClone(DEFAULT_CHECKS);
+  const raw2 = (r.checks && typeof r.checks === "object" ? r.checks : {}) as Record<string, { on?: unknown; level?: unknown }>;
+  for (const k of Object.keys(checks) as (keyof CheckSettings)[]) {
+    const c = raw2[k];
+    if (!c || typeof c !== "object") continue;
+    if (typeof c.on === "boolean") checks[k].on = c.on;
+    if (typeof c.level === "string" && LEVELS.includes(c.level)) checks[k].level = c.level as CheckSettings[typeof k]["level"];
+  }
+  return { ignored: strings(r.ignored), ignoredKinds: strings(r.ignoredKinds), seen: strings(r.seen), log, checks };
 }
 
 export interface FlagBlock {
@@ -58,7 +70,7 @@ export interface FlagPanelView {
 }
 
 /** Red and yellow flags as they are right now. */
-export function liveFlags(ws: Workspace, layerId: Id, redOnly = false): FlagBlock[] {
+export function liveFlags(ws: Workspace, layerId: Id, redOnly = false, checks: CheckSettings = DEFAULT_CHECKS): FlagBlock[] {
   const name = (id: Id) => ({ id, name: ws.get(layerId, id)?.name ?? "?" });
   const red: FlagBlock[] = [
     ...redFlags(ws, layerId).map((f) => ({
@@ -76,12 +88,12 @@ export function liveFlags(ws: Workspace, layerId: Id, redOnly = false): FlagBloc
     ...worldRuleFlags(ws, layerId).map((f) => ({ key: f.key, color: "red" as const, kind: "rule", category: null, title: f.title, detail: "Change them, or choose I meant that for deliberate exceptions.", nodes: f.offenders.map(name), isNew: false, canUndo: false, time: null })),
   ];
   if (redOnly) return red;
-  const yellow: FlagBlock[] = yellowFlags(ws, layerId, DEFAULT_CHECKS).map((f) => ({ key: f.key, color: "yellow" as const, kind: f.kind, category: f.category, title: f.title, detail: f.detail, nodes: f.nodes.map(name), isNew: false, canUndo: false, time: null }));
+  const yellow: FlagBlock[] = yellowFlags(ws, layerId, checks).map((f) => ({ key: f.key, color: "yellow" as const, kind: f.kind, category: f.category, title: f.title, detail: f.detail, nodes: f.nodes.map(name), isNew: false, canUndo: false, time: null }));
   return [...red, ...yellow];
 }
 
 export function panelView(ws: Workspace, layerId: Id, state: PanelState, now: number): FlagPanelView {
-  const live = liveFlags(ws, layerId).map((b) => ({ ...b, isNew: !state.seen.includes(b.key) }));
+  const live = liveFlags(ws, layerId, false, state.checks).map((b) => ({ ...b, isNew: !state.seen.includes(b.key) }));
   const isIgnored = (b: FlagBlock) => state.ignored.includes(b.key) || (b.color === "yellow" && state.ignoredKinds.includes(b.kind));
   const shown = live.filter((b) => !isIgnored(b));
   const latest = ws.history.at(-1)?.id ?? null;
@@ -116,8 +128,9 @@ export function panelView(ws: Workspace, layerId: Id, state: PanelState, now: nu
 
 /** Keeps the saved memory small: only flags that still exist, and log entries from the last 30 days. */
 export function tidy(ws: Workspace, layerId: Id, state: PanelState, now: number): PanelState {
-  const keys = new Set(liveFlags(ws, layerId).map((b) => b.key));
+  const keys = new Set(liveFlags(ws, layerId, false, state.checks).map((b) => b.key));
   return {
+    checks: state.checks,
     ignored: state.ignored.filter((k) => keys.has(k)),
     ignoredKinds: state.ignoredKinds,
     seen: state.seen.filter((k) => keys.has(k)),

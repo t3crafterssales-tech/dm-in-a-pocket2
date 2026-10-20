@@ -502,3 +502,20 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .others-chip { background: #dfeee0; color: #2c5e33; }
 .source-select { width: 100%; }
 .dialog-body > .check { display: flex; margin: 4px 0; }
+.check-settings { list-style: none; padding: 0; margin: 6px 0 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.check-settings li { display: flex; align-items: center; gap: 12px; padding: 8px 12px; flex-wrap: wrap; }
+.check-settings li + li { border-top: 1px solid var(--line); }
+.check-settings .grow { flex: 1; min-width: 160px; }
+.slider { display: inline-flex; align-items: center; gap: 6px; }
+.slider input { width: 90px; }
+.pad.tight { padding: 6px 10px 0; }
+.flag-filter { width: 100%; }
+.heading-input { font-weight: 600; }
+.lore-section .inline { margin-bottom: 4px; }
+.roll-table .number-input { width: 64px; }
+.quick-question { font-size: 19px; margin: 6px 0 12px; }
+.quick-options { display: grid; gap: 8px; }
+.quick-option { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; cursor: pointer; text-align: left; }
+.quick-option:hover, .quick-option:focus-visible { border-color: var(--accent); background: #fffaf2; }
+.quick-option.chosen { border-color: var(--accent); background: var(--accent-soft); }
+.quick-label { font-weight: 600; }

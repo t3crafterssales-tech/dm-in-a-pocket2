@@ -11,6 +11,8 @@ import { ICONS } from "./icons.ts";
 import type { PlaceCtx } from "./place.ts";
 
 let showIgnored = false;
+/** The flag panel's filter: everything, red only, or one kind of yellow check. */
+let only: "all" | "red" | "balance" | "economy" | "filing" = "all";
 
 export async function flagPanel(ctx: PlaceCtx): Promise<HTMLElement> {
   const view: FlagPanelView = (await attempt(() => api.flagPanel())) ?? { blocks: [], ignored: [], counts: { red: 0, yellow: 0, blue: 0, green: 0, new: 0 } };
@@ -27,9 +29,25 @@ export async function flagPanel(ctx: PlaceCtx): Promise<HTMLElement> {
       h("span", { class: "head-count small" }, counter.flatMap((x, i) => (i ? [" · ", x] : [x]))),
       c.new ? h("button", { class: "new-count", title: "Mark them all as seen", onClick: async () => (await attempt(() => api.markSeen(null)), await ctx.refresh()) }, `${c.new} new`) : null,
     ),
-    view.blocks.length
-      ? h("ul", { class: "flag-list" }, view.blocks.map((b) => block(b, ctx, ro)))
-      : h("p", { class: "muted small pad" }, "No flags. Everything checks out."),
+    (() => {
+      const sel = h(
+        "select",
+        { class: "text-input select small-select flag-filter", "aria-label": "Show flags" },
+        [
+          ["all", "All flags"],
+          ["red", "Red only"],
+          ["balance", "Balance"],
+          ["economy", "Economy"],
+          ["filing", "Filing"],
+        ].map(([v, l]) => h("option", { value: v, selected: only === v }, l)),
+      );
+      sel.addEventListener("change", () => ((only = sel.value as typeof only), void ctx.refresh()));
+      return view.blocks.length ? h("div", { class: "pad tight" }, sel) : h("span");
+    })(),
+    (() => {
+      const shown = view.blocks.filter((b) => only === "all" || (only === "red" ? b.color === "red" : b.category === only));
+      return shown.length ? h("ul", { class: "flag-list" }, shown.map((b) => block(b, ctx, ro))) : h("p", { class: "muted small pad" }, view.blocks.length ? "None of that kind." : "No flags. Everything checks out.");
+    })(),
     h(
       "div",
       { class: "flag-foot" },

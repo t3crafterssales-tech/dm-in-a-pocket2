@@ -10,6 +10,8 @@ import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { flagPanel, showNodeBin } from "./flag-panel.ts";
 import { showHistory } from "./history-dialog.ts";
+import { lorePanels } from "./lore-tab.ts";
+import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
@@ -31,7 +33,7 @@ export interface PlaceCtx {
   refresh: () => Promise<void>;
 }
 
-export async function openPlace(place: Place, mode: "normal" | "read-only" | "take-over" = "normal", name?: string) {
+export async function openPlace(place: Place, mode: "normal" | "read-only" | "take-over" = "normal", name?: string, then?: "quickstart") {
   const res = await attempt(() => api.open(place, mode));
   if (!res) {
     await nav.home();
@@ -51,6 +53,7 @@ export async function openPlace(place: Place, mode: "normal" | "read-only" | "ta
   for (const t of TABS) selected[t] = null;
   await renderPlace();
   if (res.view.recovered) notice("Recovered after an unexpected close.", "blue", undefined, 0);
+  if (then === "quickstart") await showQuickStart(() => renderPlace());
 }
 
 export function leavePlace() {
@@ -135,6 +138,7 @@ async function draw() {
   else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
   else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
   else if (tab === "Rulebook") ({ list, editor } = await rulebookPanels(ctx));
+  else if (tab === "Lore") ({ list, editor } = await lorePanels(ctx));
   else ({ list, editor } = comingSoon(tab, view));
   const flags = await flagPanel(ctx);
   if (current !== view) return; // went home while loading
@@ -243,6 +247,37 @@ async function placeSettings(view: PlaceView) {
         ),
       ),
     );
+
+    // Checks: each kind of yellow warning can be switched off or made stricter.
+    const checks = await attempt(() => api.checkSettings());
+    if (checks) {
+      const names: Record<string, [string, string]> = {
+        balance: ["Balance", "damage or hit points far off for a challenge rating"],
+        economy: ["Economy", "a weaker item that costs more than a stronger one in its category"],
+        filing: ["Filing", "a weapon with no attack, a creature filed as an item, duplicate names, empty sheets"],
+      };
+      parts.push(
+        h("h3", null, "Checks"),
+        h("p", { class: "muted" }, "The free checks that raise yellow flags. Normal is always measured against this system's own content. Red flags (broken links and your world rules) can't be switched off, only ignored one by one."),
+        h(
+          "ul",
+          { class: "check-settings" },
+          (Object.keys(names) as (keyof typeof checks)[]).map((k) => {
+            const on = h("input", { type: "checkbox", checked: checks[k].on, disabled: view.readOnly });
+            on.addEventListener("change", async () => (await attempt(() => api.setCheck(k, { on: on.checked })), await draw()));
+            const level = h("input", { type: "range", min: "0", max: "2", step: "1", value: String(["relaxed", "normal", "strict"].indexOf(checks[k].level)), disabled: view.readOnly || !checks[k].on, "aria-label": `${names[k]![0]} sensitivity` });
+            level.addEventListener("change", async () => (await attempt(() => api.setCheck(k, { level: (["relaxed", "normal", "strict"] as const)[Number(level.value)] })), await draw()));
+            return h(
+              "li",
+              null,
+              h("label", { class: "check" }, on, h("strong", null, names[k]![0])),
+              h("span", { class: "muted small grow" }, names[k]![1]),
+              h("span", { class: "slider" }, h("span", { class: "muted tiny" }, "Relaxed"), level, h("span", { class: "muted tiny" }, "Strict")),
+            );
+          }),
+        ),
+      );
+    }
 
     if (isWorld) {
       // Snapshots: named save points, kept until deleted.
