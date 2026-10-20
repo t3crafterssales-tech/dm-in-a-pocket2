@@ -5,8 +5,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
 ## Where we are
 
 - **Done:** Milestone 1, the engine core (approved by Jeff, merged into `main`).
-- **Now:** Milestone 2, files and saving (branch `milestone-2-files`), waiting for Jeff's approval.
-- **Also done, waiting for approval:** engine parts of milestones 5 and 6 (branch
+- **Done:** Milestone 2, files and saving (approved by Jeff, merged into `main`).
+- **Also done (approved by Jeff, merged):** engine parts of milestones 5 and 6 (branch
   `engine-checks-and-book`): world-rule red flags, free yellow checks, plain-English sentences,
   and the rulebook builder. Built early because they need no installs.
 - **Next:** Milestone 3, the desktop app shell. Needs a session that can install packages (Electron).
