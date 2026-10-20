@@ -9,7 +9,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Also done (approved by Jeff, merged):** engine parts of milestones 5 and 6 (branch
   `engine-checks-and-book`): world-rule red flags, free yellow checks, plain-English sentences,
   and the rulebook builder. Built early because they need no installs.
-- **Next:** Milestone 3, the desktop app shell. Needs a session that can install packages (Electron).
+- **Built, waiting for Jeff to test:** Milestone 3, the desktop app shell (branch
+  `claude/electron-desktop-app-shell-2arspv`).
+- **Next:** Milestone 4, the Rules tab and sheets.
 
 ## Milestones to first playable
 
@@ -26,6 +28,46 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 3)
+
+- Milestone 3 written: the Electron desktop app.
+  - `src/app/backend.ts`: everything the window can ask for (home screen, New system, New world,
+    delete to the recycle bin, restore, empty, settings, opening worlds and systems, backups),
+    plain TypeScript with no Electron in it so it is tested like the engine.
+  - `src/app/session.ts`: one open world or system, with constant saving, the save signal for the
+    pulsing logo, and the lock heartbeat every 15 seconds (finishing milestone 2's to-do list).
+  - `src/app/settings.ts`: the app's own settings on this computer (main folder, last opened,
+    and where the user is, for crash recovery).
+  - `src/app/main.ts` and `preload.ts`: the Electron window, kept thin. `src/ui/`: the screens.
+  - `src/storage/library.ts` gained the recycle bin for whole worlds and systems, card pictures
+    for systems, and a way to read a world for its flag counts without opening it.
+  - `scripts/build.mjs` builds the app; `npm start` runs it; `npm run dist` makes the installer.
+    `.github/workflows/windows.yml` builds the installer on a Windows computer at GitHub.
+- What the home screen does: two shelves of cards (Systems, Worlds), last opened first; a
+  placeholder picture until one is chosen; world cards show their system's name and a flag count
+  (2 red · 5 yellow); system cards show "Used by 3 worlds". Double-click (or Enter) opens. The
+  bin button on a card asks, then sends it to the recycle bin; a notice offers Undo, and Ctrl+Z
+  on the home screen does the same. Deleting a system that worlds use warns and lists them.
+  Top bar: Import (greyed out until sharing), Recycle bin (with a count), Settings (main folder).
+- New system and New world are short linear pop-ups: name (required), picture (optional), then
+  the starting point or the game system. New world is greyed out with "Create a system first."
+  until a system exists. Generic d20 is listed but greyed out until the d20 starter is built
+  (milestone 6), so From scratch is the only choice for now.
+- Opening a world or system fills the window: tabs (Rules, Creatures, Items, Lore, Rulebook),
+  Home and World settings on the right, and the list, editor and flag panels, empty for now.
+  World settings lists backups in plain words ("Yesterday") with Restore.
+- Crash recovery works in the real app: killing the app while a world is open and starting it
+  again reopens that world with the blue "Recovered after an unexpected close." notice.
+- Open on another computer: the app offers Open read-only or Take over; the first computer
+  switches to read-only at its next heartbeat and stops saving.
+- 92 automatic tests pass (20 new). The app was also driven click by click in a real Electron
+  window here, which found and fixed one bug (Enter in the name box skipped the picture step).
+- Not checked here: the installer itself, which can only be built on Windows. The GitHub
+  workflow builds it; Jeff's test is to install it and open it.
+- Left for later, needing Jeff's decisions: "Move them to another system" when deleting a system
+  (shown greyed out; it needs copying a world into a different system), renaming and changing the
+  picture in World settings, Import, and what the AI part of Settings looks like.
 
 ### 2026-10-20 (checks and rulebook engine)
 
@@ -139,3 +181,39 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: The cloud session used for building cannot reach the npm package registry, so
   Electron (milestone 3) waits until a session can install packages. Milestones 1 and 2 need no
   installs.
+- 2026-10-20: Milestone 3's session could install packages. Only build tools are installed
+  (Electron, electron-builder, esbuild), pinned to exact versions at least two weeks old. The app
+  itself still uses no outside libraries.
+- 2026-10-20: The screens are plain TypeScript building the page directly, with no framework
+  (React and the like), to match the engine. Revisit at milestone 4 if the editor needs one.
+- 2026-10-20: esbuild packs the TypeScript into three files for Electron (main process, preload,
+  window). The engine and tests still run the TypeScript directly.
+- 2026-10-20: The window has no access to files or Node. It can only call a fixed list of named
+  back-end methods through one bridge, and pictures load through a private dmpic:// address that
+  can only read the picture store.
+- 2026-10-20: The app's own settings (main folder, last opened, where the user is) live in the
+  app's settings folder on this computer, not in the main folder, so two computers sharing a
+  Dropbox folder never overwrite each other's settings.
+- 2026-10-20: "Last opened" is per computer. Things never opened on this computer sort by when
+  they last changed. A newly created system or world counts as just opened.
+- 2026-10-20: Crash recovery: the app notes which world or system is open and clears the note on
+  going home or closing normally. Finding the note at start-up means an unexpected close, so the
+  app reopens that place and shows the blue notice.
+- 2026-10-20: Deleted worlds and systems go to a Recycle bin folder inside the main folder, as
+  whole files, so restoring brings back everything including undo history. Deleting a system
+  takes its worlds and the systems built on it into the same bin entry; restoring a world whose
+  system was binned separately brings that system back too. (Jeff may want to check: this adds a
+  folder to the main folder layout, documented in `docs/data-format.md`.)
+- 2026-10-20: Emptying the bin also deletes those worlds' backups and snapshots. Pictures stay
+  in the picture store for now; a Clean up for unused pictures comes with the history-space
+  settings.
+- 2026-10-20: Only one copy of the app runs per computer; starting it again brings the open
+  window forward.
+- 2026-10-20: Pictures can be PNG, JPG, GIF or WebP, up to 25 MB each.
+- 2026-10-20: The Windows installer lets the user choose where to install, installs for the
+  current user only (no administrator needed), and adds Start menu and desktop shortcuts. It is
+  not code-signed yet, so Windows shows a warning the first time.
+- 2026-10-20: The installer is built by GitHub Actions on a Windows computer on every push, after
+  all tests pass, so Jeff can download it without setting anything up.
+- 2026-10-20: A system opened on its own has no "one copy open" lock yet; only worlds do. Worth
+  adding before systems are edited from two computers at once.

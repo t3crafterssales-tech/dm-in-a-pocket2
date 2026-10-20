@@ -3,16 +3,53 @@
   "version": "0.1.0",
   "private": true,
   "description": "Build tabletop RPG systems and worlds, and print them as rulebooks.",
+  "author": "Jeff",
   "type": "module",
+  "main": "dist/main.cjs",
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.ts\"",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/build.mjs && electron .",
+    "dist": "node scripts/build.mjs && electron-builder --win --x64 --publish never"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
     "typescript": "^6.0.3"
+  },
+  "build": {
+    "appId": "com.t3crafters.dminapocket",
+    "productName": "DM in a Pocket",
+    "copyright": "Copyright © 2026 Jeff",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/**/*.map",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DM in a Pocket",
+      "artifactName": "DM-in-a-Pocket-Setup-${version}.${ext}"
+    }
   }
 }

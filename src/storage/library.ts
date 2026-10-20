@@ -6,17 +6,18 @@
 //   <root>/Backups/<worldId>/        automatic daily and weekly backups
 //   <root>/Snapshots/<worldId>/      named snapshots the user made
 //   <root>/.pictures/                every picture, stored once, shared by backups and snapshots
+//   <root>/Recycle bin/<entryId>/    deleted worlds and systems, kept until the bin is emptied
 //
 // World and system files are ordinary ZIP files holding a JSON file and a pictures folder.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
-import { extname, join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
+import { basename, extname, join } from "node:path";
 import { FORMAT_VERSION, Workspace, newId, upgrade } from "../engine/index.ts";
 import type { Id, Layer, SavedFile } from "../engine/index.ts";
 import { atomicWrite, clearInterruptedSave } from "./atomic.ts";
 import type { WriteHooks } from "./atomic.ts";
-import { WorldLock } from "./lock.ts";
+import { LOCK_STALE_MS, LOCK_SUFFIX, WorldLock } from "./lock.ts";
 import type { AcquireResult } from "./lock.ts";
 import { readZip, writeZip } from "./zip.ts";
 
@@ -42,8 +43,24 @@ export interface SystemInfo {
   base: Id | null;
   picture: Id | null;
   usedBy: number;
+  changed: number;
   path: string;
 }
+
+/** One deletion from the home screen. Deleting a system takes the worlds that use it along. */
+export interface RecycledInfo {
+  id: Id;
+  /** What the user deleted. */
+  kind: "world" | "system";
+  name: string;
+  time: number;
+  /** Everything that went into the bin together, restored together. */
+  worlds: { id: Id; name: string }[];
+  systems: { id: Id; name: string }[];
+}
+
+type LibraryDir = "Systems" | "Worlds" | "Imported" | "Backups" | "Snapshots" | ".pictures" | "Recycle bin";
+const LIBRARY_DIRS: LibraryDir[] = ["Systems", "Worlds", "Imported", "Backups", "Snapshots", ".pictures", "Recycle bin"];
 
 export interface OpenWorld {
   ws: Workspace;
@@ -92,12 +109,12 @@ export class Library {
     this.now = now;
   }
 
-  dir(name: "Systems" | "Worlds" | "Imported" | "Backups" | "Snapshots" | ".pictures"): string {
+  dir(name: LibraryDir): string {
     return join(this.root, name);
   }
 
   init() {
-    for (const d of ["Systems", "Worlds", "Imported", "Backups", "Snapshots", ".pictures"] as const) mkdirSync(this.dir(d), { recursive: true });
+    for (const d of LIBRARY_DIRS) mkdirSync(this.dir(d), { recursive: true });
   }
 
   // ---------- Pictures (stored once) ----------
@@ -174,13 +191,14 @@ export class Library {
 
   private writeSystem(ws: Workspace, systemId: Id, hooks: WriteHooks = {}, withHistory = true) {
     const layer = ws.layer(systemId);
+    const old = existsSync(this.systemPath(systemId)) ? this.readSystemFile(systemId) : null;
     let file: FileWithMeta;
     if (withHistory) {
       file = { ...ws.toFile(systemId), layers: [layer] };
     } else {
-      const old = existsSync(this.systemPath(systemId)) ? this.readSystemFile(systemId) : null;
-      file = { format: FORMAT_VERSION, app: ws.toFile().app, main: systemId, layers: [structuredClone(layer)], bin: old?.bin ?? [], history: old?.history ?? [], redo: old?.redo ?? [], meta: old?.meta };
+      file = { format: FORMAT_VERSION, app: ws.toFile().app, main: systemId, layers: [structuredClone(layer)], bin: old?.bin ?? [], history: old?.history ?? [], redo: old?.redo ?? [] };
     }
+    file.meta = { ...old?.meta, [systemId]: { ...old?.meta?.[systemId], changed: this.now() } };
     writeArchive(this.systemPath(systemId), "system.json", file, this, hooks);
   }
 
@@ -190,7 +208,8 @@ export class Library {
       try {
         const f = readArchive(path, "system.json", this, false).data;
         const l = f.layers.find((x) => x.id === f.main) ?? f.layers[0]!;
-        return [{ id: l.id, name: l.name, base: l.base, picture: f.meta?.[l.id]?.picture ?? null, usedBy: worlds.filter((w) => w.systemId === l.id).length, path }];
+        const changed = f.meta?.[l.id]?.changed ?? statSync(path).mtimeMs;
+        return [{ id: l.id, name: l.name, base: l.base, picture: f.meta?.[l.id]?.picture ?? null, usedBy: worlds.filter((w) => w.systemId === l.id).length, changed, path }];
       } catch {
         return [];
       }
@@ -296,14 +315,136 @@ export class Library {
   }
 
   setWorldPicture(open: OpenWorld, picture: Id | null) {
-    const f = readArchive(open.path, "world.json", this, false).data;
-    f.meta = { ...f.meta, [open.worldId]: { ...f.meta?.[open.worldId], picture } };
-    writeArchive(open.path, "world.json", f, this);
+    this.setPicture("world", open.worldId, picture);
+  }
+
+  /** Sets the picture on a world or system card. */
+  setPicture(type: "world" | "system", id: Id, picture: Id | null) {
+    const path = type === "world" ? this.worldPath(id) : this.systemPath(id);
+    const json = type === "world" ? "world.json" : "system.json";
+    if (!existsSync(path)) throw new LibraryError(`That ${type} isn't in the main folder.`);
+    const f = readArchive(path, json, this, false).data;
+    f.meta = { ...f.meta, [id]: { ...f.meta?.[id], picture } };
+    writeArchive(path, json, f, this);
+  }
+
+  /**
+   * Reads a world without opening it: no lock, no backup, nothing written. For the home screen's
+   * flag counts. Uses the Systems folder's copy of each system when there is one.
+   */
+  peekWorld(id: Id): Workspace {
+    const { data } = readArchive(this.worldPath(id), "world.json", this, false);
+    const world = data.layers.find((l) => l.id === data.main);
+    if (!world) throw new LibraryError("That world file is damaged.");
+    const layers = new Map(data.layers.map((l) => [l.id, l]));
+    if (world.base) {
+      try {
+        for (const l of this.loadSystemChain(world.base)) layers.set(l.id, l);
+      } catch {
+        // The system isn't on the shelf: the copy inside the world file is used.
+      }
+    }
+    return Workspace.fromFile({ ...data, layers: [...layers.values()] });
   }
 
   close(open: OpenWorld) {
     open.lock?.release();
     open.lock = null;
+  }
+
+  // ---------- Recycle bin (whole worlds and systems) ----------
+
+  /** What else goes into the bin with a system: the systems built on it and every world using any of them. */
+  systemDependents(id: Id): { systems: SystemInfo[]; worlds: WorldInfo[] } {
+    const all = this.listSystems();
+    const family = new Set<Id>([id]);
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const s of all) if (s.base && family.has(s.base) && !family.has(s.id)) (family.add(s.id), (grew = true));
+    }
+    return { systems: all.filter((s) => s.id !== id && family.has(s.id)), worlds: this.listWorlds().filter((w) => family.has(w.systemId)) };
+  }
+
+  /** Moves a world to the recycle bin. Its backups and snapshots stay until the bin is emptied. */
+  deleteWorld(id: Id): Id {
+    const w = this.listWorlds().find((x) => x.id === id);
+    if (!w) throw new LibraryError("That world isn't in the Worlds folder.");
+    return this.recycle("world", w.name, [w], []);
+  }
+
+  /** Moves a system to the recycle bin, together with the systems built on it and the worlds that use them. */
+  deleteSystem(id: Id): Id {
+    const s = this.listSystems().find((x) => x.id === id);
+    if (!s) throw new LibraryError("That system isn't in the Systems folder.");
+    const dep = this.systemDependents(id);
+    return this.recycle("system", s.name, dep.worlds, [s, ...dep.systems]);
+  }
+
+  private recycle(kind: "world" | "system", name: string, worlds: WorldInfo[], systems: SystemInfo[]): Id {
+    const id = newId();
+    const dir = join(this.dir("Recycle bin"), id);
+    mkdirSync(dir, { recursive: true });
+    const info: RecycledInfo = { id, kind, name, time: this.now(), worlds: worlds.map((w) => ({ id: w.id, name: w.name })), systems: systems.map((s) => ({ id: s.id, name: s.name })) };
+    // The list is written first, so a crash part-way through still shows what went in.
+    atomicWrite(join(dir, "entry.json"), JSON.stringify(info));
+    for (const f of [...worlds, ...systems]) {
+      renameSync(f.path, join(dir, basename(f.path)));
+      const lock = f.path + LOCK_SUFFIX;
+      const held = new WorldLock(f.path, this.me, this.now).read();
+      if (held && (held.session === this.me.session || held.machine === this.me.machine || this.now() - held.heartbeat >= LOCK_STALE_MS)) rmSync(lock, { force: true });
+    }
+    return id;
+  }
+
+  listRecycleBin(): RecycledInfo[] {
+    const dir = this.dir("Recycle bin");
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .flatMap((d) => {
+        try {
+          return [JSON.parse(readFileSync(join(dir, d, "entry.json"), "utf8")) as RecycledInfo];
+        } catch {
+          return [];
+        }
+      })
+      .sort((a, b) => b.time - a.time);
+  }
+
+  /**
+   * Puts a deletion back, with everything that went in with it. A world whose system is also in
+   * the bin brings its system back too, so it opens connected. Never overwrites a file that is
+   * already back on the shelf.
+   */
+  restoreFromBin(entryId: Id): RecycledInfo[] {
+    const entry = this.listRecycleBin().find((e) => e.id === entryId);
+    if (!entry) throw new LibraryError("That isn't in the recycle bin any more.");
+    const dir = join(this.dir("Recycle bin"), safeName(entryId));
+    const back = (from: string, to: string) => {
+      if (existsSync(from) && !existsSync(to)) renameSync(from, to);
+    };
+    for (const s of entry.systems) back(join(dir, basename(this.systemPath(s.id))), this.systemPath(s.id));
+    for (const w of entry.worlds) back(join(dir, basename(this.worldPath(w.id))), this.worldPath(w.id));
+    rmSync(dir, { recursive: true, force: true });
+    const restored = [entry];
+    for (const w of entry.worlds) {
+      const systemId = this.listWorlds().find((x) => x.id === w.id)?.systemId;
+      if (!systemId || existsSync(this.systemPath(systemId))) continue;
+      const other = this.listRecycleBin().find((e) => e.systems.some((s) => s.id === systemId));
+      if (other) restored.push(...this.restoreFromBin(other.id));
+    }
+    return restored;
+  }
+
+  /** The only truly permanent action: removes the files, and the worlds' backups and snapshots. */
+  emptyRecycleBin(entryIds?: Id[]) {
+    for (const e of this.listRecycleBin()) {
+      if (entryIds && !entryIds.includes(e.id)) continue;
+      for (const w of e.worlds) {
+        rmSync(this.backupDir(w.id), { recursive: true, force: true });
+        rmSync(this.snapshotDir(w.id), { recursive: true, force: true });
+      }
+      rmSync(join(this.dir("Recycle bin"), safeName(e.id)), { recursive: true, force: true });
+    }
   }
 
   // ---------- Backups ----------
