@@ -28,9 +28,10 @@ test("Table mode has Rules, Monsters, Items and Tables, in the rulebook's own wo
   const v = backend.tableMode();
   assert.deepEqual(v.tabs.map((t) => t.title), ["Rules", "Monsters", "Items", "Tables"]);
   const tab = (id: string) => v.tabs.find((t) => t.id === id)!;
-  const goblin = tab("monsters").entries.find((e) => e.title === "Goblin")!;
-  assert.match(goblin.stats!, /HP 7/);
+  const goblin = tab("monsters").entries.find((e) => e.title === "Goblin Warrior")!;
+  assert.match(goblin.stats!, /HP 10/);
   assert.ok(goblin.paragraphs.some((p) => /Scimitar/.test(p)));
+  assert.ok(tab("rules").entries.some((e) => e.title === "Fireball" && e.group === "Spells"), "spells are in the Rules tab");
   assert.ok(tab("rules").entries.some((e) => e.title === "Poisoned" && e.group === "Conditions"));
   assert.ok(tab("items").entries.some((e) => e.title === "Longsword"));
   // Mentions only point at things Table mode can open.
@@ -40,7 +41,7 @@ test("Table mode has Rules, Monsters, Items and Tables, in the rulebook's own wo
 
 test("variants appear in full, roll tables carry their rows, and stars show", () => {
   const { backend } = setup();
-  const goblin = backend.tableMode().tabs[1]!.entries.find((e) => e.title === "Goblin")!.id;
+  const goblin = backend.tableMode().tabs[1]!.entries.find((e) => e.title === "Goblin Warrior")!.id;
   backend.addBeing({ name: "Goblin Scout", kind: "monster", variantOf: goblin });
   const ogre = backend.addBeing({ name: "Ogre", kind: "monster", variantOf: null });
   const t = backend.addLore("Forest encounters", "table");
@@ -53,7 +54,7 @@ test("variants appear in full, roll tables carry their rows, and stars show", ()
   const v = backend.tableMode();
   const monsters = v.tabs[1]!.entries;
   const boss = monsters.find((e) => e.title === "Goblin Scout")!;
-  assert.match(boss.stats!, /HP 7/, "printed in full, not \"As Goblin\"");
+  assert.match(boss.stats!, /HP 10/, "printed in full, not \"As Goblin Warrior\"");
   assert.equal(monsters.find((e) => e.id === ogre)!.favourite, true);
   const table = v.tabs[3]!.entries.find((e) => e.id === t)!;
   assert.deepEqual(table.table, { die: "d6", canRoll: true, rows: [{ range: "1-5", text: "Wolves", result: null }, { range: "6", text: "", result: { id: ogre, name: "Ogre" } }] });

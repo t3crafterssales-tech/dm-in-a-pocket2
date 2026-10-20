@@ -24,8 +24,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
   "next"; merged into `main`).
 - **Done:** Milestone 8, Quick start, roll tables, lore pages, and the check categories with
   sliders (approved by Jeff on October 20, 2026, when he asked for milestone 10; merged into `main`).
-- **Next:** Milestone 10, Table mode, Word export and the full SRD 5.2 (Jeff chose it before
-  milestone 9, the AI, which needs his own Claude API key).
+- **Built, waiting for Jeff to test:** Milestone 10, Table mode, Word export and the full SRD 5.2
+  (Jeff chose it before milestone 9).
+- **Next:** Milestone 9, the AI (needs Jeff's own Claude API key; see the table below).
 
 ## Milestones to first playable
 
@@ -53,6 +54,16 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 
 ## Log
 
+### Milestone 10: what Jeff can test
+
+1. New system → Generic d20. Beings → Monsters lists all 341 SRD monsters; open the Adult Red
+   Dragon. Items has the weapons, armour, gear and magic items; Library → Spells has every spell.
+2. Rulebook → Player's Handbook now has a Spells chapter. Try Save as Word…, open it in Word and
+   choose Yes when it asks to update fields (that fills in the page numbers).
+3. Make a world on it, then press Table mode at the top. Search "poison", click a monster, then
+   Ctrl-click Poisoned to read both side by side. Star a few things and tick Starred only. Make a
+   roll table in the Lore tab first to try Roll in the Tables tab. Edit goes back.
+
 ### 2026-10-20 (milestone 10: Table mode, Word export, full SRD 5.2)
 
 - Part 1, Word export: the Rulebook tab has Save as Word… beside Save as PDF. The file has the
@@ -64,6 +75,16 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
   other tabs match), Starred only, stars on every entry, up to three entries side by side
   (Ctrl-click opens one beside the others, like a browser tab; "See Scimitar" links open things
   too), and a Roll button on tables that highlights the row it lands on. Edit goes back.
+- Part 3, the full SRD 5.2: New system → Generic d20 now builds all of it: 341 monsters, 339
+  spells, 38 weapons, 13 armours, 145 pieces of gear and poisons, 262 magic items, 9 species with
+  their lineages, 12 classes with their subclasses and features, 4 backgrounds, 17 feats, the 15
+  conditions in the SRD's own words, weapon properties and masteries, and languages. The
+  rulebook gains a Spells chapter (Player's Handbook and Complete Rulebook); Table mode lists
+  spells in its Rules tab. A fresh SRD system opens with no flags. Checked in the real window: it
+  builds in under half a second, a 355-page Player's Handbook lays out in 1.5 seconds, and the
+  whole SRD saves as a 515-page Word file.
+- Made the engine much faster on big systems (opening a sheet went from 0.2 to 0.02 seconds) by
+  not copying every record just to read it.
 
 ### 2026-10-20 (milestone 8: Quick start, lore, roll tables, check settings)
 
@@ -602,3 +623,27 @@ One plain line each. Jeff can overrule any of these at a milestone.
   what is read at the table is what prints. Lore pages, places and factions sit in the Rules tab
   under Lore, since the design lists only four tabs. Starring is the one thing that works there; it
   is an ordinary undo step.
+- 2026-10-20: The SRD 5.2 content comes from the open 5e-database project (MIT licence; the content
+  itself is CC-BY 4.0), converted once by scripts/srd-convert.mjs into src/app/starters/srd52.json,
+  which is committed. The app never reaches the internet or that project. The official SRD PDF
+  site can't be reached from the build machine. Its notice is in src/app/starters/SRD-SOURCE.md.
+- 2026-10-20: The core rules text (the d20 check, combat, resting) stays the app's own short
+  version; the data has no rules-chapter text. Conditions use the SRD's words.
+- 2026-10-20: Monster actions become library bricks shared by name (one Bite, one Multiattack),
+  with each monster's own dice and words kept on its sheet. Attacks the app understands get an
+  ability, dice and damage type, so the free checks work on them; everything else (breath weapons,
+  spellcasting) is kept word for word as a trait. A second brick with the same name gets a short
+  note in the library ("Bite (trait)") while the sheet still says Bite.
+- 2026-10-20: Untouched SRD content is the yardstick for the free yellow checks, not a suspect:
+  homemade monsters and items are measured against it, but the SRD's own are not flagged (the
+  app's damage estimate can't read Multiattack or breath weapons, which made 165 false flags). An
+  SRD monster changed in a world is checked again.
+- 2026-10-20: Spells are spell bricks with level, school, casting time, range, components and
+  duration, and print in a new Spells chapter. Monster stat-block details (size, type, senses,
+  languages, resistances, XP) go in the monster's text box. Class features and species traits go
+  in their text box, a line each. Backgrounds, feats, weapon properties and languages are rules
+  in the Rules tab. "Druid" the stat block is called "Druid (monster)" because Druid is a class.
+- 2026-10-20: Magic items that come in +1, +2 and +3 are variants of a template ("Armor (magic,
+  any bonus)").
+- 2026-10-20: The engine's own look-ups read records without copying them (peek); list and
+  resolve results are read-only, and changes still go through edit.

@@ -39,6 +39,11 @@ Kind-specific meaning lives in `fields`. For example a being has `beingKind` (`m
 
 The field names that checks, sentences and the rulebook rely on (`beingKind`, `hp`, `cr`, `cost`,
 `type`, `dice`, `forbid`, ...) are listed with explanations in `src/engine/conventions.ts`.
+Spell bricks also carry `spellLevel` (0 for a cantrip), `school`, `castingTime`, `range`,
+`components`, `duration`, `ritual` and `spellClasses`, which the rulebook's Spells chapter prints.
+These are ordinary fields, so older files without them still open.
+
+A node's `text` may hold several lines; each line prints as its own paragraph.
 
 ## Attachments (a brick on a sheet)
 

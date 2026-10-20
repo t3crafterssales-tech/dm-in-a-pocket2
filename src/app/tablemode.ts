@@ -24,6 +24,7 @@ const TAB_OF: Record<ChapterId, TableTab> = {
   rules: "rules",
   races: "rules",
   classes: "rules",
+  spells: "rules",
   lore: "rules",
   monsters: "monsters",
   npcs: "monsters",

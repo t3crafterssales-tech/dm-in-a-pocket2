@@ -93,7 +93,8 @@ export function coreText(ws: Workspace, layerId: Id, a: Attachment): string {
   const wording = typeof v[F.wording] === "string" ? fill(v[F.wording] as string, v, ws, layerId) : "";
   switch (v[F.type]) {
     case "attack":
-      return `${name}: attack with d20 + ${nameOf(ws, layerId, v[F.ability])} + proficiency, ${v[F.dice] ?? "?"} ${v[F.damageType] ?? ""} damage`.replace(/\s+damage$/, " damage");
+      // Any wording follows the damage: "(melee, reach 10 ft.) plus 5 (2d4) Fire damage".
+      return `${name}: attack with d20 + ${nameOf(ws, layerId, v[F.ability])} + proficiency, ${v[F.dice] ?? "?"} ${v[F.damageType] ?? ""} damage`.replace(/\s+damage$/, " damage") + (wording ? ` ${wording}` : "");
     case "damage":
       return `deals ${v[F.dice] ?? "?"} ${v[F.damageType] ?? ""} damage`.replace(/\s+damage$/, " damage");
     case "effect":
@@ -130,7 +131,9 @@ export function sentence(ws: Workspace, layerId: Id, a: Attachment): string {
     const success = a.save.onSuccess === "half" ? " (half on a success)" : a.save.onSuccess && a.save.onSuccess !== "no effect" ? ` (${a.save.onSuccess} on a success)` : "";
     s = `${when ? `${cap(when)}, the` : "The"} target must make a ${saveText(ws, layerId, a.save)}; on a failure, ${core}${success}`;
   } else s = when ? `${cap(when)}, ${core}` : cap(core);
-  s += usesText(a) + ".";
+  const uses = usesText(a);
+  // Wording copied from a book often ends with its own full stop.
+  s += uses ? `${uses}.` : /[.!?]$/.test(s) ? "" : ".";
   if (a.children.length) s += ` When that happens, also: ${a.children.map((c) => sentence(ws, layerId, c).replace(/\.$/, "")).join("; ")}.`;
   if (a.tiers.length) s += ` Upgrades: ${a.tiers.map((t) => `${t.name}${t.requirement ? ` (${t.requirement})` : ""}: ${t.change}`).join("; ")}.`;
   return s;
