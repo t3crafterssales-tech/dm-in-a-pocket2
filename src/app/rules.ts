@@ -113,7 +113,8 @@ export function rulesTab(ws: Workspace, layerId: Id): RulesSection[] {
   const nodes = ws
     .list(layerId)
     .filter((n) => RULE_KINDS.includes(n.kind) && !n.fields[F.forbid] && !n.template)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    // Abilities keep the order they were made in, like a character sheet (STR, DEX, CON...).
+    .sort((a, b) => (a.kind === "ability" && b.kind === "ability" ? a.created - b.created : a.name.localeCompare(b.name)));
   const entry = (n: NodeRecord) => ({
     id: n.id,
     name: n.name,

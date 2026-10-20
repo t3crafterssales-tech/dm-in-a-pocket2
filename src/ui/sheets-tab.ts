@@ -1,0 +1,352 @@
+// The Beings and Items tabs: a list on the left (variants indented under their parents) and the
+// open sheet in the middle, with its header numbers, ability scores and sections.
+
+import type { BeingKind, CategoryOption, Choices, ListEntry, NodeView } from "../app/backend.ts";
+import { api, pictureUrl } from "./api.ts";
+import { attempt } from "./common.ts";
+import { notice, openDialog } from "./dialogs.ts";
+import { h, svg } from "./dom.ts";
+import { FieldMaker } from "./fields.ts";
+import { ICONS } from "./icons.ts";
+import type { PlaceCtx } from "./place.ts";
+
+export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
+  { id: "character", label: "Character", plural: "Characters" },
+  { id: "class", label: "Class", plural: "Classes" },
+  { id: "race", label: "Race", plural: "Races" },
+  { id: "monster", label: "Monster", plural: "Monsters" },
+  { id: "npc", label: "NPC", plural: "NPCs" },
+];
+
+let beingTab: BeingKind = "monster";
+const filters: Record<string, { text: string; favourites: boolean }> = {};
+
+export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Promise<{ list: HTMLElement; editor: HTMLElement }> {
+  const [entries, categories, choices] = await Promise.all([
+    attempt(() => (which === "beings" ? api.beingsList(beingTab) : api.itemsList())),
+    attempt(() => api.categories()),
+    attempt(() => api.choices()),
+  ]);
+  let view: NodeView | null = null;
+  if (ctx.selected) {
+    try {
+      view = await api.node(ctx.selected);
+      if (view.kind !== (which === "beings" ? "being" : "item")) view = null;
+    } catch {
+      view = null;
+    }
+  }
+  // Opening a being from another sub-tab (for example from a flag) switches to its sub-tab.
+  if (view && which === "beings" && view.fields.beingKind && view.fields.beingKind !== beingTab) {
+    beingTab = view.fields.beingKind as BeingKind;
+    return sheetPanels(ctx, which);
+  }
+  return {
+    list: listPanel(which, entries ?? [], categories ?? [], ctx),
+    editor: sheetEditor(view, which, categories ?? [], choices ?? { abilities: [], conditions: [], resources: [] }, ctx),
+  };
+}
+
+// ---------- The list ----------
+
+function listPanel(which: "beings" | "items", all: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx) {
+  const key = which === "beings" ? `beings-${beingTab}` : "items";
+  const f = (filters[key] ??= { text: "", favourites: false });
+  const noun = which === "beings" ? BEING_TABS.find((t) => t.id === beingTab)!.label.toLowerCase() : "item";
+  const match = (e: ListEntry) => (!f.text || e.name.toLowerCase().includes(f.text.toLowerCase())) && (!f.favourites || e.favourite);
+  const filtering = !!f.text || f.favourites;
+  // While filtering, a match is shown even if its parent isn't.
+  const entries = filtering ? all.filter(match).map((e) => ({ ...e, depth: 0 })) : all;
+
+  const filterBox = h("input", { class: "text-input small-input", placeholder: "Filter by name", value: f.text, "data-key": `filter-${key}`, "aria-label": "Filter by name" });
+  filterBox.addEventListener("input", () => {
+    f.text = filterBox.value;
+    void ctx.refresh();
+  });
+  const star = h("button", { class: `icon-button small star${f.favourites ? " on" : ""}`, title: f.favourites ? "Showing favourites only" : "Show favourites only", "aria-pressed": f.favourites ? "true" : "false", onClick: () => ((f.favourites = !f.favourites), void ctx.refresh()) }, svg(ICONS.star));
+
+  const item = (e: ListEntry) =>
+    h(
+      "li",
+      {
+        class: `item depth-${Math.min(e.depth, 6)}${e.id === ctx.selected ? " selected" : ""}`,
+        tabindex: 0,
+        "data-key": `item-${e.id}`,
+        onClick: () => ctx.select(e.id),
+        onKeydown: (ev: KeyboardEvent) => {
+          if (ev.key === "Enter") ctx.select(e.id);
+          if (ev.key === "Delete" && !ctx.view.readOnly) void remove(e.id, ctx);
+        },
+      },
+      e.depth ? h("span", { class: "variant-mark", "aria-hidden": "true" }, "↳") : null,
+      h("span", { class: "item-name" }, e.name),
+      e.favourite ? h("span", { class: "star-mark", title: "Favourite" }, svg(ICONS.star)) : null,
+      e.note ? h("span", { class: "item-label" }, e.note) : null,
+      e.fromBelow ? h("span", { class: "from-below", title: "From the system" }, svg(ICONS.layers)) : null,
+    );
+
+  let body: HTMLElement;
+  if (!entries.length) body = h("p", { class: "muted small pad" }, filtering ? "Nothing matches." : `No ${which === "beings" ? BEING_TABS.find((t) => t.id === beingTab)!.plural.toLowerCase() : "items"} yet.`);
+  else if (which === "items" && !filtering) {
+    // Items are grouped by where they are filed.
+    const groups = new Map<string, ListEntry[]>();
+    for (const e of entries) {
+      const top = e.depth === 0 ? (e.categoryPath ?? "Uncategorized") : [...groups.keys()].at(-1)!;
+      groups.set(top, [...(groups.get(top) ?? []), e]);
+    }
+    body = h(
+      "div",
+      null,
+      [...groups.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([title, list]) => h("div", { class: "section" }, h("div", { class: "group-title" }, title), h("ul", { class: "items flat" }, list.map(item)))),
+    );
+  } else body = h("ul", { class: "items flat" }, entries.map(item));
+
+  return h(
+    "aside",
+    { class: "panel list-panel", "aria-label": which === "beings" ? "Beings" : "Items", "data-scroll": `list-${key}` },
+    h(
+      "div",
+      { class: "panel-head" },
+      which === "beings" ? "Beings" : "Items",
+      ctx.view.readOnly ? null : h("button", { class: "button primary small-button head-button", onClick: () => void createNew(which, all, categories, ctx) }, svg(ICONS.plus), `New ${noun}`),
+    ),
+    which === "beings"
+      ? h(
+          "div",
+          { class: "subtabs", role: "tablist" },
+          BEING_TABS.map((t) => h("button", { class: `subtab${t.id === beingTab ? " active" : ""}`, role: "tab", "aria-selected": t.id === beingTab ? "true" : "false", onClick: () => ((beingTab = t.id), ctx.select(null)) }, t.plural)),
+        )
+      : null,
+    h("div", { class: "filter-row" }, filterBox, star),
+    body,
+  );
+}
+
+/** Create new: a name, what it is, and optionally what it's a variant of. */
+async function createNew(which: "beings" | "items", existing: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx) {
+  const d = openDialog(which === "beings" ? "New being" : "New item");
+  const name = h("input", { class: "text-input", placeholder: which === "beings" ? "For example: Goblin" : "For example: Longsword", maxlength: 200 });
+  const kind = h("select", { class: "text-input" }, BEING_TABS.map((t) => h("option", { value: t.id, selected: t.id === beingTab }, t.label)));
+  const variant = h("select", { class: "text-input" }, h("option", { value: "" }, "Nothing: it's new"), existing.map((e) => h("option", { value: e.id }, `${"  ".repeat(e.depth)}${e.name}`)));
+  const category = h("select", { class: "text-input" }, h("option", { value: "" }, "Item (the default)"), categories.filter((c) => c.role !== "creature").map((c) => h("option", { value: c.id }, `${"   ".repeat(c.depth)}${c.name}`)));
+  const create = h("button", { class: "button primary" }, "Create");
+  const refresh = () => {
+    create.disabled = !name.value.trim();
+    kind.disabled = !!variant.value;
+  };
+  name.addEventListener("input", refresh);
+  variant.addEventListener("change", refresh);
+  name.addEventListener("keydown", (e) => e.key === "Enter" && (e.preventDefault(), create.click()));
+  d.body.append(
+    h("label", { class: "field-label" }, "Name"),
+    name,
+    ...(which === "beings" ? [h("label", { class: "field-label spaced" }, "What is it?"), kind] : [h("label", { class: "field-label spaced" }, "Filed under"), category]),
+    h("label", { class: "field-label spaced" }, "Variant of…"),
+    variant,
+    h("p", { class: "muted small" }, "A variant starts with everything its parent has. Change anything to make it different; later changes to the parent still reach it."),
+  );
+  create.addEventListener("click", async () => {
+    if (!name.value.trim()) return;
+    create.disabled = true;
+    const id = await attempt(() =>
+      which === "beings"
+        ? api.addBeing({ name: name.value, kind: kind.value as BeingKind, variantOf: variant.value || null })
+        : api.addItem({ name: name.value, categoryId: category.value || null, variantOf: variant.value || null }),
+    );
+    if (!id) return refresh();
+    d.close();
+    ctx.select(id);
+  });
+  d.footer.append(h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"), create);
+  refresh();
+  name.focus();
+}
+
+async function remove(id: string, ctx: PlaceCtx) {
+  const r = await attempt(() => api.deleteNode(id));
+  if (!r) return;
+  notice(`${r.label}. It's in the recycle bin; anything that used it is flagged.`, "blue", {
+    label: "Undo",
+    run: async () => {
+      await attempt(() => api.undo());
+      ctx.select(id);
+    },
+  });
+  ctx.select(null);
+}
+
+// ---------- The sheet ----------
+
+function sheetEditor(view: NodeView | null, which: "beings" | "items", categories: CategoryOption[], choices: Choices, ctx: PlaceCtx) {
+  if (!view)
+    return h(
+      "section",
+      { class: "panel editor" },
+      h(
+        "div",
+        { class: "empty-editor" },
+        h("h2", null, ctx.view.name),
+        h("p", { class: "muted" }, which === "beings" ? "Pick something on the left, or make a new one. Monsters, NPCs, characters, races and classes are all made the same way." : "Pick an item on the left, or make a new one."),
+      ),
+    );
+  const ro = view.readOnly;
+  const ed = new FieldMaker(view, ctx);
+  const sheet = view.sheet!;
+
+  const nameInput = h("input", { class: "title-input", value: view.name, "data-key": "f-name", "aria-label": "Name", disabled: ro, maxlength: 200 });
+  nameInput.addEventListener("change", () => void ed.save(() => api.rename(view.id, nameInput.value)));
+  nameInput.addEventListener("keydown", (e) => e.key === "Enter" && nameInput.blur());
+
+  const pic = h(
+    "button",
+    { class: `sheet-picture${view.picture ? "" : " empty"}`, disabled: ro, title: view.picture ? "Change the picture" : "Add a picture", "aria-label": "Picture" },
+    view.picture ? h("img", { src: pictureUrl(view.picture), alt: "" }) : [svg(ICONS.image), h("span", null, "Picture")],
+  );
+  pic.addEventListener("click", async () => {
+    const id = await attempt(() => api.pickPicture());
+    if (id) await ed.save(() => api.setPicture(view.id, id));
+  });
+
+  const kindLabel = view.kind === "item" ? "Item" : (BEING_TABS.find((t) => t.id === view.fields.beingKind)?.label ?? "Being");
+  const categorySelect = h(
+    "select",
+    { class: "text-input select chip-sized", "data-key": "f-category", disabled: ro, "aria-label": "Category" },
+    h("option", { value: "", selected: !view.categoryId }, "Uncategorized"),
+    categories.map((c) => h("option", { value: c.id, selected: c.id === view.categoryId }, `${"   ".repeat(c.depth)}${c.name}`)),
+    h("option", { value: "__new" }, "+ New category…"),
+  );
+  categorySelect.addEventListener("change", async () => {
+    if (categorySelect.value === "__new") {
+      const made = await newCategory(categories);
+      if (made) await ed.save(() => api.setCategory(view.id, made));
+      else await ctx.refresh();
+      return;
+    }
+    await ed.save(() => api.setCategory(view.id, categorySelect.value || null));
+  });
+
+  const head = h(
+    "div",
+    { class: "sheet-head" },
+    pic,
+    h(
+      "div",
+      { class: "sheet-title" },
+      h(
+        "div",
+        { class: "title-row" },
+        nameInput,
+        ed.pencil("name"),
+        h("button", { class: `icon-button star${view.favourite ? " on" : ""}`, disabled: ro, title: view.favourite ? "Favourite (click to unstar)" : "Add to favourites", "aria-pressed": view.favourite ? "true" : "false", onClick: () => void ed.save(() => api.toggleFavourite(view.id)) }, svg(ICONS.star)),
+        ro ? null : h("button", { class: "icon-button", title: "Delete (it goes to the recycle bin)", "aria-label": `Delete ${view.name}`, onClick: () => void remove(view.id, ctx) }, svg(ICONS.trash)),
+      ),
+      h(
+        "div",
+        { class: "chips" },
+        h("span", { class: "chip" }, kindLabel),
+        h("label", { class: "chip-select" }, "Filed under ", categorySelect),
+        view.parent
+          ? h("span", { class: "chip variant-chip" }, "Variant of ", h("button", { class: "link", onClick: () => ctx.select(view.parent!.id) }, view.parent.name), ro ? null : h("button", { class: "link small detach", title: "Make it a fully independent copy", onClick: () => void ed.save(() => api.detach(view.id)) }, "Detach"))
+          : view.parentMissing
+            ? h("span", { class: "chip broken-chip" }, "Its parent was removed")
+            : null,
+        view.fromBelow ? h("span", { class: "chip muted", title: "This comes from the system. Changes you make here stay in this world, marked with a pencil." }, svg(ICONS.layers), "From the system") : null,
+      ),
+      h(
+        "div",
+        { class: "stat-row" },
+        sheet.header.map((f) =>
+          h(
+            "label",
+            { class: "stat" },
+            h("span", { class: "stat-label" }, f.label, ed.pencil(f.key)),
+            f.type === "number" ? ed.number(f.key) : ed.text(f.key, f.placeholder ?? ""),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  const scores = sheet.scores ? scoreRow(view, choices, ed) : null;
+  const sections = h(
+    "div",
+    { class: "sheet-sections" },
+    sheet.sections.map((s) => h("div", { class: "sheet-section" }, h("div", { class: "sheet-section-title" }, s), h("div", { class: "drop-hint muted small" }, "Bricks from the library go here. Dragging them in comes in the next step."))),
+  );
+
+  const textBox = h("textarea", { class: "text-input rules-text", "data-key": "f-text", rows: 5, disabled: ro, placeholder: "Description: what it looks like, how it behaves, where it comes from." }, view.text);
+  textBox.addEventListener("change", () => void ed.save(() => api.setText(view.id, textBox.value)));
+
+  return h(
+    "section",
+    { class: "panel editor", "data-scroll": "editor" },
+    h(
+      "div",
+      { class: "editor-inner wide" },
+      head,
+      scores,
+      sections,
+      h("div", { class: "field" }, h("div", { class: "field-label" }, "Description", ed.pencil("text")), textBox),
+      view.variants ? h("p", { class: "muted small" }, `${view.variants} ${view.variants === 1 ? "variant follows" : "variants follow"} this one; changes here reach them unless they set that value themselves.`) : null,
+      h(
+        "div",
+        { class: "used-by" },
+        h("div", { class: "field-label" }, "Used by"),
+        view.usedBy.length ? h("ul", { class: "link-list" }, view.usedBy.map((u) => h("li", null, h("button", { class: "link", onClick: () => ctx.select(u.id) }, u.name)))) : h("p", { class: "muted small" }, "Nothing uses this yet."),
+      ),
+    ),
+  );
+}
+
+/** The system's abilities as score boxes, with the bonus worked out beside each. */
+function scoreRow(view: NodeView, choices: Choices, ed: FieldMaker) {
+  if (!choices.abilities.length) return h("p", { class: "muted small" }, "Add abilities (such as Strength) in the Rules tab, and their score boxes appear on every sheet.");
+  const scores = new Map(view.scores.map((s) => [s.ability, s.score]));
+  const missing = view.scores.filter((s) => !choices.abilities.some((a) => a.id === s.ability));
+  return h(
+    "div",
+    { class: "score-row" },
+    choices.abilities.map((a) => {
+      const v = scores.get(a.id);
+      const bonus = v === undefined ? "" : a.bonus === "d20" ? signed(Math.floor((v - 10) / 2)) : a.bonus === "score" ? signed(v) : "";
+      const input = h("input", { class: "text-input score-input", type: "number", value: v === undefined ? "" : String(v), "data-key": `score-${a.id}`, disabled: view.readOnly, "aria-label": a.name });
+      input.addEventListener("change", () => {
+        const raw = input.value.trim();
+        if (raw !== "" && !Number.isFinite(Number(raw))) return;
+        void ed.save(() => api.setScore(view.id, a.id, raw === "" ? null : Number(raw)));
+      });
+      input.addEventListener("keydown", (e) => e.key === "Enter" && input.blur());
+      return h("label", { class: "score", title: a.name }, h("span", { class: "score-label" }, a.label ?? a.name, ed.pencil(`score_${a.id}`)), input, h("span", { class: "score-bonus muted small" }, bonus));
+    }),
+    missing.map((s) => h("div", { class: "score broken", title: "This ability was removed. See the flag panel." }, h("span", { class: "score-label" }, `[missing: ${view.missing[s.ability] ?? "removed"}]`), h("span", null, String(s.score)))),
+  );
+}
+
+function signed(n: number): string {
+  return n >= 0 ? `+${n}` : `−${Math.abs(n)}`;
+}
+
+/** "+ New category…": a name, and optionally which category it goes inside. */
+function newCategory(categories: CategoryOption[]): Promise<string | null> {
+  return new Promise((resolve) => {
+    let made: string | null = null;
+    const d = openDialog("New category", { onClose: () => resolve(made) });
+    const name = h("input", { class: "text-input", placeholder: "For example: Melee", maxlength: 200 });
+    const under = h("select", { class: "text-input" }, h("option", { value: "" }, "Nothing: a new top category"), categories.filter((c) => c.depth < 2).map((c) => h("option", { value: c.id }, `${"   ".repeat(c.depth)}${c.name}`)));
+    const ok = h("button", { class: "button primary", disabled: true }, "Add category");
+    name.addEventListener("input", () => (ok.disabled = !name.value.trim()));
+    name.addEventListener("keydown", (e) => e.key === "Enter" && (e.preventDefault(), ok.click()));
+    ok.addEventListener("click", async () => {
+      if (!name.value.trim()) return;
+      const id = await attempt(() => api.addCategory(name.value, under.value || null));
+      if (!id) return;
+      made = id;
+      d.close();
+    });
+    d.body.append(h("label", { class: "field-label" }, "Name"), name, h("label", { class: "field-label spaced" }, "Inside"), under, h("p", { class: "muted small" }, "Categories go up to three levels deep, such as Weapon → Melee → Metal."));
+    d.footer.append(h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"), ok);
+    name.focus();
+  });
+}

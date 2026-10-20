@@ -10,6 +10,7 @@ import type { RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
 import type { Choices, FlagView, NodeView, StepResult } from "./editing.ts";
 import type { RulesSection } from "./rules.ts";
+import type { BeingKind, CategoryOption, ListEntry } from "./sheets.ts";
 import { Session } from "./session.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
@@ -19,6 +20,7 @@ export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
 export type { Choices, FlagView, NodeView, Option, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
+export type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
 
 export interface SystemCard {
   id: Id;
@@ -143,6 +145,18 @@ export const BACKEND_METHODS = [
   "deleteNode",
   "undo",
   "redo",
+  "beingsList",
+  "itemsList",
+  "categories",
+  "addBeing",
+  "addItem",
+  "addCategory",
+  "setCategory",
+  "setPicture",
+  "toggleFavourite",
+  "setScore",
+  "useParentValue",
+  "detach",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -420,6 +434,49 @@ export class Backend {
   }
   redo(): StepResult | null {
     return this.editing.redo();
+  }
+
+  beingsList(kind: BeingKind): ListEntry[] {
+    return this.editing.beingsList(kind);
+  }
+  itemsList(): ListEntry[] {
+    return this.editing.itemsList();
+  }
+  categories(): CategoryOption[] {
+    return this.editing.categories();
+  }
+  addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null }): Id {
+    return this.editing.addBeing(input);
+  }
+  addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null }): Id {
+    return this.editing.addItem(input);
+  }
+  addCategory(name: string, under: Id | null): Id {
+    return this.editing.addCategory(name, under);
+  }
+  setCategory(id: Id, categoryId: Id | null): true {
+    this.editing.setCategory(id, categoryId);
+    return true;
+  }
+  setPicture(id: Id, picture: Id | null): true {
+    this.editing.setPicture(id, picture);
+    return true;
+  }
+  toggleFavourite(id: Id): true {
+    this.editing.toggleFavourite(id);
+    return true;
+  }
+  setScore(id: Id, ability: Id, score: number | null): true {
+    this.editing.setScore(id, ability, score);
+    return true;
+  }
+  useParentValue(id: Id, key: string): true {
+    this.editing.useParentValue(id, key);
+    return true;
+  }
+  detach(id: Id): true {
+    this.editing.detach(id);
+    return true;
   }
 
   /** The app is closing normally. */

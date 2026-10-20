@@ -13,8 +13,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
   installer builds at GitHub and all tests pass on Windows.
 - **In progress:** Milestone 4, the Rules tab and sheets (branch
   `claude/electron-desktop-app-shell-2arspv`, the branch this build session is allowed to use).
-  Step 1 of 4 done: the Rules tab. Next: Beings and Items sheets, then the library with drag and
-  drop and Shift/Ctrl selection, then drilling into a brick and Edit parent.
+  Steps 1 and 2 of 4 done: the Rules tab, and the Beings and Items sheets. Next: the library with
+  drag and drop and Shift/Ctrl selection, then drilling into a brick and Edit parent.
 
 ## Milestones to first playable
 
@@ -31,6 +31,21 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 4, step 2: Beings and Items sheets)
+
+- `src/app/sheets.ts`: the five kinds of being, the sheet each kind shows (header numbers,
+  ability scores, sections), the starter categories (Weapon, Armour, Item, Creature, Spell) with
+  + New category up to three levels deep, lists with variants indented under their parents to any
+  depth, creating beings and items (optionally as a variant), and Detach.
+- Screens: `src/ui/sheets-tab.ts`. Beings has the sub-tabs Characters, Classes, Races, Monsters
+  and NPCs; Items are grouped by where they are filed. Lists filter by name and by favourites.
+  A sheet has its picture, name, star, kind, Filed under, "Variant of" with Detach, the header
+  numbers, the system's abilities as score boxes with the bonus worked out, its sections (empty
+  until the library arrives in step 3), the description, and Used by.
+- Pencil marks now cover variants too: "Use Goblin's" puts a value back to following the parent.
+- 112 automatic tests pass (9 new), including the Part 4 rules: a parent's change reaches a variant
+  unless it set that value itself, through every generation; Detach keeps everything as it was.
 
 ### 2026-10-20 (milestone 4, step 1: the Rules tab)
 
@@ -268,3 +283,13 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20 (Jeff may want to check): Undo and Redo also have small arrow buttons in the top bar,
   beside Home, for anyone who doesn't know Ctrl+Z.
 - 2026-10-20: The Creatures tab is now called Beings, following the October 20 design decision.
+- 2026-10-20: Each ability score on a sheet is its own value, so a variant that changes only its
+  Dexterity keeps following its parent's other scores, and deleting an ability flags every sheet.
+- 2026-10-20: Abilities are listed in the order they were made (STR, DEX, CON...), not
+  alphabetically; everything else is alphabetical.
+- 2026-10-20: Until a system can edit its own sheets, every system uses the basic sheets in
+  `src/app/sheets.ts` (monster: hit points, armour, speed, challenge; and so on).
+- 2026-10-20 (Jeff may want to check): Create new is one short pop-up (name, what it is, Variant
+  of…) instead of a second pop-up for "Variant of".
+- 2026-10-20: New beings are filed under Creature and new items under Item, unless chosen
+  otherwise. A variant starts in its parent's category.

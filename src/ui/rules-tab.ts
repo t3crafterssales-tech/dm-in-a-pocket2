@@ -7,10 +7,9 @@ import { attempt } from "./common.ts";
 import { notice } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
+import { FieldMaker, asLink, isObj } from "./fields.ts";
+import type { Link, Value } from "./fields.ts";
 import type { PlaceCtx } from "./place.ts";
-
-type Value = NodeView["fields"][string];
-type Link = { link: string };
 
 const collapsed = new Set<string>();
 /** The section with its "new rule" box open, if any. */
@@ -421,108 +420,3 @@ function thresholdsEditor(view: NodeView, conditions: Option[], ed: FieldMaker) 
   );
 }
 
-// ---------- Building fields ----------
-
-class FieldMaker {
-  private readonly view: NodeView;
-  private readonly ctx: PlaceCtx;
-  constructor(view: NodeView, ctx: PlaceCtx) {
-    this.view = view;
-    this.ctx = ctx;
-  }
-
-  /** Saves a change, then redraws so the summary and flags catch up. */
-  async save(fn: () => Promise<unknown>) {
-    await attempt(fn);
-    await this.ctx.refresh();
-  }
-
-  /** A pencil mark for something this world changed, with a way back to the system's value. */
-  pencil(key: string | string[]) {
-    const keys = Array.isArray(key) ? key : [key];
-    const changed = keys.filter((k) => this.view.changedHere.includes(k));
-    if (!changed.length) return null;
-    return h(
-      "span",
-      { class: "pencil", title: "Changed in this world. The system's other worlds are unaffected." },
-      svg(ICONS.pencil),
-      this.view.readOnly ? null : h("button", { class: "link small", onClick: () => void this.save(async () => { for (const k of changed) await api.useSystemValue(this.view.id, k); }) }, "Use the system's"),
-    );
-  }
-
-  row(label: string, key: string | string[], control: HTMLElement) {
-    return h("div", { class: "field" }, h("div", { class: "field-label" }, label, this.pencil(key)), control);
-  }
-
-  text(key: string, placeholder = "") {
-    const v = this.view.fields[key];
-    const input = h("input", { class: "text-input", value: typeof v === "string" || typeof v === "number" ? String(v) : "", placeholder, "data-key": `f-${key}`, disabled: this.view.readOnly, maxlength: 500 });
-    input.addEventListener("change", () => void this.save(() => api.setField(this.view.id, key, input.value)));
-    input.addEventListener("keydown", (e) => e.key === "Enter" && input.blur());
-    return input;
-  }
-
-  number(key: string, min?: number) {
-    const v = this.view.fields[key];
-    return this.plainNumber(v, (n) => api.setField(this.view.id, key, min !== undefined ? Math.max(min, n) : n), `f-${key}`);
-  }
-
-  plainNumber(v: Value | undefined, set: (n: number) => Promise<unknown>, dataKey: string) {
-    const input = h("input", { class: "text-input number-input", type: "number", value: typeof v === "number" ? String(v) : "", "data-key": dataKey, disabled: this.view.readOnly });
-    input.addEventListener("change", () => {
-      if (input.value.trim() === "" || !Number.isFinite(Number(input.value))) return;
-      void this.save(() => set(Number(input.value)));
-    });
-    input.addEventListener("keydown", (e) => e.key === "Enter" && input.blur());
-    return input;
-  }
-
-  select(key: string, options: { value: string; label: string }[]) {
-    const v = this.view.fields[key];
-    return this.plainSelect(typeof v === "string" ? v : "", options, (value) => api.setField(this.view.id, key, value), `f-${key}`);
-  }
-
-  plainSelect(value: string, options: { value: string; label: string }[], set: (v: string) => Promise<unknown>, dataKey: string) {
-    const sel = h(
-      "select",
-      { class: "text-input select", "data-key": dataKey, disabled: this.view.readOnly },
-      options.some((o) => o.value === value) ? null : h("option", { value: "", disabled: true, selected: true }, "Choose…"),
-      options.map((o) => h("option", { value: o.value, selected: o.value === value }, o.label)),
-    );
-    sel.addEventListener("change", () => void this.save(() => set(sel.value)));
-    return sel;
-  }
-
-  /** A drop-down of nodes. A link to something that is gone shows as [missing: ...] in red. */
-  linkSelect(key: string, options: Option[], none: string) {
-    return this.plainLinkSelect(asLink(this.view.fields[key]), options, none, (id) => api.setField(this.view.id, key, id ? { link: id } : null), `f-${key}`);
-  }
-
-  plainLinkSelect(current: Link | null, options: Option[], none: string, set: (id: string | null) => Promise<unknown>, dataKey: string) {
-    const id = current?.link ?? "";
-    const missing = !!id && !options.some((o) => o.id === id);
-    const sel = h(
-      "select",
-      { class: `text-input select${missing ? " broken" : ""}`, "data-key": dataKey, disabled: this.view.readOnly },
-      h("option", { value: "" }, none),
-      missing ? h("option", { value: id, selected: true }, `[missing: ${this.view.missing[id] ?? "something removed"}]`) : null,
-      options.map((o) => h("option", { value: o.id, selected: o.id === id }, o.label ? `${o.name} (${o.label})` : o.name)),
-    );
-    sel.addEventListener("change", () => void this.save(() => set(sel.value || null)));
-    return sel;
-  }
-
-  checkbox(checked: boolean, set: (on: boolean) => Promise<unknown>, dataKey: string) {
-    const box = h("input", { type: "checkbox", checked, "data-key": dataKey, disabled: this.view.readOnly });
-    box.addEventListener("change", () => void this.save(() => set(box.checked)));
-    return box;
-  }
-}
-
-function isObj(v: Value | undefined): v is { [k: string]: Value } {
-  return !!v && typeof v === "object" && !Array.isArray(v);
-}
-
-function asLink(v: Value | undefined): Link | null {
-  return isObj(v) && typeof v.link === "string" ? { link: v.link } : null;
-}

@@ -8,11 +8,15 @@ import { LibraryError } from "../storage/index.ts";
 import { createRuleNode, createSection, ensureSections, ruleSummary, rulesTab, sectionOf } from "./rules.ts";
 import type { RulesSection, SectionKey } from "./rules.ts";
 import type { Session } from "./session.ts";
+import { beingsList, categoryTree, createBeing, createCategory, createItem, detach, itemsList, scoreKey, scoresOf, scoreValue, sheetFor } from "./sheets.ts";
+import type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
 
 export interface Option {
   id: Id;
   name: string;
   label: string | null;
+  /** For abilities: how a score becomes a bonus ("d20", "score", "table", "none"). */
+  bonus?: string;
 }
 
 export interface NodeView {
@@ -35,6 +39,20 @@ export interface NodeView {
   usedBy: { id: Id; name: string }[];
   summary: string;
   readOnly: boolean;
+  picture: Id | null;
+  favourite: boolean;
+  categoryId: Id | null;
+  /** The node this is a variant of. */
+  parent: { id: Id; name: string } | null;
+  /** True if it is a variant of something that is gone. */
+  parentMissing: boolean;
+  /** For a variant: the fields it set for itself (pencil marks); the rest come from its parent. */
+  own: string[];
+  /** How many variants it has. */
+  variants: number;
+  /** The sheet for beings and items, from the system. */
+  sheet: SheetDef | null;
+  scores: { ability: Id; score: number }[];
 }
 
 export interface Choices {
@@ -84,7 +102,7 @@ export class Editing {
     try {
       return fn();
     } catch (e) {
-      if (e instanceof EngineError || e instanceof LibraryError) throw new LibraryError(e.message);
+      if (e instanceof EngineError || e instanceof LibraryError || e instanceof Error) throw new LibraryError(e.message);
       throw e;
     }
   }
@@ -117,7 +135,9 @@ export class Editing {
     for (const [to, name] of Object.entries(names)) if (name === null) missing[to] = ws.binEntryFor(to)?.node.name ?? "something removed";
     const key = n.kind === "category" ? null : sectionOf(ws, this.layer, n);
     const sections = rulesTab(ws, this.layer);
-    const usedBy = [...new Set(ws.usedBy(this.layer, id).map((s) => s.node))].filter((x) => x !== id).map((x) => ({ id: x, name: ws.get(this.layer, x)?.name ?? "?" }));
+    // Variants point at their parent, but they are listed as variants, not as "used by".
+    const usedBy = [...new Set(ws.usedBy(this.layer, id).filter((s) => s.path[0] !== "parent").map((s) => s.node))].filter((x) => x !== id).map((x) => ({ id: x, name: ws.get(this.layer, x)?.name ?? "?" }));
+    const parent = n.parent ? ws.get(this.layer, n.parent.link) : null;
     return {
       id,
       kind: n.kind,
@@ -131,8 +151,17 @@ export class Editing {
       names,
       missing,
       usedBy: usedBy.sort((a, b) => a.name.localeCompare(b.name)),
-      summary: ruleSummary(ws, this.layer, id),
+      summary: n.kind === "being" || n.kind === "item" ? "" : ruleSummary(ws, this.layer, id),
       readOnly: this.session.readOnly,
+      picture: n.picture,
+      favourite: n.favourite,
+      categoryId: n.category?.link ?? null,
+      parent: parent ? { id: parent.id, name: parent.name } : null,
+      parentMissing: r.parentMissing,
+      own: n.parent ? r.ownFields : [],
+      variants: ws.childrenOf(this.layer, id).length,
+      sheet: sheetFor(n, r.fields),
+      scores: scoresOf(r.fields),
     };
   }
 
@@ -142,8 +171,12 @@ export class Editing {
       this.ws
         .list(this.layer, kind)
         .filter((n) => !n.template)
-        .map((n) => ({ id: n.id, name: n.name, label: typeof n.fields.label === "string" && n.fields.label ? n.fields.label : null }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => (kind === "ability" ? a.created - b.created : 0))
+        .map((n) => {
+          const f = this.ws.resolve(this.layer, n.id)!.fields;
+          return { id: n.id, name: n.name, label: typeof f.label === "string" && f.label ? f.label : null, ...(kind === "ability" ? { bonus: typeof f.bonus === "string" ? f.bonus : "d20" } : {}) };
+        })
+        .sort((a, b) => (kind === "ability" ? 0 : a.name.localeCompare(b.name)));
     return { abilities: opt("ability"), conditions: opt("condition"), resources: opt("resource") };
   }
 
@@ -221,6 +254,71 @@ export class Editing {
   redo(): StepResult | null {
     const s = this.run(() => this.ws.redo());
     return s ? { label: s.label } : null;
+  }
+
+  // ---------- Beings and items ----------
+
+  beingsList(kind: BeingKind): ListEntry[] {
+    return beingsList(this.ws, this.layer, kind);
+  }
+
+  itemsList(): ListEntry[] {
+    return itemsList(this.ws, this.layer);
+  }
+
+  categories(): CategoryOption[] {
+    return categoryTree(this.ws, this.layer);
+  }
+
+  addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null }): Id {
+    const n = cleanName(input.name);
+    return this.run(() => createBeing(this.ws, this.layer, n, input.kind, input.variantOf));
+  }
+
+  addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null }): Id {
+    const n = cleanName(input.name);
+    return this.run(() => createItem(this.ws, this.layer, n, input.categoryId, input.variantOf));
+  }
+
+  addCategory(name: string, under: Id | null): Id {
+    const n = cleanName(name);
+    return this.run(() => createCategory(this.ws, this.layer, n, under));
+  }
+
+  setCategory(id: Id, categoryId: Id | null) {
+    const node = this.must(id);
+    const cat = categoryId ? this.categories().find((c) => c.id === categoryId) : null;
+    if (categoryId && !cat) throw new LibraryError("That category is gone.");
+    this.run(() => this.ws.transact(`Filed ${node.name} under ${cat?.path ?? "nothing"}`, () => this.ws.edit(this.layer, id, (r) => (r.category = categoryId ? link(categoryId) : null))));
+  }
+
+  setPicture(id: Id, picture: Id | null) {
+    const node = this.must(id);
+    this.run(() => this.ws.transact(picture ? `Changed the picture of ${node.name}` : `Removed the picture of ${node.name}`, () => this.ws.edit(this.layer, id, (r) => (r.picture = picture))));
+  }
+
+  toggleFavourite(id: Id) {
+    const node = this.must(id);
+    this.run(() => this.ws.transact(node.favourite ? `Unstarred ${node.name}` : `Starred ${node.name}`, () => this.ws.edit(this.layer, id, (r) => (r.favourite = !r.favourite))));
+  }
+
+  /** One ability score on a sheet. Null clears it (a variant then follows its parent again). */
+  setScore(id: Id, ability: Id, score: number | null) {
+    const node = this.must(id);
+    if (!/^[0-9a-f]+$/.test(ability)) throw new LibraryError("That isn't an ability.");
+    const abilityName = this.ws.get(this.layer, ability)?.name ?? "a score";
+    this.run(() => this.ws.transact(`Changed ${node.name}'s ${abilityName}`, () => this.ws.setField(this.layer, id, scoreKey(ability), score === null ? undefined : scoreValue(ability, score))));
+  }
+
+  /** For a variant: a value goes back to following its parent (removes the pencil mark). */
+  useParentValue(id: Id, key: string) {
+    const node = this.must(id);
+    if (!node.parent) throw new LibraryError("It isn't a variant of anything.");
+    this.run(() => this.ws.transact(`${node.name} follows its parent again`, () => this.ws.setField(this.layer, id, key, undefined)));
+  }
+
+  detach(id: Id) {
+    this.run(() => detach(this.ws, this.layer, id));
   }
 
   /** Sections a rule can be moved to (abilities, resources, skills and conditions stay in their own). */

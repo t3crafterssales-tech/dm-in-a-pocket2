@@ -9,6 +9,7 @@ import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { rulesPanels } from "./rules-tab.ts";
+import { sheetPanels } from "./sheets-tab.ts";
 
 const TABS = ["Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
 type Tab = (typeof TABS)[number];
@@ -126,6 +127,8 @@ async function draw() {
   let list: HTMLElement;
   let editor: HTMLElement;
   if (tab === "Rules") ({ list, editor } = await rulesPanels(ctx));
+  else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
+  else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
   else ({ list, editor } = comingSoon(tab, view));
   const flags = (await attempt(() => api.flags())) ?? [];
   if (current !== view) return; // went home while loading
@@ -150,8 +153,8 @@ async function draw() {
 function comingSoon(t: Tab, view: PlaceView) {
   const coming: Record<Tab, string> = {
     Rules: "",
-    Beings: "Monsters, NPCs, characters, races and classes, with the library, are the next step of this milestone.",
-    Items: "Items and the library are the next step of this milestone.",
+    Beings: "",
+    Items: "",
     Lore: "Lore pages, places and factions come after first playable.",
     Rulebook: "Printing a rulebook from your world comes in milestone 6.",
   };
