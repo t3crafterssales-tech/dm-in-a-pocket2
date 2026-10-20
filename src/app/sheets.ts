@@ -44,7 +44,7 @@ export const SHEETS: Record<BeingKind | "item", SheetDef> = {
   npc: { header: [HP, AC, SPEED, { key: F.cr, label: "Challenge", type: "text", placeholder: "1" }], scores: true, sections: ["Attacks and actions", "Traits and features", "Spells", "Gear"] },
   character: { header: [{ key: "level", label: "Level", type: "number" }, HP, AC, SPEED], scores: true, sections: ["Attacks and actions", "Features", "Spells", "Gear"] },
   race: { header: [{ key: "size", label: "Size", type: "text", placeholder: "Medium" }, SPEED], scores: false, sections: ["Traits", "Ability bonuses", "Languages"] },
-  class: { header: [{ key: "hitDie", label: "Hit die", type: "text", placeholder: "d8" }], scores: false, sections: ["Features", "Choices", "Proficiencies"] },
+  class: { header: [{ key: "hitDie", label: "Hit die", type: "text", placeholder: "d8" }, { key: F.maxLevel, label: "Levels", type: "number" }], scores: false, sections: ["Features", "Choices", "Proficiencies"] },
   item: {
     header: [
       { key: F.cost, label: "Cost", type: "text", placeholder: "15 gp" },

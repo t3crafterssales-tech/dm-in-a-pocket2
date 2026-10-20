@@ -1,7 +1,7 @@
 // The rulebook, written automatically from a system and world. This builds the book's content
 // and structure; turning it into a PDF or Word file happens in the export milestone.
 
-import { F, SRD_LICENSE, attachmentValues } from "./conventions.ts";
+import { F, SRD_LICENSE, attachmentValues, levelKey } from "./conventions.ts";
 import { findLinks, isLink } from "./links.ts";
 import { isCoreCheck, ruleText } from "./rulestext.ts";
 import { cap, sentence } from "./text.ts";
@@ -225,13 +225,22 @@ function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): E
   // One text box per node; each line in it is a paragraph.
   paragraphs.push(...n.text.split(/\n+/).map((p) => p.trim()).filter(Boolean));
   paragraphs.push(...describeFields(ws, layerId, n, fields));
-  for (const { attachment } of attachments) {
+  // A class's features print in level order: "Level 3. Sneak Attack: ...". Others stay in sheet order.
+  const levelOf = (aid: string) => {
+    const l = Number(r.fields[levelKey(aid)]);
+    return Number.isInteger(l) && l > 0 ? l : null;
+  };
+  const isClass = n.kind === "being" && r.fields[F.beingKind] === "class";
+  const ordered = isClass ? [...attachments].sort((a, b) => (levelOf(a.attachment.aid) ?? 1e9) - (levelOf(b.attachment.aid) ?? 1e9)) : attachments;
+  for (const { attachment } of ordered) {
+    const level = isClass ? levelOf(attachment.aid) : null;
     const s = sentence(ws, layerId, attachment);
     // On a sheet the card shows the brick's name; in the book an effect needs it said: "Poison Bite. The target is Poisoned."
     const target = attachment.brick ? ws.get(layerId, attachment.brick.link) : null;
     const name = attachment.name || target?.name || "";
     const type = attachmentValues(ws, layerId, attachment)[F.type];
-    paragraphs.push(name && (type === "effect" || type === "damage") && !s.toLowerCase().includes(name.toLowerCase()) ? `${name}. ${s}` : s);
+    const said = name && (type === "effect" || type === "damage") && !s.toLowerCase().includes(name.toLowerCase()) ? `${name}. ${s}` : s;
+    paragraphs.push(level ? `Level ${level}. ${said}` : said);
   }
   // Page references go to things the book prints: what bricks link to (Poisoned), and carried items,
   // never the library bricks themselves.
@@ -283,7 +292,7 @@ function describeFields(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<str
     case "skill":
       return isLink(f.ability) ? [`Uses ${name(f.ability)}.`] : [];
     case "rule":
-      if (isCoreCheck(ws, layerId, n)) return [ruleText(ws, layerId, n.id)];
+      if (isCoreCheck(ws, layerId, n) || f[F.method] === "pointBuy") return [ruleText(ws, layerId, n.id)];
       return typeof f.ruleText === "string" && f.ruleText ? [f.ruleText] : [];
     case "lore": {
       const sections = f.sections;

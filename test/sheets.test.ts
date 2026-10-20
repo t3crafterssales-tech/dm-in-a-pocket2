@@ -40,7 +40,7 @@ test("each kind of being gets its own sheet", () => {
   const elf = backend.addBeing({ name: "Elf", kind: "race", variantOf: null });
   const fighter = backend.addBeing({ name: "Fighter", kind: "class", variantOf: null });
   assert.equal(backend.node(elf).sheet!.scores, false);
-  assert.deepEqual(backend.node(fighter).sheet!.header.map((f) => f.label), ["Hit die"]);
+  assert.deepEqual(backend.node(fighter).sheet!.header.map((f) => f.label), ["Hit die", "Levels"]);
   assert.deepEqual(backend.beingsList("race").map((e) => e.name), ["Elf"]);
   assert.deepEqual(backend.beingsList("class").map((e) => e.name), ["Fighter"]);
 });

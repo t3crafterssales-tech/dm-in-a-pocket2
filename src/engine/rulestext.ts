@@ -1,6 +1,7 @@
 // Plain-English summaries of rule nodes: shown at the top of each rule's editor so the user can
 // check it says what they meant, and printed in the rulebook.
 
+import { pointBuyFrom, pointBuyText } from "./pointbuy.ts";
 import { F, formulaText } from "./conventions.ts";
 import type { Id, NodeRecord, Value } from "./types.ts";
 import type { Workspace } from "./workspace.ts";
@@ -88,6 +89,7 @@ export function ruleText(ws: Workspace, layerId: Id, nodeId: Id): string {
     }
     default:
       if (isCoreCheck(ws, layerId, n)) return coreSummary(f);
+      if (f[F.method] === "pointBuy") return pointBuyText(pointBuyFrom(n.id, f));
       if (f[F.forbid] && typeof f[F.forbid] === "object" && !Array.isArray(f[F.forbid])) {
         const fb = f[F.forbid] as Record<string, Value>;
         const what = WORLD_RULE_VALUES.find((v) => v.key === fb.field)?.label.toLowerCase() ?? String(fb.field ?? "?");

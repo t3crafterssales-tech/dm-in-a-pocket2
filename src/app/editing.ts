@@ -2,6 +2,8 @@
 // undo and redo. Each one is a single step in history. The window and, later, the AI change
 // things only through these.
 
+import { F, levelKey, pointBuyOf, pointsSpent } from "../engine/index.ts";
+import type { Spent } from "../engine/index.ts";
 import { BOOK_CHAPTERS, CHAPTER_TITLES, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
 import type { Book, BookType, ChapterId, CheckCategory, CheckSettings, Sensitivity } from "../engine/index.ts";
 
@@ -19,6 +21,8 @@ import { attachInside, attachmentDetail, changeParent, editAttachment, familyChe
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { createLore, loreList, rollTable } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
+import { attachAtLevel, isClass, levelTable, setFeatureLevel } from "./levels.ts";
+import type { LevelTable } from "./levels.ts";
 import type { TableModeView } from "./tablemode.ts";
 import { buildQuickStart } from "./quickstart.ts";
 import type { QuickStartAnswers } from "./quickstart.ts";
@@ -77,6 +81,10 @@ export interface NodeView {
   scores: { ability: Id; score: number }[];
   /** The bricks on a sheet, own first, then inherited ones. */
   attachments: AttachmentView[];
+  /** For classes: the level table. */
+  levels: LevelTable | null;
+  /** For characters, when the system has point buy: the points spent. */
+  pointBuy: (Spent & { rule: string }) | null;
 }
 
 export interface Choices {
@@ -584,7 +592,18 @@ export class Editing {
       sheet: sheetFor(n, r.fields),
       scores: scoresOf(r.fields),
       attachments: n.kind === "being" || n.kind === "item" ? attachmentsOf(ws, this.layer, id) : [],
+      levels: isClass(ws, this.layer, id) ? levelTable(ws, this.layer, id) : null,
+      pointBuy: this.pointBuyFor(n.kind, r.fields),
     };
+  }
+
+  /** A character's scores against the system's point buy, if it has one. */
+  private pointBuyFor(kind: string, fields: Record<string, Value>): (Spent & { rule: string }) | null {
+    if (kind !== "being" || fields[F.beingKind] !== "character") return null;
+    const p = pointBuyOf(this.ws, this.layer);
+    if (!p) return null;
+    const scores = scoresOf(fields).map((s) => ({ name: this.ws.get(this.layer, s.ability)?.name ?? "A score", score: s.score }));
+    return { ...pointsSpent(p, scores), rule: this.ws.get(this.layer, p.id)?.name ?? "Point buy" };
   }
 
   /** What the drop-downs offer: every ability, condition and resource, sorted by name. */
@@ -783,8 +802,26 @@ export class Editing {
     const a = findAttachment(node.attachments, aid);
     if (!a) throw new LibraryError(node.parent ? "That comes from its parent. Change it there, or Detach this one first." : "That isn't on this sheet any more.");
     const name = a.name || (a.brick ? (this.ws.get(this.layer, a.brick.link)?.name ?? "it") : "the choice");
-    this.run(() => this.ws.transact(`Removed ${name} from ${node.name}`, () => this.ws.removeAttachment(this.layer, nodeId, aid)));
+    this.run(() =>
+      this.ws.transact(`Removed ${name} from ${node.name}`, () => {
+        this.ws.removeAttachment(this.layer, nodeId, aid);
+        // A class forgets the level the feature was on.
+        if (this.ws.get(this.layer, nodeId)!.fields[levelKey(aid)] !== undefined) this.ws.setField(this.layer, nodeId, levelKey(aid), undefined);
+      }),
+    );
     return { label: `Removed ${name} from ${node.name}` };
+  }
+
+  // ---------- Class level tables ----------
+
+  attachAtLevel(classId: Id, bricks: Id[], level: number): StepResult {
+    this.must(classId);
+    return { label: this.run(() => attachAtLevel(this.ws, this.layer, classId, bricks, Number(level))) };
+  }
+
+  setFeatureLevel(classId: Id, aid: Id, level: number | null): StepResult {
+    this.must(classId);
+    return { label: this.run(() => setFeatureLevel(this.ws, this.layer, classId, aid, level === null ? null : Number(level))) };
   }
 
   // ---------- Drilling in, and Edit parent ----------

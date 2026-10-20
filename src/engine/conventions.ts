@@ -82,9 +82,18 @@ export const F = {
   ritual: "ritual",
   /** spell brick: the classes that can learn it, in words ("Sorcerer, Wizard") */
   spellClasses: "spellClasses",
+  /** class: how many levels its level table has (20 if not set) */
+  maxLevel: "maxLevel",
+  /** rule: "pointBuy" for point buy (with points, scoreStart, scoreMax, scoreMin and costs); otherwise written out */
+  method: "method",
   /** condition: a saving throw to resist or end it, { ability: link, dc } */
   save: "save",
 } as const;
+
+/** class: the level a feature (an attachment, by its id) is gained at, one value per feature. */
+export function levelKey(aid: string): string {
+  return `level_${aid}`;
+}
 
 /**
  * A formula built from blocks, never typed: [Constitution] [score] [+] [10].

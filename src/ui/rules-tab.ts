@@ -331,9 +331,35 @@ function kindFields(view: NodeView, c: Choices, ed: FieldMaker, isCore: boolean)
     }
     default:
       if (view.sectionKey === "world") return { main: worldRuleFields(view, ed), more: [] };
-      if (!isCore) return { main: [], more: [] };
+      if (!isCore) return { main: methodFields(view, ed), more: [] };
       return { main: coreFields(view, ed), more: [] };
   }
+}
+
+/**
+ * A rule is written out in words, or is point buy for ability scores: points to spend, where
+ * every score starts, how high it can go, and how low (below the start is a deficit that gives
+ * points back).
+ */
+function methodFields(view: NodeView, ed: FieldMaker): HTMLElement[] {
+  const method = view.fields.method === "pointBuy" ? "pointBuy" : "words";
+  const out = [
+    ed.row(
+      "This rule is",
+      "method",
+      ed.plainSelect(method, [{ value: "words", label: "Written out in words" }, { value: "pointBuy", label: "Point buy for ability scores" }], (v) => api.setField(view.id, "method", v === "pointBuy" ? "pointBuy" : null), "f-method"),
+    ),
+  ];
+  if (method !== "pointBuy") return out;
+  const start = typeof view.fields.scoreStart === "number" ? view.fields.scoreStart : 8;
+  out.push(
+    ed.row("Points to spend", "points", h("div", { class: "inline" }, ed.number("points", 0), h("span", { class: "muted small" }, "27 if left empty"))),
+    ed.row("Every score starts at", "scoreStart", h("div", { class: "inline" }, ed.number("scoreStart"), h("span", { class: "muted small" }, "8 if left empty"))),
+    ed.row("Highest score you can buy", "scoreMax", h("div", { class: "inline" }, ed.number("scoreMax"), h("span", { class: "muted small" }, "15 if left empty"))),
+    ed.row("Lowest a score can go", "scoreMin", h("div", { class: "inline" }, ed.number("scoreMin"), h("span", { class: "muted small" }, `Lower than ${start} allows deficits: each step below gives a point back. Leave empty for none.`))),
+    ed.row("Costs", "costs", ed.plainSelect(view.fields.costs === "flat" ? "flat" : "d20", [{ value: "d20", label: "1 point a step up to 13, then 2 (the familiar d20 table)" }, { value: "flat", label: "1 point for every step" }], (v) => api.setField(view.id, "costs", v), "f-costs")),
+  );
+  return out;
 }
 
 /** The values a world rule can be about (the same list as WORLD_RULE_VALUES in src/app/rules.ts). */

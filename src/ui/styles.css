@@ -585,3 +585,28 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .ai-settings .text-input:not(.number-input) { min-width: 280px; }
 .ai-tip { background: #e6eef7; border-radius: 8px; margin: 0 12px 8px 40px; padding: 6px 10px; }
 .ai-build { display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 40px; border-top: 1px solid var(--line); background: #eef4fb; }
+
+/* ---------- Class level tables ---------- */
+
+.level-table { margin-bottom: 16px; }
+.level-rows { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; max-height: 340px; overflow: auto; }
+.level-row { display: flex; gap: 10px; align-items: center; padding: 4px 10px; border-bottom: 1px solid var(--line); min-height: 30px; }
+.level-row:last-child { border-bottom: none; }
+.level-row.drop-over { background: var(--accent-soft); }
+.level-row.unplaced { border: 1px dashed var(--line); border-radius: 8px; margin-top: 6px; }
+.level-num { width: 82px; flex: none; font-weight: 600; font-size: 12.5px; color: var(--muted); }
+.level-features { display: flex; flex-wrap: wrap; gap: 6px; }
+.level-feature { cursor: grab; background: var(--accent-soft); }
+.level-feature.inherited { background: var(--paper-deep); font-style: italic; }
+.point-buy { margin: -6px 0 14px; color: var(--muted); } .point-buy.over { color: var(--red); font-weight: 600; }
+
+/* ---------- Search ---------- */
+
+.search-box { position: relative; align-self: center; margin-left: auto; }
+.search-input { width: 230px; user-select: text; }
+.search-results { position: absolute; top: calc(100% + 4px); right: 0; width: 420px; max-height: 60vh; overflow: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); z-index: 50; padding: 4px; }
+.search-hit { display: block; width: 100%; text-align: left; border: none; background: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.search-hit:hover, .search-hit.active { background: var(--accent-soft); }
+.search-name { font-weight: 600; }
+.search-snippet { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-results[hidden] { display: none; }

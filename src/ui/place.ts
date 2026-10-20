@@ -2,6 +2,7 @@
 // and World settings.
 
 import type { PlaceView } from "../app/backend.ts";
+import type { SearchHit } from "../app/search.ts";
 import type { Place } from "../app/settings.ts";
 import { api } from "./api.ts";
 import { app, attempt, brand, iconButton, nav, typingIn } from "./common.ts";
@@ -55,6 +56,7 @@ export async function openPlace(place: Place, mode: "normal" | "read-only" | "ta
   current = res.view;
   tab = "Rules";
   tableMode = false;
+  search = null;
   for (const t of TABS) selected[t] = null;
   await renderPlace();
   if (res.view.recovered) notice("Recovered after an unexpected close.", "blue", undefined, 0);
@@ -125,6 +127,7 @@ async function draw() {
     brand(),
     h("div", { class: "place-title" }, h("span", { class: "place-name" }, view.name), h("span", { class: "muted small" }, isWorld ? `World · ${view.systemName}` : "System")),
     tabs,
+    searchBox(),
     h(
       "nav",
       { class: "top-actions" },
@@ -183,6 +186,81 @@ function comingSoon(t: Tab, view: PlaceView) {
   };
 }
 
+// ---------- Search (Ctrl+F) ----------
+
+/**
+ * The search box is made once per open world and kept across redraws, so typing is never
+ * interrupted: only its own list of results changes as you type.
+ */
+let search: { el: HTMLElement; input: HTMLInputElement; reset: () => void } | null = null;
+
+function searchBox(): HTMLElement {
+  if (search) return search.el;
+  let hits: SearchHit[] = [];
+  let total = 0;
+  let at = 0;
+  let seq = 0;
+  const input = h("input", { class: "text-input search-input", type: "search", placeholder: "Search everything (Ctrl+F)", "aria-label": "Search everything" });
+  const list = h("div", { class: "search-results", role: "listbox", hidden: true });
+  const go = (hit: SearchHit | undefined) => {
+    if (!hit) return;
+    list.hidden = true;
+    input.blur();
+    tab = hit.tab;
+    selected[tab] = hit.id;
+    void renderPlace();
+  };
+  const show = () => {
+    const q = input.value.trim();
+    list.hidden = q.length < 2;
+    list.replaceChildren(
+      ...(hits.length
+        ? hits.map((hit, i) =>
+            h(
+              "button",
+              { class: `search-hit${i === at ? " active" : ""}`, role: "option", onMousedown: (e: MouseEvent) => (e.preventDefault(), go(hit)) },
+              h("span", { class: "search-name" }, hit.name),
+              h("span", { class: "muted small" }, ` ${hit.what} · ${hit.tab}`),
+              hit.snippet ? h("span", { class: "search-snippet muted small" }, hit.snippet) : null,
+            ),
+          )
+        : [h("p", { class: "muted small pad" }, "Nothing matches.")]),
+      ...(total > hits.length ? [h("p", { class: "muted small pad" }, `${total - hits.length} more: type more to narrow it down.`)] : []),
+    );
+    list.querySelector(".search-hit.active")?.scrollIntoView({ block: "nearest" });
+  };
+  input.addEventListener("input", () => {
+    const q = input.value;
+    const mine = ++seq;
+    void (async () => {
+      const r = q.trim().length >= 2 ? await attempt(() => api.search(q)) : { hits: [], total: 0 };
+      if (mine !== seq || !r) return;
+      hits = r.hits;
+      total = r.total;
+      at = 0;
+      show();
+    })();
+  });
+  input.addEventListener("focus", () => input.value.trim().length >= 2 && show());
+  input.addEventListener("blur", () => setTimeout(() => (list.hidden = true), 150));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      at = Math.max(0, Math.min(hits.length - 1, at + (e.key === "ArrowDown" ? 1 : -1)));
+      show();
+    } else if (e.key === "Enter") go(hits[at]);
+    else if (e.key === "Escape") {
+      input.value = "";
+      hits = [];
+      list.hidden = true;
+      input.blur();
+    }
+  });
+  const el = h("div", { class: "search-box" }, input, list);
+  search = { el, input, reset: () => ((input.value = ""), (hits = []), (list.hidden = true)) };
+  return el;
+}
+
 // ---------- Undo and redo ----------
 
 async function undo() {
@@ -208,6 +286,10 @@ document.addEventListener("keydown", (e) => {
   if (tableMode) {
     // Nothing to undo in a read-only view; Ctrl+F finds things.
     if (k === "f" && focusTableSearch()) e.preventDefault();
+    return;
+  }
+  if (k === "f") {
+    if (search) (e.preventDefault(), search.input.focus(), search.input.select());
     return;
   }
   if (typingIn(e)) return;

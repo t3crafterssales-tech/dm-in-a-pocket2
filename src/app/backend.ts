@@ -32,6 +32,8 @@ import * as assistant from "./ai/assistant.ts";
 import type { AiView, AskResult } from "./ai/assistant.ts";
 import type { AiTransport } from "./ai/job.ts";
 import { readDocument } from "./ai/documents.ts";
+import { search } from "./search.ts";
+import type { SearchHit } from "./search.ts";
 import type { ModelChoice } from "./ai/models.ts";
 import { CAREFUL, QUICK, dollars } from "./ai/models.ts";
 import type { Place } from "./settings.ts";
@@ -306,6 +308,9 @@ export const BACKEND_METHODS = [
   "aiFixFlag",
   "setAiLive",
   "dismissAiTip",
+  "search",
+  "attachAtLevel",
+  "setFeatureLevel",
   "aiFromDocument",
   "aiGenerate",
   "aiBuildNext",
@@ -926,6 +931,17 @@ export class Backend {
   }
   attach(input: { targets: Id[]; bricks: Id[]; activation?: Activation; uses?: Uses | null }): StepResult {
     return this.editing.attach(input);
+  }
+  /** The search box in the top bar. */
+  search(query: string): { hits: SearchHit[]; total: number } {
+    if (!this.session) throw new LibraryError("Open a world or system first.");
+    return search(this.session.ws, this.session.id, String(query ?? ""));
+  }
+  attachAtLevel(classId: Id, bricks: Id[], level: number): StepResult {
+    return this.editing.attachAtLevel(classId, bricks, level);
+  }
+  setFeatureLevel(classId: Id, aid: Id, level: number | null): StepResult {
+    return this.editing.setFeatureLevel(classId, aid, level);
   }
   removeAttachment(nodeId: Id, aid: Id): StepResult {
     return this.editing.removeAttachment(nodeId, aid);

@@ -434,7 +434,24 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
     ),
   );
 
-  const scores = sheet.scores ? scoreRow(view, choices, ed) : null;
+  const scores = sheet.scores
+    ? h(
+        "div",
+        null,
+        scoreRow(view, choices, ed),
+        view.pointBuy
+          ? h(
+              "p",
+              { class: `small point-buy${view.pointBuy.spent > view.pointBuy.points || view.pointBuy.problems.length ? " over" : ""}` },
+              `${view.pointBuy.rule}: ${view.pointBuy.spent} of ${view.pointBuy.points} points spent`,
+              view.pointBuy.spent < view.pointBuy.points ? `, ${view.pointBuy.points - view.pointBuy.spent} left` : view.pointBuy.spent > view.pointBuy.points ? `, ${view.pointBuy.spent - view.pointBuy.points} too many` : "",
+              view.pointBuy.problems.length ? `. ${view.pointBuy.problems.join("; ")}.` : ".",
+            )
+          : null,
+      )
+    : view.levels
+      ? levelTablePanel(view, ctx)
+      : null;
   const bySection = new Map<string, AttachmentView[]>();
   for (const a of view.attachments) bySection.set(a.section, [...(bySection.get(a.section) ?? []), a]);
   const extra = [...bySection.keys()].filter((s) => !sheet.sections.includes(s));
@@ -563,6 +580,67 @@ function brickCard(view: NodeView, a: AttachmentView, ctx: PlaceCtx) {
     ),
     // The card already shows the name, so the sentence doesn't repeat it.
     h("div", { class: "brick-sentence" }, a.sentence.startsWith(`${a.name}: `) ? capFirst(a.sentence.slice(a.name.length + 2)) : a.sentence),
+  );
+}
+
+const FEATURE_DRAG = "application/x-dm-feature";
+
+/**
+ * A class's level table: drag bricks from the Library onto a row to add them at that level, or
+ * drag a feature from one row to another. Features dropped elsewhere on the sheet wait at the
+ * bottom until they are given a level.
+ */
+function levelTablePanel(view: NodeView, ctx: PlaceCtx): HTMLElement {
+  const t = view.levels!;
+  const ro = view.readOnly;
+  const done = async (r: { label: string } | undefined) => {
+    if (r) notice(`${r.label}.`, "green", { label: "Undo", run: async () => (await attempt(() => api.undo()), await ctx.refresh()) }, 5000);
+    await ctx.refresh();
+  };
+  const dropZone = (level: number | null) => ({
+    onDragover: (ev: DragEvent) => {
+      const types = ev.dataTransfer?.types ?? [];
+      if (ro || !(types.includes(DRAG_TYPE) || types.includes(FEATURE_DRAG))) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      (ev.currentTarget as HTMLElement).classList.add("drop-over");
+    },
+    onDragleave: (ev: DragEvent) => (ev.currentTarget as HTMLElement).classList.remove("drop-over"),
+    onDrop: (ev: DragEvent) => {
+      if (ro) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      (ev.currentTarget as HTMLElement).classList.remove("drop-over");
+      document.querySelector(".sheet-drop")?.classList.remove("drop-over");
+      const feature = ev.dataTransfer!.getData(FEATURE_DRAG);
+      if (feature) return void attempt(() => api.setFeatureLevel(view.id, feature, level)).then(done);
+      const bricks = JSON.parse(ev.dataTransfer!.getData(DRAG_TYPE) || "[]") as string[];
+      if (!bricks.length) return;
+      if (level === null) return void drop([view.id], bricks, ctx);
+      void attempt(() => api.attachAtLevel(view.id, bricks, level)).then(done);
+    },
+  });
+  const chip = (f: NonNullable<NodeView["levels"]>["unplaced"][number]) =>
+    h(
+      "span",
+      {
+        class: `chip level-feature${f.from ? " inherited" : ""}`,
+        draggable: ro ? "false" : "true",
+        title: `${f.sentence}${f.from ? ` (from ${f.from})` : ""}${ro ? "" : " Drag it to another level."}`,
+        onDragstart: (ev: DragEvent) => ev.dataTransfer?.setData(FEATURE_DRAG, f.aid),
+      },
+      f.name,
+    );
+  return h(
+    "div",
+    { class: "level-table" },
+    h("div", { class: "sheet-section-title" }, "Level table", h("span", { class: "muted small" }, ro ? "" : " Drag bricks from the Library onto a level, or drag a feature to another level.")),
+    h(
+      "ol",
+      { class: "level-rows" },
+      t.rows.map((r) => h("li", { class: `level-row${r.features.length ? "" : " empty"}`, ...dropZone(r.level) }, h("span", { class: "level-num" }, `Level ${r.level}`), h("span", { class: "level-features" }, r.features.length ? r.features.map(chip) : h("span", { class: "muted small" }, "—")))),
+    ),
+    t.unplaced.length ? h("div", { class: "level-row unplaced", ...dropZone(null) }, h("span", { class: "level-num" }, "No level yet"), h("span", { class: "level-features" }, t.unplaced.map(chip))) : null,
   );
 }
 

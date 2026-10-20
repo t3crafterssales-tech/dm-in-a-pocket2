@@ -45,6 +45,11 @@ These are ordinary fields, so older files without them still open.
 
 A node's `text` may hold several lines; each line prints as its own paragraph.
 
+A class (a being with `beingKind` "class") may have `maxLevel` (20 if not set) and one
+`level_<attachment id>` number per feature, the level it is gained at. A rule with `method`
+"pointBuy" is point buy for ability scores, with `points`, `scoreStart`, `scoreMax`, `scoreMin`
+and `costs` ("flat" or "d20"). These are ordinary fields; older files without them still open.
+
 ## Attachments (a brick on a sheet)
 
 | Field | What it holds |

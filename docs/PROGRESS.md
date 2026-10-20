@@ -57,6 +57,20 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 
 ## Log
 
+### 2026-10-20 (before Jeff's Ashen Vigil test: level tables, point buy, search)
+
+- Class level tables: a class sheet shows levels 1 to 20 (or its own Levels number). Drag bricks
+  from the Library onto a level to add them there, or drag a feature to another level; features
+  dropped elsewhere wait under "No level yet". A subclass shows its parent's features at their
+  levels and can move one for itself. The rulebook prints class features in level order
+  ("Level 3. Sneak Attack: ...").
+- Point buy with deficits: any written rule can be switched to "Point buy for ability scores":
+  points, where every score starts, the highest you can buy, the lowest a score can go (below
+  the start gives points back), and flat or d20-table costs. Character sheets show "Ability
+  scores: 25 of 27 points spent, 2 left", in red when over or out of range. It prints in words.
+- Search everything: a box in the top bar (Ctrl+F) finds anything by name, then by its words,
+  says what it is and which tab it is on, and opens it there.
+
 ### 2026-10-20 (milestone 9: the AI)
 
 - Part 1, the AI panel: a prompt line at the bottom of every world and system, with "Working on:"
@@ -723,3 +737,12 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: Whole-system generation uses a fixed plan of seven sections rather than letting the
   AI plan, so the user always knows what comes next and can stop between sections. A section is
   used up only once it runs; an estimate the user cancels leaves it waiting.
+- 2026-10-20: A feature's level on a class is a value on the class, one per feature
+  (level_<attachment id>), so a subclass inherits its parent's levels and can change one for
+  itself. Removing a feature from a class forgets its level.
+- 2026-10-20: Point buy is a rule whose method is "pointBuy", with points, scoreStart, scoreMax,
+  scoreMin and costs; the d20 table is 1 point a step to 13, then 2. A system uses its first point
+  buy rule. Sheets only show the total; nothing is blocked (Promise 4).
+- 2026-10-20: Search ranks exact names, then names that start with the words (shorter first),
+  then everything whose text or values mention them, at most 40 shown with a count of the rest.
+  The box is kept across redraws so typing is never interrupted.
