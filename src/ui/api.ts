@@ -10,6 +10,9 @@ declare global {
     dm: {
       call(method: BackendMethod, args: unknown[]): Promise<Result>;
       showFolder(): Promise<string>;
+      bookPdf(opts: unknown): Promise<Result>;
+      bookPrint(opts: unknown): Promise<Result>;
+      openPdf(path: string): Promise<string>;
       onEvent(fn: (e: BackendEvent) => void): void;
     };
   }

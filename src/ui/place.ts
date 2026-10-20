@@ -10,6 +10,7 @@ import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { flagPanel, showNodeBin } from "./flag-panel.ts";
 import { showHistory } from "./history-dialog.ts";
+import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 
@@ -133,6 +134,7 @@ async function draw() {
   if (tab === "Rules") ({ list, editor } = await rulesPanels(ctx));
   else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
   else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
+  else if (tab === "Rulebook") ({ list, editor } = await rulebookPanels(ctx));
   else ({ list, editor } = comingSoon(tab, view));
   const flags = await flagPanel(ctx);
   if (current !== view) return; // went home while loading

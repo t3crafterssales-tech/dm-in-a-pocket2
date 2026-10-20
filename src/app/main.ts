@@ -2,10 +2,11 @@
 // behaviour lives in backend.ts, which is tested without Electron.
 
 import { BrowserWindow, Menu, app, dialog, ipcMain, protocol, shell } from "electron";
+import { writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { extname, join } from "node:path";
 import { Backend, BACKEND_METHODS, PICTURE_TYPES } from "./backend.ts";
-import type { BackendEvent, BackendMethod } from "./backend.ts";
+import type { BackendEvent, BackendMethod, BookRequest } from "./backend.ts";
 
 const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" };
 
@@ -86,6 +87,41 @@ void app.whenReady().then(() => {
     }
   });
   ipcMain.handle("dm:showFolder", () => (backend ? shell.openPath(backend.folder) : ""));
+
+  // The rulebook: laid out in a hidden window by the same page as the preview, then saved as a
+  // PDF or sent to the printer.
+  const renderBook = async (opts: BookRequest) => {
+    const data = backend!.book(opts);
+    const w = new BrowserWindow({ show: false, width: 1000, height: 1300, webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false } });
+    await w.loadFile(join(__dirname, "book.html"));
+    await w.webContents.executeJavaScript(`window.renderBook(${JSON.stringify(data)})`);
+    return { w, data };
+  };
+  ipcMain.handle("dm:bookPdf", async (_e, opts: BookRequest) => {
+    try {
+      const { w, data } = await renderBook(opts);
+      const pdf = await w.webContents.printToPDF({ pageSize: data.pageSize, printBackground: true, margins: { top: 0, bottom: 0, left: 0, right: 0 }, preferCSSPageSize: false });
+      w.destroy();
+      const name = `${data.book.title} - ${data.book.subtitle}.pdf`.replace(/[\\/:*?"<>|]+/g, " ");
+      const r = await dialog.showSaveDialog(win!, { title: "Save the rulebook as a PDF", defaultPath: join(app.getPath("documents"), name), filters: [{ name: "PDF", extensions: ["pdf"] }] });
+      if (r.canceled || !r.filePath) return { ok: true, value: null };
+      writeFileSync(r.filePath, pdf);
+      return { ok: true, value: r.filePath };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) };
+    }
+  });
+  ipcMain.handle("dm:bookPrint", async (_e, opts: BookRequest) => {
+    try {
+      const { w } = await renderBook(opts);
+      const ok = await new Promise<boolean>((resolve) => w.webContents.print({ silent: false, printBackground: true, margins: { marginType: "none" } }, (success) => resolve(success)));
+      w.destroy();
+      return { ok: true, value: ok };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) };
+    }
+  });
+  ipcMain.handle("dm:openPath", (_e, path: string) => (typeof path === "string" && path.toLowerCase().endsWith(".pdf") ? shell.openPath(path) : ""));
 
   createWindow();
 });

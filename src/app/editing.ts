@@ -2,7 +2,10 @@
 // undo and redo. Each one is a single step in history. The window and, later, the AI change
 // things only through these.
 
-import { DEFAULT_CHECKS, EngineError, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
+import { BOOK_CHAPTERS, CHAPTER_TITLES, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
+import type { Book, BookType, ChapterId } from "../engine/index.ts";
+
+const BOOK_TYPES = Object.keys(BOOK_CHAPTERS) as BookType[];
 import type { Activation, Id, NodeKind, Uses, Value, Workspace } from "../engine/index.ts";
 import { LibraryError } from "../storage/index.ts";
 import { createRuleNode, createSection, ensureSections, ruleSummary, rulesTab, sectionOf } from "./rules.ts";
@@ -100,6 +103,24 @@ export interface HistoryView {
   done: HistoryStep[];
   /** Steps that were undone and can be redone, the next one to redo last. */
   undone: HistoryStep[];
+}
+
+export interface BookRequest {
+  type: BookType;
+  /** Chapters to include, in order; leave out for the book type's usual chapters. */
+  chapters?: ChapterId[];
+  variants?: "differences" | "full";
+  monstersByChallenge?: boolean;
+  /** "Created by" line; leave empty for none. */
+  author?: string | null;
+  pageSize?: "Letter" | "A4";
+}
+
+export interface BookData {
+  book: Book;
+  /** Names of everything the entries mention, for "see Poisoned, page 42". */
+  names: Record<Id, string>;
+  pageSize: "Letter" | "A4";
 }
 
 export interface BinView {
@@ -275,6 +296,25 @@ export class Editing {
     p.log = p.log.filter((e) => e.id !== id);
     this.setPanel(p);
     return r;
+  }
+
+  // ---------- The rulebook ----------
+
+  /** The book's content for the chosen book type, plus the names its page references need. */
+  book(opts: BookRequest): BookData {
+    const type = BOOK_TYPES.includes(opts.type) ? opts.type : "everything";
+    const chapters = Array.isArray(opts.chapters) ? opts.chapters.filter((c): c is ChapterId => c in CHAPTER_TITLES) : undefined;
+    const book = buildBook(this.ws, this.layer, { type, chapters, variants: opts.variants === "full" ? "full" : "differences", monstersByChallenge: !!opts.monstersByChallenge, author: opts.author?.trim() || null });
+    const names: Record<Id, string> = {};
+    const walk = (e: Book["chapters"][number]["entries"][number]) => {
+      for (const m of e.mentions) {
+        const n = this.ws.get(this.layer, m);
+        if (n) names[m] = n.name;
+      }
+      e.variants.forEach(walk);
+    };
+    book.chapters.forEach((c) => c.entries.forEach(walk));
+    return { book, names, pageSize: opts.pageSize === "A4" ? "A4" : "Letter" };
   }
 
   // ---------- History ----------

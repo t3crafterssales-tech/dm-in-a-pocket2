@@ -17,8 +17,10 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 5, the flag panel, recycle bin, undo and history on screen (approved by Jeff
   on October 20, 2026, when he asked for the next step; merged into `main`). Anything he finds when
   he installs it gets fixed in milestone 6.
-- **Next:** Milestone 6, the rulebook export (PDF) and the small d20 starter, which completes first
-  playable.
+- **Done:** Milestone 6, the rulebook export (PDF) and the small d20 starter (approved by Jeff on
+  October 20, 2026, when he asked for the next step; merged into `main`). **First playable is
+  complete.** Jeff hasn't installed it yet; anything he finds gets fixed in the next milestone.
+- **Next:** Milestone 7, sharing and snapshots (see the table below).
 
 ## Milestones to first playable
 
@@ -34,7 +36,57 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 5 | Flag panel, recycle bin, undo and history on screen; basic free yellow checks | Delete Strength, fix it, undo, restore |
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
+After first playable, the rest of version 1 (order proposed by Claude on October 20, 2026; the
+free, no-AI work first, since the AI needs Jeff's API key and costs money on it; Jeff can reorder):
+
+| # | Milestone | What Jeff can test |
+| --- | --- | --- |
+| 7 | Sharing and snapshots: Import, Share a world or system, named snapshots with restore and clean-up, author name and the From others filter | Send a world to yourself and import it; snapshot, change, restore |
+| 8 | Quick start, roll tables, lore pages and templates, check categories with on/off and sliders | Build a quick game in 15 minutes; roll on a table |
+| 9 | The AI: chat, Check for errors, bulk changes, World Notes, create from a prompt | Needs Jeff's Claude API key |
+| 10 | The full SRD 5.2, Table mode and Word export | Run a game from the app |
+
 ## Log
+
+### 2026-10-20 (milestone 6, step 2: the small d20 starter; first playable complete)
+
+- Generic d20 now works in New system (`src/app/starters/d20.ts`): the d20 check; the six
+  abilities in sheet order; hit points from Constitution with Unconscious at 0; the 18 skills; the
+  15 conditions with short descriptions; short rules for initiative, turns, attacks, advantage,
+  resting, coins, levels and spellcasting; library bricks for natural and weapon attacks, traits,
+  effects (knocked prone, poison, paralysis), immunity to poison and two spells; 19 items (weapons
+  under Melee, Light and Ranged, armour by weight, gear, a healing potion); 19 monsters, 3 NPCs,
+  3 races and 2 classes. It shows off the features: Basic Melee Weapon is a template whose
+  variants are the metal weapons, and Goblin Boss is a variant of Goblin.
+- Everything in it is marked as SRD 5.2 content, so its rulebook prints the CC-BY credit line by
+  itself. The rules text is short and written for the app.
+- It opens with no red or yellow flags. Getting there improved one check: damage per round now
+  counts carried weapons one at a time (the best one) while natural attacks all count, so a goblin
+  with a scimitar and a bow isn't flagged as hitting twice as hard.
+- 161 automatic tests pass (4 new). A d20 system was made in the real window here and its Monster
+  Manual saved as a PDF and read back.
+
+### First playable: what Jeff can test
+
+Make a system from Generic d20 and a world on it; look through the Rules tab, the monsters and
+items; build a monster of your own from library bricks; delete Strength and fix, undo and restore;
+then go to the Rulebook tab, pick a book and Save as PDF.
+
+### 2026-10-20 (milestone 6, step 1: the rulebook)
+
+- The Rulebook tab: choose the book (Player's Handbook, Monster Manual, GM Guide, World Guide or
+  Complete Rulebook), tick or untick chapters, print variants in full or as differences, monsters
+  in order of challenge, a "Created by" line, and Letter or A4. The preview in the middle is the
+  same page that becomes the PDF. Save as PDF… and Print….
+- `src/book/`: the book page. It lays the book out into real pages (a cover, contents, a chapter
+  per section, an index and credits), then fills in the page numbers: the contents, the index,
+  and "See Poisoned (page 6)" under entries. Links in the PDF jump to the page.
+- The plain-English summaries moved into the engine (`src/engine/rulestext.ts`), so the book
+  prints exactly what each rule's editor says. The book builder now reads the Rules tab's values
+  (it had guessed older names), prints short labels, keeps abilities in the order they were made,
+  names effects ("Poison Bite. The target is Poisoned.") and points page references at what a
+  brick links to, never at library bricks, which don't print.
+- 157 automatic tests pass (3 new). A PDF was made and read back here, page by page.
 
 ### 2026-10-20 (milestone 5, step 4: world rules, and editing the system from a world)
 
@@ -451,3 +503,17 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: When the system is changed from inside a world, unticked worlds are protected by
   writing the old value into their own files at once. Undoing the change in this world puts the
   system back; the protected worlds then simply match the system again.
+- 2026-10-20: The PDF is made by the app's own browser engine from the same page as the preview,
+  with no outside library. Pages are laid out by the app so page numbers in the contents and index
+  are exact.
+- 2026-10-20 (Jeff may want to check): Each chapter starts on a new page, like a printed rulebook;
+  one simple look for now (book styles, two columns, cover pictures and Word export come later).
+- 2026-10-20: The page size defaults to Letter; A4 is a choice.
+- 2026-10-20: The starter's monster and item numbers follow the SRD 5.2 in simplified form (for
+  example ability bonuses aren't added into damage); check them against the official SRD 5.2
+  before any public release, together with the credit wording.
+- 2026-10-20: Starter content is marked as coming from a template ("source: template"), as the
+  data format allows, so it can later be told apart from homemade content.
+- 2026-10-20: The damage check counts natural attacks together but carried weapons one at a time.
+- 2026-10-20: Light melee weapons have their own category (Weapon → Melee → Light) in the starter,
+  because their prices are only fair when compared with each other.

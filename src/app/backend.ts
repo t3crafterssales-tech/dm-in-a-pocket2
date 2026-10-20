@@ -8,7 +8,8 @@ import type { Activation, Id, NodeKind, Slot, Uses, Value } from "../engine/inde
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import type { RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
-import type { BinView, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
+import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
+import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
@@ -16,6 +17,7 @@ import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
 import { ensureCategories } from "./sheets.ts";
+import { buildD20Starter } from "./starters/d20.ts";
 import { changeInSystem, upwardView } from "./upward.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
@@ -24,7 +26,7 @@ import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
-export type { BinView, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
+export type { BinView, BookData, BookRequest, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
@@ -62,7 +64,7 @@ export interface StartingPoint {
 }
 
 export const STARTING_POINTS: StartingPoint[] = [
-  { id: "d20", label: "Generic d20", ready: false, note: "Coming with the d20 starter (milestone 6)" },
+  { id: "d20", label: "Generic d20", ready: true, note: null },
   { id: "scratch", label: "From scratch", ready: true, note: null },
 ];
 
@@ -202,6 +204,8 @@ export const BACKEND_METHODS = [
   "rollBackAll",
   "upwardView",
   "changeInSystem",
+  "book",
+  "bookChoices",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -288,7 +292,8 @@ export class Backend {
     // From scratch starts with the small set of categories from the design. It is the starting
     // point, not a change, so it isn't an undo step.
     const { ws } = this.lib.openSystem(id);
-    ws.transact("Started from scratch", () => ensureCategories(ws, id));
+    if (start.id === "d20") ws.transact("Started from the generic d20", () => buildD20Starter(ws, id));
+    else ws.transact("Started from scratch", () => ensureCategories(ws, id));
     ws.history = [];
     this.lib.saveSystem(ws, id);
     if (input.picture) this.lib.setPicture("system", id, input.picture);
@@ -652,6 +657,18 @@ export class Backend {
   changeInSystem(nodeId: Id, changes: Record<string, Value | null>, ticked: Id[]): { label: string; kept: string[]; couldNot: string[] } {
     if (!this.session) throw new LibraryError("Open a world first.");
     return changeInSystem(this.lib, this.session, nodeId, changes, ticked);
+  }
+
+  /** The rulebook's content (the window lays it out into pages; main.ts turns it into a PDF). */
+  book(opts: BookRequest): BookData {
+    return this.editing.book(opts);
+  }
+  /** The book types and chapters to choose from, with each type's usual chapters. */
+  bookChoices() {
+    return {
+      types: Object.entries(BOOK_TITLES).map(([id, title]) => ({ id, title, chapters: BOOK_CHAPTERS[id as keyof typeof BOOK_CHAPTERS] })),
+      chapters: Object.entries(CHAPTER_TITLES).map(([id, title]) => ({ id, title })),
+    };
   }
 
   /** The app is closing normally. */
