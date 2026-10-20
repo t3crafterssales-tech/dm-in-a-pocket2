@@ -1,71 +1,31 @@
 // The app window: the home screen with its two shelves, the New system and New world pop-ups,
-// the recycle bin, settings, and the full-screen view of an open world or system.
+// the recycle bin and settings. The open world or system is in place.ts.
 
-import type { HomeData, PlaceView, RecycledInfo, SystemCard, WorldCard } from "../app/backend.ts";
-import type { Place } from "../app/settings.ts";
+import type { HomeData, RecycledInfo, SystemCard, WorldCard } from "../app/backend.ts";
 import { count, whenLabel } from "../app/words.ts";
-import { AppError, api, pictureUrl } from "./api.ts";
+import { api, pictureUrl } from "./api.ts";
+import { app, attempt, brand, iconButton, nav, pulseLogo, typingIn } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
-import { ICONS, LOGO } from "./icons.ts";
+import { ICONS } from "./icons.ts";
+import { becameReadOnly, current, leavePlace, openPlace } from "./place.ts";
 
-const app = document.getElementById("app")!;
-let current: PlaceView | null = null;
 /** The last thing deleted from the home screen, so Ctrl+Z can put it back. */
 let lastDeleted: RecycledInfo | null = null;
-let logo: SVGElement | null = null;
-
-// ---------- Save indicator ----------
 
 window.dm.onEvent((e) => {
   if (e.type === "saved") pulseLogo();
   else if (e.type === "saveFailed") notice(`Couldn't save just now (${e.message}). Your changes are kept and saving will try again.`, "yellow");
   else if (e.type === "readOnly") {
-    if (current) {
-      current.readOnly = true;
-      current.readOnlyReason = e.reason;
-      renderPlace(current);
-    }
+    becameReadOnly(e.reason);
     notice(`${e.reason} It is now read-only here.`, "blue", undefined, 0);
   }
 });
 
-function pulseLogo() {
-  if (!logo) return;
-  logo.classList.remove("pulse");
-  void (logo as unknown as HTMLElement).getBoundingClientRect();
-  logo.classList.add("pulse");
-}
-
-function brand(): HTMLElement {
-  logo = svg(LOGO);
-  return h("div", { class: "brand", title: "The logo glows each time your work is saved" }, logo, h("span", { class: "brand-name" }, "DM in a Pocket"));
-}
-
-function iconButton(icon: string, label: string, onClick: () => void, opts: { disabled?: boolean; title?: string; badge?: number } = {}) {
-  return h(
-    "button",
-    { class: "top-button", disabled: !!opts.disabled, title: opts.title ?? label, onClick },
-    svg(icon),
-    h("span", null, label),
-    opts.badge ? h("span", { class: "count-badge", "aria-label": `${opts.badge} in the bin` }, opts.badge) : null,
-  );
-}
-
-/** Runs an action and shows any problem as a red notice instead of failing quietly. */
-async function attempt<T>(fn: () => Promise<T>): Promise<T | undefined> {
-  try {
-    return await fn();
-  } catch (e) {
-    notice(e instanceof AppError || e instanceof Error ? e.message : String(e), "red");
-    return undefined;
-  }
-}
-
 // ---------- Home screen ----------
 
 async function showHome(highlight?: string) {
-  current = null;
+  leavePlace();
   const home = await attempt(() => api.home());
   if (!home) return;
   renderHome(home, highlight);
@@ -509,129 +469,10 @@ async function showSettings() {
   await draw();
 }
 
-// ---------- Inside a world or system ----------
-
-const TABS = ["Rules", "Creatures", "Items", "Lore", "Rulebook"] as const;
-let tab: (typeof TABS)[number] = "Rules";
-
-async function openPlace(place: Place, mode: "normal" | "read-only" | "take-over" = "normal", name?: string) {
-  const res = await attempt(() => api.open(place, mode));
-  if (!res) {
-    await showHome();
-    return;
-  }
-  if (res.status === "in-use") {
-    const choice = await ask(`${name ?? "This world"} is open on another computer`, [`It is open on ${res.machine} right now. Two copies must never save over each other.`, "Take over closes it on the other computer first; it switches to read-only there within a few seconds."], [
-      { label: "Cancel", value: null },
-      { label: "Open read-only", value: "read-only" as const },
-      { label: "Take over", value: "take-over" as const, kind: "primary" },
-    ]);
-    if (choice) await openPlace(place, choice, name);
-    return;
-  }
-  current = res.view;
-  tab = "Rules";
-  renderPlace(res.view);
-  if (res.view.recovered) notice("Recovered after an unexpected close.", "blue", undefined, 0);
-}
-
-function renderPlace(view: PlaceView) {
-  const isWorld = view.type === "world";
-  const tabs = h(
-    "nav",
-    { class: "tabs", role: "tablist" },
-    TABS.map((t) => h("button", { class: `tab${t === tab ? " active" : ""}`, role: "tab", "aria-selected": t === tab ? "true" : "false", onClick: () => ((tab = t), renderPlace(view)) }, t)),
-  );
-  const top = h(
-    "header",
-    { class: "topbar place" },
-    brand(),
-    h("div", { class: "place-title" }, h("span", { class: "place-name" }, view.name), h("span", { class: "muted small" }, isWorld ? `World · ${view.systemName}` : "System")),
-    tabs,
-    h(
-      "nav",
-      { class: "top-actions" },
-      iconButton(ICONS.home, "Home", () => void goHome()),
-      iconButton(ICONS.gear, isWorld ? "World settings" : "System settings", () => void placeSettings(view)),
-    ),
-  );
-  const banner = view.readOnly ? h("div", { class: "banner" }, h("strong", null, "Read-only. "), view.readOnlyReason ?? "", " Nothing you do here is saved.") : null;
-  const coming: Record<(typeof TABS)[number], string> = {
-    Rules: "The Rules tab (core check, abilities, resources, skills, conditions and free-text rules) is the next milestone.",
-    Creatures: "Monsters, NPCs, characters, races and classes, with the library, come with the Rules tab.",
-    Items: "Items and the library come with the Rules tab.",
-    Lore: "Lore pages, places and factions come after first playable.",
-    Rulebook: "Printing a rulebook from your world comes in milestone 6.",
-  };
-  const workspace = h(
-    "div",
-    { class: "workspace" },
-    h("aside", { class: "panel list-panel", "aria-label": "List" }, h("div", { class: "panel-head" }, tab), h("p", { class: "muted small pad" }, "Nothing here yet.")),
-    h("section", { class: "panel editor" }, h("div", { class: "empty-editor" }, h("h2", null, view.name), h("p", { class: "muted" }, coming[tab]), h("p", { class: "muted small" }, "Your work saves itself constantly; the logo in the top-left corner glows each time it does."))),
-    h("aside", { class: "panel flag-panel", "aria-label": "Flags" }, h("div", { class: "panel-head" }, "Flags"), h("p", { class: "muted small pad" }, "No flags. Everything checks out.")),
-  );
-  app.replaceChildren(top, ...(banner ? [banner] : []), workspace);
-}
-
-async function goHome() {
-  await attempt(() => api.goHome());
-  await showHome(current?.id);
-}
-
-async function placeSettings(view: PlaceView) {
-  const d = openDialog(view.type === "world" ? "World settings" : "System settings", { wide: true });
-  const backups = view.type === "world" ? ((await attempt(() => api.backups())) ?? []) : [];
-  d.body.append(
-    h("dl", { class: "facts" }, h("dt", null, "Name"), h("dd", null, view.name), ...(view.type === "world" ? [h("dt", null, "Game system"), h("dd", null, view.systemName ?? "")] : [])),
-    h("p", { class: "muted small" }, "Renaming, the card picture and copying a world arrive here with the next milestones."),
-  );
-  if (view.type === "world") {
-    d.body.append(h("h3", null, "Backups"), h("p", { class: "muted" }, "Kept automatically: one a day for the last week and one a week for the last month. Restoring one first takes a snapshot of how the world is now, so a restore can be undone."));
-    if (!backups.length) d.body.append(h("p", { class: "muted small" }, "No backups yet. The first one is made the first time the world is opened each day."));
-    else
-      d.body.append(
-        h(
-          "ul",
-          { class: "bin-list" },
-          backups.map((b) =>
-            h(
-              "li",
-              null,
-              svg(ICONS.folder),
-              h("div", { class: "bin-text" }, h("div", { class: "bin-name" }, b.label), h("div", { class: "muted small" }, new Date(b.time).toLocaleDateString())),
-              h(
-                "button",
-                {
-                  class: "button plain",
-                  disabled: view.readOnly,
-                  onClick: async () => {
-                    const ok = await ask(`Restore the backup from ${b.label.toLowerCase()}?`, ["The world goes back to how it was then. A snapshot of how it is now is taken first, so nothing is lost."], [
-                      { label: "Cancel", value: false },
-                      { label: "Restore", value: true, kind: "primary" },
-                    ]);
-                    if (!ok) return;
-                    if ((await attempt(() => api.restoreBackup(b.file))) !== undefined) {
-                      d.close();
-                      notice(`Restored the backup from ${b.label.toLowerCase()}. A snapshot of before was saved first.`, "green");
-                    }
-                  },
-                },
-                "Restore",
-              ),
-            ),
-          ),
-        ),
-      );
-  }
-  d.footer.append(h("span", { class: "spacer" }), h("button", { class: "button primary", onClick: () => d.close() }, "Done"));
-}
-
 // ---------- Keyboard ----------
 
 document.addEventListener("keydown", (e) => {
-  if (document.querySelector(".overlay")) return;
-  const target = e.target as HTMLElement;
-  if (target.matches("input, textarea, select")) return;
+  if (document.querySelector(".overlay") || typingIn(e)) return;
   if (!current && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && lastDeleted) {
     e.preventDefault();
     void undoDelete();
@@ -646,4 +487,5 @@ async function start() {
   else await showHome();
 }
 
+nav.home = showHome;
 void start();

@@ -11,7 +11,10 @@ Newest first. Every session reads this after `CLAUDE.md`.
   and the rulebook builder. Built early because they need no installs.
 - **Done:** Milestone 3, the desktop app shell (approved by Jeff, merged into `main`). The Windows
   installer builds at GitHub and all tests pass on Windows.
-- **Next:** Milestone 4, the Rules tab and sheets.
+- **In progress:** Milestone 4, the Rules tab and sheets (branch
+  `claude/electron-desktop-app-shell-2arspv`, the branch this build session is allowed to use).
+  Step 1 of 4 done: the Rules tab. Next: Beings and Items sheets, then the library with drag and
+  drop and Shift/Ctrl selection, then drilling into a brick and Edit parent.
 
 ## Milestones to first playable
 
@@ -28,6 +31,29 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 4, step 1: the Rules tab)
+
+- `src/app/rules.ts`: the Rules tab's ten sections from the design (Core check, Abilities,
+  Resources, Skills, Conditions, Combat, Magic and powers, Advancement, Time and rest, Currency
+  and economy), plus sections of the user's own; each kind's defaults; and the plain-English
+  summary at the top of each rule.
+- `src/app/editing.ts`: the named actions for changing things (add, rename, change a value, use
+  the system's value, move to a section, delete, undo, redo), each one step in history, and the
+  views the window shows (a node with its links' names and Used by, the drop-down choices, flags).
+- Screens: `src/ui/place.ts` (an open world or system) and `src/ui/rules-tab.ts` (sections on
+  the left, the open rule in the middle, flags on the right).
+- Each kind has its main choices up front and the fine print under More options: abilities
+  (label, score range, how the bonus works), resources (label, maximum built from blocks such as
+  [Constitution score] [+] [10], how it starts; recovery, display and thresholds that link to
+  conditions), skills (linked ability), conditions (duration, saving throw; stages), the core
+  check (the eight families and their settings), and free-text rules.
+- Inside a world, a system rule changed there shows a pencil mark with "Use the system's".
+- The red flags show in the flag panel straight away: deleting Constitution flags Hit points
+  ("Constitution removed: 1 thing affected", with [missing: Constitution] in its formula), and
+  Ctrl+Z puts it all back.
+- 103 automatic tests pass (11 new). Driven in the real window here, which found and fixed two
+  problems (a new rule's name box didn't get the cursor; a redraw could cut the logo's glow short).
 
 ### 2026-10-20 (milestone 3 approved)
 
@@ -225,3 +251,20 @@ One plain line each. Jeff can overrule any of these at a milestone.
   all tests pass, so Jeff can download it without setting anything up.
 - 2026-10-20: A system opened on its own has no "one copy open" lock yet; only worlds do. Worth
   adding before systems are edited from two computers at once.
+- 2026-10-20: Rules tab sections are category nodes under one "Rules" category, each built-in one
+  marked with a section key, so renaming a section never breaks anything. They are made the first
+  time something is added, in the same undo step. The rulebook finds the core check through it.
+- 2026-10-20: Abilities, resources, skills and conditions always show in their own sections;
+  only general rules can move between sections.
+- 2026-10-20: New field names for rules are listed in `src/engine/conventions.ts` (label, score
+  range, bonus, maximum, start, recovery, display, thresholds, family, die, target, stages,
+  duration, save). Formulas are stored as blocks with links, so deleting an ability flags them.
+- 2026-10-20: A value is saved when you leave its box or press Enter, as one undo step, rather
+  than on every key press, so Ctrl+Z undoes a whole change.
+- 2026-10-20: Ctrl+Z inside a text box undoes typing in that box, as everywhere else; outside a
+  box it undoes the last change in the world.
+- 2026-10-20: Deleting a rule doesn't ask first, because it goes to the recycle bin and a notice
+  offers Undo (the "always quiet" flag design).
+- 2026-10-20 (Jeff may want to check): Undo and Redo also have small arrow buttons in the top bar,
+  beside Home, for anyone who doesn't know Ctrl+Z.
+- 2026-10-20: The Creatures tab is now called Beings, following the October 20 design decision.

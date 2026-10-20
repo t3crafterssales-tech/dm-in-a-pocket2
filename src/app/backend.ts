@@ -4,9 +4,12 @@
 import { readFileSync, statSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { DEFAULT_CHECKS, newId, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Id } from "../engine/index.ts";
+import type { Id, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import type { RecycledInfo, Timers } from "../storage/index.ts";
+import { Editing } from "./editing.ts";
+import type { Choices, FlagView, NodeView, StepResult } from "./editing.ts";
+import type { RulesSection } from "./rules.ts";
 import { Session } from "./session.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
@@ -14,6 +17,8 @@ import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
+export type { Choices, FlagView, NodeView, Option, StepResult } from "./editing.ts";
+export type { RulesSection } from "./rules.ts";
 
 export interface SystemCard {
   id: Id;
@@ -122,6 +127,22 @@ export const BACKEND_METHODS = [
   "goHome",
   "backups",
   "restoreBackup",
+  // Inside an open world or system: the named actions in editing.ts.
+  "rulesTab",
+  "node",
+  "choices",
+  "flags",
+  "sections",
+  "addRule",
+  "addSection",
+  "rename",
+  "setText",
+  "setField",
+  "useSystemValue",
+  "moveToSection",
+  "deleteNode",
+  "undo",
+  "redo",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -341,6 +362,64 @@ export class Backend {
     if (!this.lib.listBackups(s.id).some((b) => b.file === file)) throw new LibraryError("That backup is gone.");
     s.restoreBackup(file);
     return true;
+  }
+
+  // ---------- Inside an open world or system ----------
+
+  private get editing(): Editing {
+    if (!this.session) throw new LibraryError("Open a world or system first.");
+    return new Editing(this.session);
+  }
+
+  rulesTab(): RulesSection[] {
+    return this.editing.rulesTab();
+  }
+  node(id: Id): NodeView {
+    return this.editing.node(id);
+  }
+  choices(): Choices {
+    return this.editing.choices();
+  }
+  flags(): FlagView[] {
+    return this.editing.flags();
+  }
+  sections(): { key: string; title: string }[] {
+    return this.editing.sections();
+  }
+  addRule(sectionKey: string, name: string): Id {
+    return this.editing.addRule(sectionKey, name);
+  }
+  addSection(title: string): Id {
+    return this.editing.addSection(title);
+  }
+  rename(id: Id, name: string): true {
+    this.editing.rename(id, name);
+    return true;
+  }
+  setText(id: Id, text: string): true {
+    this.editing.setText(id, text);
+    return true;
+  }
+  setField(id: Id, key: string, value: Value): true {
+    this.editing.setField(id, key, value);
+    return true;
+  }
+  useSystemValue(id: Id, key: string): true {
+    this.editing.useSystemValue(id, key);
+    return true;
+  }
+  moveToSection(id: Id, sectionKey: string): true {
+    this.editing.moveToSection(id, sectionKey);
+    return true;
+  }
+  deleteNode(id: Id): StepResult {
+    return this.editing.deleteNode(id);
+  }
+  undo(): StepResult | null {
+    return this.editing.undo();
+  }
+  redo(): StepResult | null {
+    return this.editing.redo();
   }
 
   /** The app is closing normally. */
