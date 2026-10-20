@@ -45,15 +45,15 @@ export function brickDefaults(type: BrickType): Record<string, Value> {
 export interface LibraryEntry {
   id: Id;
   name: string;
-  /** A brick's type, or "item" for items (which can be carried as gear). */
-  type: BrickType | "item";
+  /** A brick's type, "item" for items (which can be carried as gear), or "template" for template parents. */
+  type: BrickType | "item" | "template";
   /** What it does, in a few words. */
   note: string;
   fromBelow: boolean;
 }
 
 export interface LibrarySection {
-  type: BrickType | "item";
+  type: BrickType | "item" | "template";
   title: string;
   entries: LibraryEntry[];
 }
@@ -79,6 +79,16 @@ export function librarySections(ws: Workspace, layerId: Id): LibrarySection[] {
       .list(layerId, "item")
       .filter((n) => !n.template)
       .map((n) => ({ id: n.id, name: n.name, type: "item" as const, note: typeof ws.resolve(layerId, n.id)!.fields[F.cost] === "string" ? String(ws.resolve(layerId, n.id)!.fields[F.cost]) : "", fromBelow: fromBelow(n.id) }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  });
+  // Template parents live here rather than in the lists. They are opened, not dragged.
+  sections.push({
+    type: "template",
+    title: "Templates",
+    entries: ws
+      .list(layerId)
+      .filter((n) => n.template && (n.kind === "being" || n.kind === "item"))
+      .map((n) => ({ id: n.id, name: n.name, type: "template" as const, note: n.kind === "item" ? "Item template" : "Being template", fromBelow: fromBelow(n.id) }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   });
   return sections;

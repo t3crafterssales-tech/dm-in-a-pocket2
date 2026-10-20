@@ -33,6 +33,24 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 
 ## Log
 
+### 2026-10-20 (milestone 4: Jeff's answers, and finishing touches)
+
+- Jeff's answers: yes to the undo and redo buttons beside Home; yes to one Create new pop-up with
+  the variant choice inside it; yes to a variant not removing a brick it inherited.
+- Jeff asked Claude to decide what still belongs in milestone 4. Decided: templates, starting a
+  new sheet as a copy, and sorting by challenge now (all in first playable and small). Edit
+  parent from a world up to its system moves to milestone 5, because it has to change other
+  worlds' files safely. A system choosing what its own sheets show, and movable panels, come
+  after first playable.
+- Built: templates (Make it a template when creating, or Make template / Make it real on a
+  sheet; kept out of the lists, the checks and the rulebook; shown in the library's Templates
+  group; a new item filed under a category with a template suggests starting as its variant);
+  "Start from" in Create new (nothing, a variant of a thing or a template, or a copy of a thing);
+  and A to Z or By challenge for Monsters and NPCs.
+- A new system made from scratch now starts with the design's small set of categories (Weapon,
+  Armour, Item, Creature, Spell), so the first item can be filed as a Weapon straight away.
+- 133 automatic tests pass (5 new). Driven in the real window here.
+
 ### 2026-10-20 (milestone 4, step 4: drilling in and Edit parent)
 
 - `src/app/drill.ts`: one sheet's copy of a brick (its own name, values with pencil marks, when it
@@ -56,14 +74,12 @@ bricks in the Library and drag them onto sheets (Ctrl/Shift to pick several, or 
 at once); click a brick on a sheet to change that copy; use Edit parent from a variant. Delete
 Strength and watch the red flags, then Ctrl+Z.
 
-Not in this milestone, still to come (some need Jeff's decisions):
-- A system editing its own sheets (which numbers and sections each kind shows). Every system
-  uses the basic sheets for now.
-- Edit parent from a world up to its system (it works between parents and variants inside one
-  world or system).
-- Templates (the Templates group, and new items suggesting their category's template), Change
-  parent for many nodes at once, starting a new monster as a copy of another, choice bricks and
-  upgrade tiers on screen, smart text, sorting lists by challenge, and movable panels.
+Still to come (decided October 20, 2026):
+- Milestone 5: Edit parent from a world up to its system.
+- After first playable: a system choosing what its own sheets show (every system uses the basic
+  sheets for now), and movable, dockable panels.
+- Not yet scheduled: Change parent for many nodes at once, choice bricks and upgrade tiers on
+  screen, and smart text.
 
 ### 2026-10-20 (milestone 4, step 3: the library, drag and drop, selection)
 
@@ -358,3 +374,9 @@ One plain line each. Jeff can overrule any of these at a milestone.
   undo step. It covers a sheet's header numbers and ability scores for now.
 - 2026-10-20: A variant's checklist row is greyed out when it set every changed value itself,
   since ticking it would make no difference.
+- 2026-10-20: A copy of a variant stays a variant of the same parent (with the same own changes),
+  so it looks the same and keeps getting the parent's changes; a copy of anything else stands alone.
+- 2026-10-20: Setting up a new system's starter categories isn't an undo step; it is the starting
+  point, like an empty page.
+- 2026-10-20: Templates are opened from the library, not dragged onto sheets; a sheet uses a
+  template by being its variant.

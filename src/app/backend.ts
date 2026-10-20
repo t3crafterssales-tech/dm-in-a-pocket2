@@ -10,10 +10,11 @@ import type { RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
 import type { Choices, FlagView, NodeView, StepResult } from "./editing.ts";
 import type { RulesSection } from "./rules.ts";
-import type { BeingKind, CategoryOption, ListEntry } from "./sheets.ts";
+import type { BeingKind, CategoryOption, ListEntry, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { Session } from "./session.ts";
+import { ensureCategories } from "./sheets.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
@@ -22,7 +23,7 @@ export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
 export type { Choices, FlagView, NodeView, Option, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
-export type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
+export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
 export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 
@@ -171,6 +172,9 @@ export const BACKEND_METHODS = [
   "attachInside",
   "familyChecklist",
   "changeParent",
+  "templates",
+  "copyNode",
+  "setTemplate",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -254,6 +258,12 @@ export class Backend {
     if (!start) throw new LibraryError("Choose a starting point.");
     if (!start.ready) throw new LibraryError(`${start.label} isn't ready yet. Choose From scratch for now.`);
     const id = this.lib.createSystem(name);
+    // From scratch starts with the small set of categories from the design. It is the starting
+    // point, not a change, so it isn't an undo step.
+    const { ws } = this.lib.openSystem(id);
+    ws.transact("Started from scratch", () => ensureCategories(ws, id));
+    ws.history = [];
+    this.lib.saveSystem(ws, id);
     if (input.picture) this.lib.setPicture("system", id, input.picture);
     this.markOpened(id);
     return id;
@@ -450,8 +460,18 @@ export class Backend {
     return this.editing.redo();
   }
 
-  beingsList(kind: BeingKind): ListEntry[] {
-    return this.editing.beingsList(kind);
+  beingsList(kind: BeingKind, sort: "name" | "challenge" = "name"): ListEntry[] {
+    return this.editing.beingsList(kind, sort);
+  }
+  templates(): TemplateEntry[] {
+    return this.editing.templates();
+  }
+  copyNode(sourceId: Id, name: string): Id {
+    return this.editing.copyNode(sourceId, name);
+  }
+  setTemplate(id: Id, on: boolean): true {
+    this.editing.setTemplate(id, on);
+    return true;
   }
   itemsList(): ListEntry[] {
     return this.editing.itemsList();
@@ -459,10 +479,10 @@ export class Backend {
   categories(): CategoryOption[] {
     return this.editing.categories();
   }
-  addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null }): Id {
+  addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null; template?: boolean }): Id {
     return this.editing.addBeing(input);
   }
-  addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null }): Id {
+  addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null; template?: boolean }): Id {
     return this.editing.addItem(input);
   }
   addCategory(name: string, under: Id | null): Id {

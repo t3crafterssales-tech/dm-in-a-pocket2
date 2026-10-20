@@ -25,8 +25,9 @@ let adding: string | null = null;
  * The library panel. `targets` says which sheets a drop or "Add" goes to (the open sheet, or
  * every selected one in the list).
  */
-export async function libraryPanel(ctx: PlaceCtx, targets: () => { ids: string[]; names: string }): Promise<HTMLElement> {
-  const sections = (await attempt(() => api.library())) ?? [];
+export async function libraryPanel(ctx: PlaceCtx, targets: () => { ids: string[]; names: string }, which: "beings" | "items"): Promise<HTMLElement> {
+  // The Templates group shows this tab's templates (being templates in Beings, item ones in Items).
+  const sections = ((await attempt(() => api.library())) ?? []).map((s) => (s.type === "template" ? { ...s, entries: s.entries.filter((e) => e.note === (which === "items" ? "Item template" : "Being template")) } : s));
   const visible: LibraryEntry[] = [];
   const all = new Map(sections.flatMap((s) => s.entries.map((e) => [e.id, e] as const)));
   for (const id of [...librarySelection]) if (!all.has(id)) librarySelection.delete(id);
@@ -49,7 +50,7 @@ export async function libraryPanel(ctx: PlaceCtx, targets: () => { ids: string[]
           h("span", null, s.title),
           s.entries.length ? h("span", { class: "muted small" }, s.entries.length) : null,
         ),
-        ctx.view.readOnly || s.type === "item" ? null : h("button", { class: "icon-button small", title: `New ${s.title.toLowerCase()} brick`, "aria-label": `New brick in ${s.title}`, onClick: () => ((adding = s.type), collapsed.delete(s.type), void ctx.refresh()) }, svg(ICONS.plus)),
+        ctx.view.readOnly || s.type === "item" || s.type === "template" ? null : h("button", { class: "icon-button small", title: `New ${s.title.toLowerCase()} brick`, "aria-label": `New brick in ${s.title}`, onClick: () => ((adding = s.type), collapsed.delete(s.type), void ctx.refresh()) }, svg(ICONS.plus)),
       ),
       open ? sectionBody(s, entries, filter, visible, ctx) : null,
     );
@@ -91,10 +92,11 @@ function sectionBody(s: LibrarySection, entries: LibraryEntry[], filter: string,
           {
             class: `item lib-item${librarySelection.has(e.id) ? " selected" : ""}${e.id === ctx.selected ? " open" : ""}`,
             tabindex: 0,
-            draggable: ctx.view.readOnly ? "false" : "true",
+            draggable: ctx.view.readOnly || e.type === "template" ? "false" : "true",
             "data-key": `lib-${e.id}`,
             title: `${e.note}\nDouble-click to open the original.`,
-            onClick: (ev: MouseEvent) => select(e.id, ev, visible, ctx),
+            // Templates are opened, not added to sheets (sheets become variants of them instead).
+            onClick: (ev: MouseEvent) => (e.type === "template" ? ctx.select(e.id) : select(e.id, ev, visible, ctx)),
             onDblclick: () => ctx.select(e.id),
             onKeydown: (ev: KeyboardEvent) => {
               if (ev.key === "Enter") ctx.select(e.id);
@@ -122,7 +124,9 @@ function sectionBody(s: LibrarySection, entries: LibraryEntry[], filter: string,
             newNameBox(`Name of the new ${s.title.toLowerCase()} brick`, `newbrick-${s.type}`, (name) => void addBrick(s.type as BrickType, name, ctx), () => ((adding = null), void ctx.refresh())),
           )
         : null,
-      !s.entries.length && adding !== s.type ? h("li", { class: "empty muted small" }, s.type === "item" ? "Items made in the Items tab can be carried as gear." : "None yet.") : null,
+      !s.entries.length && adding !== s.type
+        ? h("li", { class: "empty muted small" }, s.type === "item" ? "Items made in the Items tab can be carried as gear." : s.type === "template" ? "None yet. Tick \"Make it a template\" when making one, or use Make template on a sheet." : "None yet.")
+        : null,
     ),
   );
 }

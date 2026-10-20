@@ -29,11 +29,13 @@ const leftMode: Record<string, "list" | "library"> = {};
 const listSelection = new Map<string, Set<string>>();
 const listAnchor = new Map<string, string>();
 
+let sortBy: "name" | "challenge" = "name";
+
 const listKey = (which: "beings" | "items") => (which === "beings" ? `beings-${beingTab}` : "items");
 
 export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Promise<{ list: HTMLElement; editor: HTMLElement }> {
   const [entries, categories, choices] = await Promise.all([
-    attempt(() => (which === "beings" ? api.beingsList(beingTab) : api.itemsList())),
+    attempt(() => (which === "beings" ? api.beingsList(beingTab, beingTab === "monster" || beingTab === "npc" ? sortBy : "name") : api.itemsList())),
     attempt(() => api.categories()),
     attempt(() => api.choices()),
   ]);
@@ -62,7 +64,7 @@ export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Pro
     if (sel.size > 1 && sel.has(open.id)) return { ids: [...sel], names: `${sel.size} selected` };
     return { ids: [open.id], names: open.name };
   };
-  const library = (leftMode[which] ?? "list") === "library" ? await libraryPanel(ctx, targets) : null;
+  const library = (leftMode[which] ?? "list") === "library" ? await libraryPanel(ctx, targets, which) : null;
   const c = choices ?? { abilities: [], conditions: [], resources: [] };
   return {
     list: listPanel(which, entries ?? [], categories ?? [], ctx, library),
@@ -87,6 +89,11 @@ function listPanel(which: "beings" | "items", all: ListEntry[], categories: Cate
     f.text = filterBox.value;
     void ctx.refresh();
   });
+  const sortable = which === "beings" && (beingTab === "monster" || beingTab === "npc");
+  const sortSelect = sortable
+    ? h("select", { class: "text-input select small-select", "aria-label": "Sort by", title: "Sort by" }, h("option", { value: "name", selected: sortBy !== "challenge" }, "A to Z"), h("option", { value: "challenge", selected: sortBy === "challenge" }, "By challenge"))
+    : null;
+  sortSelect?.addEventListener("change", () => ((sortBy = sortSelect.value as "name" | "challenge"), void ctx.refresh()));
   const star = h("button", { class: `icon-button small star${f.favourites ? " on" : ""}`, title: f.favourites ? "Showing favourites only" : "Show favourites only", "aria-pressed": f.favourites ? "true" : "false", onClick: () => ((f.favourites = !f.favourites), void ctx.refresh()) }, svg(ICONS.star));
 
   // Click opens one; Ctrl-click adds or removes one; Shift-click selects a run, like File Explorer.
@@ -198,44 +205,82 @@ function listPanel(which: "beings" | "items", all: ListEntry[], categories: Cate
           BEING_TABS.map((t) => h("button", { class: `subtab${t.id === beingTab ? " active" : ""}`, role: "tab", "aria-selected": t.id === beingTab ? "true" : "false", onClick: () => ((beingTab = t.id), ctx.select(null)) }, t.plural)),
         )
       : null,
-    h("div", { class: "filter-row" }, filterBox, star),
+    h("div", { class: "filter-row" }, filterBox, sortSelect, star),
     body,
   );
 }
 
-/** Create new: a name, what it is, and optionally what it's a variant of. */
+/**
+ * Create new: a name, what it is, and where it starts from: nothing, a variant of something (or of
+ * a template), or a copy of something. A new item suggests its category's template.
+ */
 async function createNew(which: "beings" | "items", existing: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx) {
+  const templates = ((await attempt(() => api.templates())) ?? []).filter((t) => (which === "beings" ? t.kind === "being" : t.kind === "item"));
   const d = openDialog(which === "beings" ? "New being" : "New item");
   const name = h("input", { class: "text-input", placeholder: which === "beings" ? "For example: Goblin" : "For example: Longsword", maxlength: 200 });
   const kind = h("select", { class: "text-input" }, BEING_TABS.map((t) => h("option", { value: t.id, selected: t.id === beingTab }, t.label)));
-  const variant = h("select", { class: "text-input" }, h("option", { value: "" }, "Nothing: it's new"), existing.map((e) => h("option", { value: e.id }, `${"  ".repeat(e.depth)}${e.name}`)));
-  const category = h("select", { class: "text-input" }, h("option", { value: "" }, "Item (the default)"), categories.filter((c) => c.role !== "creature").map((c) => h("option", { value: c.id }, `${"   ".repeat(c.depth)}${c.name}`)));
+  const start = h(
+    "select",
+    { class: "text-input" },
+    h("option", { value: "" }, "Nothing: it's new"),
+    templates.length ? h("optgroup", { label: "A variant of a template" }, templates.map((t) => h("option", { value: `variant:${t.id}` }, t.name))) : null,
+    existing.length ? h("optgroup", { label: "A variant of" }, existing.map((e) => h("option", { value: `variant:${e.id}` }, `${"\u00a0\u00a0".repeat(e.depth)}${e.name}`))) : null,
+    existing.length ? h("optgroup", { label: "A copy of" }, existing.map((e) => h("option", { value: `copy:${e.id}` }, `${"\u00a0\u00a0".repeat(e.depth)}${e.name}`))) : null,
+  );
+  const category = h("select", { class: "text-input" }, h("option", { value: "" }, "Item (the default)"), categories.filter((c) => c.role !== "creature").map((c) => h("option", { value: c.id }, `${"\u00a0\u00a0\u00a0".repeat(c.depth)}${c.name}`)));
+  const asTemplate = h("input", { type: "checkbox" });
+  const hint = h("p", { class: "muted small" }, "A variant starts with everything its parent has and still gets the parent's later changes. A copy starts the same but goes its own way.");
   const create = h("button", { class: "button primary" }, "Create");
+  let suggested = false;
   const refresh = () => {
     create.disabled = !name.value.trim();
-    kind.disabled = !!variant.value;
+    kind.disabled = !!start.value;
+    asTemplate.disabled = start.value.startsWith("copy:");
+    if (asTemplate.disabled) asTemplate.checked = false;
   };
+  // New items suggest their category's template in "Start from", without overriding a choice.
+  category.addEventListener("change", () => {
+    const t = templates.find((x) => x.categoryId === category.value);
+    if (t && (!start.value || suggested)) {
+      start.value = `variant:${t.id}`;
+      suggested = true;
+      hint.textContent = `Suggested: a variant of the ${t.name} template, so it gets the shared parts. Choose Nothing to start blank.`;
+    } else if (suggested && !t) {
+      start.value = "";
+      suggested = false;
+    }
+    refresh();
+  });
+  start.addEventListener("change", () => ((suggested = false), refresh()));
   name.addEventListener("input", refresh);
-  variant.addEventListener("change", refresh);
   name.addEventListener("keydown", (e) => e.key === "Enter" && (e.preventDefault(), create.click()));
   d.body.append(
     h("label", { class: "field-label" }, "Name"),
     name,
     ...(which === "beings" ? [h("label", { class: "field-label spaced" }, "What is it?"), kind] : [h("label", { class: "field-label spaced" }, "Filed under"), category]),
-    h("label", { class: "field-label spaced" }, "Variant of…"),
-    variant,
-    h("p", { class: "muted small" }, "A variant starts with everything its parent has. Change anything to make it different; later changes to the parent still reach it."),
+    h("label", { class: "field-label spaced" }, "Start from"),
+    start,
+    hint,
+    h("label", { class: "check spaced-check" }, asTemplate, "Make it a template: a parent that holds shared parts, not a real thing (kept out of the lists and the rulebook)"),
   );
   create.addEventListener("click", async () => {
     if (!name.value.trim()) return;
     create.disabled = true;
-    const id = await attempt(() =>
-      which === "beings"
-        ? api.addBeing({ name: name.value, kind: kind.value as BeingKind, variantOf: variant.value || null })
-        : api.addItem({ name: name.value, categoryId: category.value || null, variantOf: variant.value || null }),
-    );
+    const [how, from] = start.value ? (start.value.split(":") as ["variant" | "copy", string]) : [null, null];
+    const id = await attempt(async () => {
+      if (how === "copy") return api.copyNode(from!, name.value);
+      const variantOf = how === "variant" ? from : null;
+      return which === "beings"
+        ? api.addBeing({ name: name.value, kind: kind.value as BeingKind, variantOf, template: asTemplate.checked })
+        : api.addItem({ name: name.value, categoryId: category.value || null, variantOf, template: asTemplate.checked });
+    });
     if (!id) return refresh();
     d.close();
+    if (asTemplate.checked) {
+      // Templates live in the library, so open the library to show where it went.
+      leftMode[which] = "library";
+      notice(`${name.value.trim()} is a template. It lives in the library's Templates group.`, "blue", undefined, 6000);
+    }
     ctx.select(id);
   });
   d.footer.append(h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"), create);
@@ -325,7 +370,15 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
         "div",
         { class: "chips" },
         h("span", { class: "chip" }, kindLabel),
+        view.template ? h("span", { class: "chip template-chip", title: "A parent that holds shared parts. It stays out of the lists and the rulebook, and lives in the library's Templates group." }, "Template") : null,
         h("label", { class: "chip-select" }, "Filed under ", categorySelect),
+        ro
+          ? null
+          : h(
+              "button",
+              { class: "link small", title: view.template ? "Make it a real thing that shows in the lists and the rulebook" : "Make it a parent that holds shared parts for other sheets", onClick: () => void ed.save(() => api.setTemplate(view.id, !view.template)) },
+              view.template ? "Make it real" : "Make template",
+            ),
         view.parent
           ? h(
               "span",

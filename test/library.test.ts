@@ -32,7 +32,7 @@ test("the library lists bricks by type, each with what it does in plain words", 
   const { backend } = setup();
   assert.deepEqual(
     backend.library().map((s) => s.title),
-    ["Attacks", "Spells", "Traits", "Effects", "Damage", "Immunities", "Ability bonuses", "Armour", "Items"],
+    ["Attacks", "Spells", "Traits", "Effects", "Damage", "Immunities", "Ability bonuses", "Armour", "Items", "Templates"],
   );
   assert.deepEqual(lib(backend, "attack").entries.map((e) => [e.name, e.note]), [["Claw", "Claw: attack with d20 + Strength + proficiency, 1d6 slashing damage"]]);
 });

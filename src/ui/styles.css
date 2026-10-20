@@ -454,3 +454,6 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .checklist li.depth-3 { padding-left: 78px; }
 .checklist li.depth-4 { padding-left: 100px; }
 .checklist li.depth-5, .checklist li.depth-6 { padding-left: 122px; }
+.small-select { padding: 4px 6px; font-size: 12.5px; width: auto; flex: none; }
+.template-chip { background: #e5ddf3; color: #4b3b78; }
+.spaced-check { margin-top: 12px; align-items: flex-start; }

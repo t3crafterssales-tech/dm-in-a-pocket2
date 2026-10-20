@@ -8,8 +8,8 @@ import { LibraryError } from "../storage/index.ts";
 import { createRuleNode, createSection, ensureSections, ruleSummary, rulesTab, sectionOf } from "./rules.ts";
 import type { RulesSection, SectionKey } from "./rules.ts";
 import type { Session } from "./session.ts";
-import { beingsList, categoryTree, createBeing, createCategory, createItem, detach, itemsList, scoreKey, scoresOf, scoreValue, sheetFor } from "./sheets.ts";
-import type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
+import { beingsList, categoryTree, copyNode, createBeing, createCategory, createItem, detach, itemsList, scoreKey, scoresOf, scoreValue, setTemplate, sheetFor, templatesList } from "./sheets.ts";
+import type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
 import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, librarySections } from "./library.ts";
 import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
@@ -45,6 +45,8 @@ export interface NodeView {
   readOnly: boolean;
   picture: Id | null;
   favourite: boolean;
+  /** A template parent: not a real thing, just the shared parts its children inherit. */
+  template: boolean;
   categoryId: Id | null;
   /** The node this is a variant of. */
   parent: { id: Id; name: string } | null;
@@ -161,6 +163,7 @@ export class Editing {
       readOnly: this.session.readOnly,
       picture: n.picture,
       favourite: n.favourite,
+      template: n.template,
       categoryId: n.category?.link ?? null,
       parent: parent ? { id: parent.id, name: parent.name } : null,
       parentMissing: r.parentMissing,
@@ -265,8 +268,21 @@ export class Editing {
 
   // ---------- Beings and items ----------
 
-  beingsList(kind: BeingKind): ListEntry[] {
-    return beingsList(this.ws, this.layer, kind);
+  beingsList(kind: BeingKind, sort: "name" | "challenge" = "name"): ListEntry[] {
+    return beingsList(this.ws, this.layer, kind, sort === "challenge" ? "challenge" : "name");
+  }
+
+  templates(): TemplateEntry[] {
+    return templatesList(this.ws, this.layer);
+  }
+
+  copyNode(sourceId: Id, name: string): Id {
+    const n = cleanName(name);
+    return this.run(() => copyNode(this.ws, this.layer, sourceId, n));
+  }
+
+  setTemplate(id: Id, on: boolean) {
+    this.run(() => setTemplate(this.ws, this.layer, id, !!on));
   }
 
   itemsList(): ListEntry[] {
@@ -277,14 +293,14 @@ export class Editing {
     return categoryTree(this.ws, this.layer);
   }
 
-  addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null }): Id {
+  addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null; template?: boolean }): Id {
     const n = cleanName(input.name);
-    return this.run(() => createBeing(this.ws, this.layer, n, input.kind, input.variantOf));
+    return this.run(() => createBeing(this.ws, this.layer, n, input.kind, input.variantOf, !!input.template));
   }
 
-  addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null }): Id {
+  addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null; template?: boolean }): Id {
     const n = cleanName(input.name);
-    return this.run(() => createItem(this.ws, this.layer, n, input.categoryId, input.variantOf));
+    return this.run(() => createItem(this.ws, this.layer, n, input.categoryId, input.variantOf, !!input.template));
   }
 
   addCategory(name: string, under: Id | null): Id {

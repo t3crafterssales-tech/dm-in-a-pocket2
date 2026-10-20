@@ -1,7 +1,7 @@
 // Beings and Items: their kinds, the sheet each kind shows, the lists, and filing into
 // categories. Plain functions on the engine, tested without the window.
 
-import { F, isLink, link, newId } from "../engine/index.ts";
+import { F, challenge, isLink, link, newId } from "../engine/index.ts";
 import type { Attachment, Id, NodeRecord, Value, Workspace } from "../engine/index.ts";
 
 export type BeingKind = "character" | "class" | "race" | "monster" | "npc";
@@ -133,24 +133,42 @@ export interface ListEntry {
   categoryPath: string | null;
   fromBelow: boolean;
   favourite: boolean;
+  /** Challenge as a number, for sorting monsters ("1/4" is 0.25). */
+  cr: number | null;
 }
 
 /** Things of one kind, with variants indented under their parents (any depth). */
-export function sheetList(ws: Workspace, layerId: Id, filter: (n: NodeRecord, fields: Record<string, Value>) => boolean, note: (fields: Record<string, Value>) => string | null): ListEntry[] {
+/** Templates stay out of the lists (they live in the library's Templates group). */
+export function sheetList(
+  ws: Workspace,
+  layerId: Id,
+  filter: (n: NodeRecord, fields: Record<string, Value>) => boolean,
+  note: (fields: Record<string, Value>) => string | null,
+  sort: "name" | "challenge" = "name",
+): ListEntry[] {
   const below = ws.layer(layerId).base;
   const tree = categoryTree(ws, layerId);
   const nodes = ws
     .list(layerId)
     .map((n) => ({ n, f: ws.resolve(layerId, n.id)!.fields }))
-    .filter(({ n, f }) => filter(n, f));
+    .filter(({ n, f }) => !n.template && filter(n, f));
   const ids = new Set(nodes.map((x) => x.n.id));
+  // By challenge: lowest first, things with no challenge last; then by name.
+  const cmp = (a: { n: NodeRecord; f: Record<string, Value> }, b: { n: NodeRecord; f: Record<string, Value> }) => {
+    if (sort === "challenge") {
+      const ca = challenge(a.f[F.cr]) ?? Infinity;
+      const cb = challenge(b.f[F.cr]) ?? Infinity;
+      if (ca !== cb) return ca - cb;
+    }
+    return a.n.name.localeCompare(b.n.name);
+  };
   const out: ListEntry[] = [];
   const add = (parent: Id | null, depth: number, seen: Set<Id>) => {
-    const kids = nodes.filter(({ n }) => (parent === null ? !n.parent || !ids.has(n.parent.link) : n.parent?.link === parent)).sort((a, b) => a.n.name.localeCompare(b.n.name));
+    const kids = nodes.filter(({ n }) => (parent === null ? !n.parent || !ids.has(n.parent.link) : n.parent?.link === parent)).sort(cmp);
     for (const { n, f } of kids) {
       if (seen.has(n.id)) continue;
       seen.add(n.id);
-      out.push({ id: n.id, name: n.name, parent, depth, note: note(f), categoryPath: tree.find((c) => c.id === n.category?.link)?.path ?? null, fromBelow: !!below && ws.owner(layerId, n.id) !== layerId, favourite: n.favourite });
+      out.push({ id: n.id, name: n.name, parent, depth, note: note(f), categoryPath: tree.find((c) => c.id === n.category?.link)?.path ?? null, fromBelow: !!below && ws.owner(layerId, n.id) !== layerId, favourite: n.favourite, cr: challenge(f[F.cr]) });
       add(n.id, depth + 1, seen);
     }
   };
@@ -158,12 +176,13 @@ export function sheetList(ws: Workspace, layerId: Id, filter: (n: NodeRecord, fi
   return out;
 }
 
-export function beingsList(ws: Workspace, layerId: Id, kind: BeingKind): ListEntry[] {
+export function beingsList(ws: Workspace, layerId: Id, kind: BeingKind, sort: "name" | "challenge" = "name"): ListEntry[] {
   return sheetList(
     ws,
     layerId,
     (n, f) => n.kind === "being" && (f[F.beingKind] ?? "monster") === kind,
     (f) => (kind === "monster" || kind === "npc" ? (f[F.cr] !== undefined && f[F.cr] !== "" ? `CR ${String(f[F.cr])}` : null) : kind === "character" && typeof f.level === "number" ? `Level ${f.level}` : null),
+    sort,
   );
 }
 
@@ -171,31 +190,79 @@ export function itemsList(ws: Workspace, layerId: Id): ListEntry[] {
   return sheetList(ws, layerId, (n) => n.kind === "item", (f) => (typeof f[F.cost] === "string" && f[F.cost] ? (f[F.cost] as string) : null));
 }
 
+export interface TemplateEntry {
+  id: Id;
+  name: string;
+  kind: "being" | "item";
+  beingKind: BeingKind | null;
+  categoryId: Id | null;
+}
+
+/** Template parents: not real things, just the shared parts their children inherit. */
+export function templatesList(ws: Workspace, layerId: Id): TemplateEntry[] {
+  return ws
+    .list(layerId)
+    .filter((n) => n.template && (n.kind === "being" || n.kind === "item"))
+    .map((n) => {
+      const bk = ws.resolve(layerId, n.id)!.fields[F.beingKind];
+      return { id: n.id, name: n.name, kind: n.kind as "being" | "item", beingKind: n.kind === "being" ? ((typeof bk === "string" ? bk : "monster") as BeingKind) : null, categoryId: n.category?.link ?? null };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // ---------- Creating ----------
 
-export function createBeing(ws: Workspace, layerId: Id, name: string, kind: BeingKind, variantOf: Id | null): Id {
+export function createBeing(ws: Workspace, layerId: Id, name: string, kind: BeingKind, variantOf: Id | null, template = false): Id {
   return ws.transact(`Added ${name}`, () => {
     const cats = ensureCategories(ws, layerId);
     if (variantOf) {
       const parent = ws.get(layerId, variantOf);
       if (!parent || parent.kind !== "being") throw new Error("That isn't here any more.");
       // A variant starts with everything its parent has, including its category and kind.
-      return ws.create(layerId, "being", name, { parent: link(variantOf), category: parent.category });
+      return ws.create(layerId, "being", name, { parent: link(variantOf), category: parent.category, template });
     }
-    return ws.create(layerId, "being", name, { category: link(cats.get("creature")!), fields: { [F.beingKind]: kind } });
+    return ws.create(layerId, "being", name, { category: link(cats.get("creature")!), fields: { [F.beingKind]: kind }, template });
   });
 }
 
-export function createItem(ws: Workspace, layerId: Id, name: string, categoryId: Id | null, variantOf: Id | null): Id {
+export function createItem(ws: Workspace, layerId: Id, name: string, categoryId: Id | null, variantOf: Id | null, template = false): Id {
   return ws.transact(`Added ${name}`, () => {
     const cats = ensureCategories(ws, layerId);
     if (variantOf) {
       const parent = ws.get(layerId, variantOf);
       if (!parent || parent.kind !== "item") throw new Error("That isn't here any more.");
-      return ws.create(layerId, "item", name, { parent: link(variantOf), category: categoryId ? link(categoryId) : parent.category });
+      return ws.create(layerId, "item", name, { parent: link(variantOf), category: categoryId ? link(categoryId) : parent.category, template });
     }
-    return ws.create(layerId, "item", name, { category: link(categoryId ?? cats.get("item")!) });
+    return ws.create(layerId, "item", name, { category: link(categoryId ?? cats.get("item")!), template });
   });
+}
+
+/**
+ * "Start by copying": a new sheet that begins as a copy of another, with all its bricks. A copy
+ * of a variant stays in the same family (same parent, same own changes), so it looks the same and
+ * still gets the parent's later changes.
+ */
+export function copyNode(ws: Workspace, layerId: Id, sourceId: Id, name: string): Id {
+  const src = ws.get(layerId, sourceId);
+  if (!src || (src.kind !== "being" && src.kind !== "item")) throw new Error("Only beings and items can be copied this way.");
+  return ws.transact(`Added ${name} as a copy of ${src.name}`, () =>
+    ws.create(layerId, src.kind, name, {
+      parent: src.parent,
+      category: src.category,
+      picture: src.picture,
+      text: src.text,
+      template: false,
+      fields: structuredClone(src.fields),
+      attachments: src.attachments.map(freshAids),
+    }),
+  );
+}
+
+/** Turns a sheet into a template parent, or back into a real thing. */
+export function setTemplate(ws: Workspace, layerId: Id, id: Id, on: boolean) {
+  const n = ws.get(layerId, id);
+  if (!n || (n.kind !== "being" && n.kind !== "item")) throw new Error("Only beings and items can be templates.");
+  ws.transact(on ? `Made ${n.name} a template` : `Made ${n.name} a real ${n.kind === "item" ? "item" : "being"}`, () => ws.edit(layerId, id, (r) => (r.template = on)));
 }
 
 /**
