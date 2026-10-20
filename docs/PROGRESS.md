@@ -66,7 +66,7 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
   click each, skippable: how checks work, which abilities, how harm works, heroic or gritty, grid
   or theatre of the mind, and magic. It builds ordinary rules in one undo step. It is also on the
   Rules tab of a system while nothing is picked.
-- 177 automatic tests pass (9 new). Driven once in the real window here.
+- 174 automatic tests pass (6 new). Driven once in the real window here.
 
 ### Milestone 8: what Jeff can test
 
