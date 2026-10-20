@@ -14,6 +14,10 @@ import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, li
 import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
+import { describeSlot, fixMissing, liveFlags, meantThat, missingDetail, panelView, readPanel, tidy } from "./flagpanel.ts";
+import type { FlagPanelView, MissingDetail, PanelState } from "./flagpanel.ts";
+import { newId } from "../engine/index.ts";
+import type { Slot } from "../engine/index.ts";
 
 export interface Option {
   id: Id;
@@ -80,6 +84,26 @@ export interface StepResult {
   label: string;
 }
 
+export interface BinView {
+  binId: Id;
+  nodeId: Id;
+  name: string;
+  kind: NodeKind;
+  deleted: number;
+  /** How many things used it when it was deleted. */
+  usedBy: number;
+  /** False if it was deleted from the system while this world was not open. */
+  here: boolean;
+}
+
+export interface RestoreResult {
+  label: string;
+  nodeId: Id;
+  name: string;
+  /** Links moved elsewhere since it was deleted; changedSince marks ones changed again after that. */
+  reconnect: { slot: Slot; nodeName: string; where: string; nowUses: string | null; changedSince: boolean }[];
+}
+
 export class Editing {
   private readonly session: Session;
   constructor(session: Session) {
@@ -104,15 +128,197 @@ export class Editing {
     return n;
   }
 
-  /** Runs an engine action, turning its errors into plain messages. */
-  private run<T>(fn: () => T): T {
+  /**
+   * Runs an engine action, turning its errors into plain messages. Red flags that clear on their
+   * own because of it get one blue notice ("1 flag cleared by Restored Strength"); a deliberate
+   * fix logs its own green block instead.
+   */
+  private run<T>(fn: () => T, opts: { fix?: boolean } = {}): T {
     this.writable();
+    const before = new Map(liveFlags(this.ws, this.layer, true).map((f) => [f.key, f]));
+    const steps = this.ws.history.length;
+    let out: T;
     try {
-      return fn();
+      out = fn();
     } catch (e) {
       if (e instanceof EngineError || e instanceof LibraryError || e instanceof Error) throw new LibraryError(e.message);
       throw e;
     }
+    if (!opts.fix && before.size) {
+      const now = new Set(liveFlags(this.ws, this.layer, true).map((f) => f.key));
+      const cleared = [...before.values()].filter((f) => !now.has(f.key));
+      if (cleared.length) {
+        const step = this.ws.history.length > steps ? this.ws.history.at(-1) : null;
+        const why = step ? ` by "${step.label}"` : "";
+        this.log("blue", `${cleared.length} flag${cleared.length === 1 ? "" : "s"} cleared${why}: ${cleared.map((f) => f.title).join("; ")}`, cleared.flatMap((f) => f.nodes.map((n) => n.id)), null);
+      }
+    }
+    return out;
+  }
+
+  // ---------- The flag panel ----------
+
+  private get panel(): PanelState {
+    return readPanel(this.session.flagPanel);
+  }
+
+  private setPanel(state: PanelState) {
+    this.session.setFlagPanel(tidy(this.ws, this.layer, state, this.ws.now()));
+  }
+
+  private log(color: "blue" | "green", title: string, nodes: Id[], stepId: string | null) {
+    const p = this.panel;
+    p.log.push({ id: newId(), color, title, time: this.ws.now(), stepId, nodes: [...new Set(nodes)] });
+    this.setPanel(p);
+  }
+
+  flagPanel(): FlagPanelView {
+    return panelView(this.ws, this.layer, this.panel, this.ws.now());
+  }
+
+  missingDetail(key: string): MissingDetail {
+    try {
+      return missingDetail(this.ws, this.layer, key);
+    } catch (e) {
+      throw new LibraryError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Fix by hand: point the ticked links at something else, or remove them. Turns green. */
+  fixMissing(key: string, slots: Slot[], to: Id | null): StepResult {
+    const label = this.run(() => fixMissing(this.ws, this.layer, key, slots, to), { fix: true });
+    this.log("green", label, slots.map((s) => s.node), this.ws.history.at(-1)?.id ?? null);
+    return { label };
+  }
+
+  /** "I meant that" for a world rule: the ticked ones become deliberate exceptions. */
+  meantThat(key: string, nodes: Id[]): StepResult {
+    const label = this.run(() => meantThat(this.ws, this.layer, key, nodes), { fix: true });
+    this.log("green", label, nodes, this.ws.history.at(-1)?.id ?? null);
+    return { label };
+  }
+
+  /** Ignore this one flag. It moves to the hidden list behind Show ignored. */
+  ignoreFlag(key: string) {
+    this.writable();
+    const p = this.panel;
+    if (!p.ignored.includes(key)) p.ignored.push(key);
+    this.setPanel(p);
+  }
+
+  /** Ignore all like this, world-wide. Only for yellow warnings; red can only be ignored one by one. */
+  ignoreKind(kind: string) {
+    this.writable();
+    if (kind === "missing" || kind === "rule") throw new LibraryError("Red flags can only be ignored one at a time.");
+    const p = this.panel;
+    if (!p.ignoredKinds.includes(kind)) p.ignoredKinds.push(kind);
+    this.setPanel(p);
+  }
+
+  /** Switches an ignored flag (or kind of flag) back on. */
+  unignore(keyOrKind: string) {
+    this.writable();
+    const p = this.panel;
+    p.ignored = p.ignored.filter((k) => k !== keyOrKind);
+    p.ignoredKinds = p.ignoredKinds.filter((k) => k !== keyOrKind);
+    this.setPanel(p);
+  }
+
+  /** A yellow warning marked as fine: it turns green and stays out of the way. */
+  markGood(key: string): StepResult {
+    this.writable();
+    const f = liveFlags(this.ws, this.layer).find((x) => x.key === key);
+    if (!f) throw new LibraryError("That flag has cleared already.");
+    if (f.color === "red") throw new LibraryError("A broken link can't simply be marked fine: point it somewhere else, remove it, or leave it for later.");
+    const p = this.panel;
+    if (!p.ignored.includes(key)) p.ignored.push(key);
+    this.setPanel(p);
+    this.log("green", `Marked as fine: ${f.title}`, f.nodes.map((n) => n.id), null);
+    return { label: `Marked as fine: ${f.title}` };
+  }
+
+  /** Flags count as new until seen, like unread email. */
+  markSeen(keys: string[] | null) {
+    if (this.session.readOnly) return;
+    const p = this.panel;
+    const all = keys ?? liveFlags(this.ws, this.layer).map((f) => f.key);
+    p.seen = [...new Set([...p.seen, ...all])];
+    this.setPanel(p);
+  }
+
+  /** Undo on a green block: only while it is still the latest change. */
+  undoLog(logKey: string): StepResult | null {
+    const id = logKey.replace(/^log:/, "");
+    const entry = this.panel.log.find((e) => e.id === id);
+    if (!entry?.stepId) throw new LibraryError("That can't be undone from here.");
+    if (this.ws.history.at(-1)?.id !== entry.stepId) throw new LibraryError("Something else was changed since. Undo the later changes first, or use History.");
+    const r = this.undo();
+    const p = this.panel;
+    p.log = p.log.filter((e) => e.id !== id);
+    this.setPanel(p);
+    return r;
+  }
+
+  // ---------- The world's recycle bin ----------
+
+  /** Everything deleted in this world or system, newest first. */
+  bin(): BinView[] {
+    return [...this.ws.bin]
+      .filter((b) => this.ws.chain(this.layer).some((l) => l.id === b.layer))
+      .sort((a, b) => b.deleted - a.deleted)
+      .map((b) => ({ binId: b.id, nodeId: b.node.id, name: b.node.name, kind: b.node.kind, deleted: b.deleted, usedBy: new Set(b.pointedHere.map((s) => s.node)).size, here: b.layer === this.layer }));
+  }
+
+  /** "You removed Strength yesterday. Restore it instead?" when making something with the same name. */
+  binnedNamed(name: string, kind: NodeKind | null = null): BinView | null {
+    const n = String(name ?? "").trim().toLowerCase();
+    if (!n) return null;
+    return this.bin().find((b) => b.name.trim().toLowerCase() === n && (!kind || b.kind === kind)) ?? null;
+  }
+
+  /**
+   * Brings something back from the recycle bin. Links that still point at it work again by
+   * themselves; links that were moved elsewhere meanwhile come back as a reconnect checklist.
+   */
+  restoreNode(binId: Id): RestoreResult {
+    const entry = this.ws.bin.find((b) => b.id === binId);
+    if (!entry) throw new LibraryError("That isn't in the recycle bin any more.");
+    if (this.ws.exists(this.layer, entry.node.id)) throw new LibraryError(`${entry.node.name} is already back.`);
+    const moved = this.run(() => this.ws.restore(binId));
+    const label = `Restored ${entry.node.name}`;
+    this.log("green", label, [entry.node.id], this.ws.history.at(-1)?.id ?? null);
+    return {
+      label,
+      nodeId: entry.node.id,
+      name: entry.node.name,
+      reconnect: moved
+        .filter((m) => this.ws.exists(this.layer, m.slot.node))
+        .map((m) => ({ slot: m.slot, nodeName: this.ws.get(this.layer, m.slot.node)!.name, where: describeSlot(this.ws, this.layer, m.slot), nowUses: m.to ? (this.ws.get(this.layer, m.to)?.name ?? null) : null, changedSince: m.changedSince })),
+    };
+  }
+
+  /** The reconnect checklist's answer: point the ticked links back at the restored thing. */
+  reconnect(nodeId: Id, slots: Slot[]): StepResult {
+    const node = this.must(nodeId);
+    if (!slots.length) return { label: "Nothing reconnected" };
+    const label = `${slots.length} reconnected to ${node.name}`;
+    this.run(() => this.ws.transact(label, () => this.ws.reconnect(slots, nodeId)), { fix: true });
+    this.log("green", label, slots.map((s) => s.node), this.ws.history.at(-1)?.id ?? null);
+    return { label };
+  }
+
+  /** The only truly permanent action. The window always asks first. */
+  emptyNodeBin(binIds: Id[] | null) {
+    this.writable();
+    this.ws.emptyBin(binIds ?? undefined);
+    this.session.markChanged();
+  }
+
+  /** Clears the blue and green blocks (the red and yellow ones clear only when fixed). */
+  clearLog() {
+    const p = this.panel;
+    p.log = [];
+    this.setPanel(p);
   }
 
   // ---------- Reading ----------

@@ -14,7 +14,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 4, the Rules tab and sheets (approved by Jeff on October 20, 2026, when he
   asked to go on to milestone 5; merged into `main`). He hasn't installed it yet, so anything he
   finds when he does gets fixed in milestone 5.
-- **Next:** Milestone 5, the flag panel, recycle bin, undo and history on screen.
+- **In progress:** Milestone 5, the flag panel, recycle bin, undo and history on screen (same
+  branch). Steps 1 and 2 of 4 done: the flag panel, and the world's recycle bin. Next: the History
+  list, then world rules on screen and Edit parent from a world up to its system.
 
 ## Milestones to first playable
 
@@ -31,6 +33,23 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 5, steps 1 and 2: the flag panel and the world's recycle bin)
+
+- `src/app/flagpanel.ts`: blocks in the design's order (red, yellow, blue, green) with a counter
+  and "new until seen"; the fix-by-hand detail for a broken link (every affected thing with what
+  on it is broken, tick any set, point them at something of the same kind or remove the link,
+  repeat with the rest or leave them for later); "I meant that" for world rules; Ignore, Ignore
+  all like this (yellow only, as the hard rules say), Show ignored and Switch back on; "It's fine"
+  for yellow; green blocks for fixes, with Undo while they are the latest change; and a blue
+  notice when flags clear by themselves ("1 flag cleared by "Restored Strength"").
+- The world's recycle bin (the bin button in the top bar): restore brings back everything that
+  still pointed at it, then a reconnect checklist offers back anything moved elsewhere meanwhile,
+  marking ones changed again since. Making something with the name of a deleted thing asks
+  "Restore Strength instead?". Emptying asks first and is the one permanent action.
+- The panel's memory is saved with the world (see `docs/data-format.md`, meta).
+- 144 automatic tests pass (11 new). Jeff's milestone 5 test (delete Strength, fix it, undo,
+  restore) was driven in the real window here.
 
 ### 2026-10-20 (milestone 4: Jeff's answers, and finishing touches)
 
@@ -379,3 +398,11 @@ One plain line each. Jeff can overrule any of these at a milestone.
   point, like an empty page.
 - 2026-10-20: Templates are opened from the library, not dragged onto sheets; a sheet uses a
   template by being its variant.
+- 2026-10-20 (Jeff may want to check): The flag panel's memory (ignored flags, which are seen, the
+  blue and green blocks) is kept in the world file's meta area, beside the card picture. It is
+  not part of undo history; ignoring is undone with Show ignored, Switch back on.
+- 2026-10-20: Clicking a flag goes to the first thing it's about; double-clicking opens the
+  details and fixes (as in the design). Ignore and Undo appear on the block when pointed at.
+- 2026-10-20: A green block's Undo only works while its change is the latest one, because undo
+  goes back in order; otherwise it says to use History.
+- 2026-10-20: In the reconnect checklist, things changed again since the fix start unticked.

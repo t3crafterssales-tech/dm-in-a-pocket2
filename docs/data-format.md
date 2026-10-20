@@ -73,7 +73,11 @@ The field names that checks, sentences and the rulebook rely on (`beingKind`, `h
 
 - **main** is the layer the file is about.
 - **meta** holds home-screen details per layer: the card picture and when it last changed. System
-  files carry it too.
+  files carry it too. It also holds `flagPanel`, the flag panel's memory: `ignored` (flags the user
+  ignored one by one), `ignoredKinds` (yellow warning kinds ignored world-wide), `seen` (flags no
+  longer new) and `log` (the blue and green blocks from the last 30 days, each with its text, time,
+  the nodes it was about and the undo step it made). None of it changes how nodes or bricks are
+  stored, and a file without it simply has an empty panel memory.
 
 ## Files in the main folder
 

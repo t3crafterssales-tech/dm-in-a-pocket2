@@ -89,10 +89,12 @@ export interface SnapshotInfo {
   bytes: number;
 }
 
-interface LayerMeta {
+export interface LayerMeta {
   /** For worlds and systems: the picture shown on the home screen card. */
   picture?: Id | null;
   changed?: number;
+  /** The flag panel's memory: ignored flags, which are seen, and the blue and green blocks. */
+  flagPanel?: unknown;
 }
 
 interface FileWithMeta extends SavedFile {
@@ -185,11 +187,18 @@ export class Library {
   }
 
   /** Saves a system opened on its own (its own history and bin stay with it). */
-  saveSystem(ws: Workspace, systemId: Id, hooks: WriteHooks = {}) {
-    this.writeSystem(ws, systemId, hooks);
+  saveSystem(ws: Workspace, systemId: Id, hooks: WriteHooks = {}, extra: Partial<LayerMeta> = {}) {
+    this.writeSystem(ws, systemId, hooks, true, extra);
   }
 
-  private writeSystem(ws: Workspace, systemId: Id, hooks: WriteHooks = {}, withHistory = true) {
+  /** Home-screen and flag-panel details stored with a world or system. */
+  readMeta(type: "world" | "system", id: Id): LayerMeta {
+    const path = type === "world" ? this.worldPath(id) : this.systemPath(id);
+    if (!existsSync(path)) return {};
+    return readArchive(path, type === "world" ? "world.json" : "system.json", this, false).data.meta?.[id] ?? {};
+  }
+
+  private writeSystem(ws: Workspace, systemId: Id, hooks: WriteHooks = {}, withHistory = true, extra: Partial<LayerMeta> = {}) {
     const layer = ws.layer(systemId);
     const old = existsSync(this.systemPath(systemId)) ? this.readSystemFile(systemId) : null;
     let file: FileWithMeta;
@@ -198,7 +207,7 @@ export class Library {
     } else {
       file = { format: FORMAT_VERSION, app: ws.toFile().app, main: systemId, layers: [structuredClone(layer)], bin: old?.bin ?? [], history: old?.history ?? [], redo: old?.redo ?? [] };
     }
-    file.meta = { ...old?.meta, [systemId]: { ...old?.meta?.[systemId], changed: this.now() } };
+    file.meta = { ...old?.meta, [systemId]: { ...old?.meta?.[systemId], ...extra, changed: this.now() } };
     writeArchive(this.systemPath(systemId), "system.json", file, this, hooks);
   }
 
@@ -293,7 +302,7 @@ export class Library {
   }
 
   /** Saves an open world: its own file, plus any of its systems that changed. */
-  saveWorld(open: OpenWorld, hooks: WriteHooks = {}) {
+  saveWorld(open: OpenWorld, hooks: WriteHooks = {}, extra: Partial<LayerMeta> = {}) {
     if (open.readOnly) throw new LibraryError(open.readOnlyReason ?? "This world is read-only.");
     if (open.lock && open.lock.heartbeat() === "lost") {
       open.readOnly = true;
@@ -310,7 +319,7 @@ export class Library {
     }
     const file: FileWithMeta = { ...ws.toFile(open.worldId), layers: chain.map((l) => structuredClone(l)) };
     const old = existsSync(open.path) ? readArchive(open.path, "world.json", this, false).data.meta : undefined;
-    file.meta = { ...old, [open.worldId]: { ...old?.[open.worldId], changed: this.now() } };
+    file.meta = { ...old, [open.worldId]: { ...old?.[open.worldId], ...extra, changed: this.now() } };
     writeArchive(open.path, "world.json", file, this, hooks);
   }
 

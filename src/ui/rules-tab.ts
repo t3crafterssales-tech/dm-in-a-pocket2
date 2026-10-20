@@ -9,6 +9,7 @@ import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { FieldMaker, asLink, isObj } from "./fields.ts";
 import type { Link, Value } from "./fields.ts";
+import { offerRestore } from "./flag-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 
 const collapsed = new Set<string>();
@@ -79,7 +80,7 @@ function listPanel(sections: RulesSection[], ctx: PlaceCtx) {
                   n.fromBelow ? h("span", { class: "from-below", title: "From the system" }, svg(ICONS.layers)) : null,
                 ),
               ),
-              adding === s.key ? h("li", { class: "item adding" }, newNameBox(`Name of the new ${s.noun}`, `new-${s.key}`, (name) => addRule(s.key, name, ctx))) : null,
+              adding === s.key ? h("li", { class: "item adding" }, newNameBox(`Name of the new ${s.noun}`, `new-${s.key}`, (name) => addRule(s.key, s.kind, name, ctx))) : null,
               !s.nodes.length && adding !== s.key ? h("li", { class: "empty muted small" }, "None yet.") : null,
             )
           : null,
@@ -116,8 +117,9 @@ export function newNameBox(placeholder: string, key: string, create: (name: stri
   return input;
 }
 
-async function addRule(sectionKey: string, name: string, ctx: PlaceCtx) {
+async function addRule(sectionKey: string, kind: string, name: string, ctx: PlaceCtx) {
   adding = null;
+  if (!(await offerRestore(name, kind, ctx))) return ctx.refresh();
   const id = await attempt(() => api.addRule(sectionKey, name));
   if (id) ctx.select(id);
   else await ctx.refresh();

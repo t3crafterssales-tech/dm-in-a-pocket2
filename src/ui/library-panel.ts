@@ -9,6 +9,7 @@ import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
+import { offerRestore } from "./flag-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 import { newNameBox } from "./rules-tab.ts";
 
@@ -154,6 +155,7 @@ function select(id: string, ev: MouseEvent, visible: LibraryEntry[], ctx: PlaceC
 
 async function addBrick(type: BrickType, name: string, ctx: PlaceCtx) {
   adding = null;
+  if (!(await offerRestore(name, "brick", ctx))) return ctx.refresh();
   const id = await attempt(() => api.addBrick(type, name));
   if (id) {
     librarySelection.clear();

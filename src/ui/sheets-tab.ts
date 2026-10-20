@@ -11,6 +11,7 @@ import { ICONS } from "./icons.ts";
 import { openDrill } from "./drill-dialog.ts";
 import { openEditParent } from "./edit-parent.ts";
 import { DRAG_TYPE, brickEditor, drop, libraryPanel } from "./library-panel.ts";
+import { offerRestore } from "./flag-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 
 export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
@@ -267,6 +268,10 @@ async function createNew(which: "beings" | "items", existing: ListEntry[], categ
     if (!name.value.trim()) return;
     create.disabled = true;
     const [how, from] = start.value ? (start.value.split(":") as ["variant" | "copy", string]) : [null, null];
+    if (!how) {
+      d.close();
+      if (!(await offerRestore(name.value, which === "beings" ? "being" : "item", ctx))) return;
+    }
     const id = await attempt(async () => {
       if (how === "copy") return api.copyNode(from!, name.value);
       const variantOf = how === "variant" ? from : null;

@@ -457,3 +457,25 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .small-select { padding: 4px 6px; font-size: 12.5px; width: auto; flex: none; }
 .template-chip { background: #e5ddf3; color: #4b3b78; }
 .spaced-check { margin-top: 12px; align-items: flex-start; }
+
+/* ---------- Flag panel (milestone 5) ---------- */
+
+.flag-head { flex-wrap: wrap; row-gap: 4px; }
+.flag-head .head-count { margin-left: auto; font-weight: 400; }
+.dot.blue { color: var(--blue); }
+.dot.green { color: var(--green); }
+.new-count { border: none; border-radius: 999px; padding: 1px 8px; background: var(--blue); color: #fff; font-size: 11.5px; cursor: pointer; }
+.flag.blue { border-left-color: var(--blue); cursor: default; }
+.flag.green { border-left-color: var(--green); cursor: default; }
+.flag.blue .flag-title, .flag.green .flag-title { font-weight: 400; }
+.flag.new { box-shadow: 0 0 0 1px #c8d8ea; }
+.new-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--blue); vertical-align: 1px; }
+.flag-actions { display: flex; gap: 10px; margin-top: 4px; opacity: 0; }
+.flag:hover .flag-actions, .flag:focus-within .flag-actions { opacity: 1; }
+.flag.green .flag-actions { opacity: 1; }
+.flag.ignored { opacity: 0.7; }
+.flag-foot { display: flex; gap: 12px; flex-wrap: wrap; padding: 4px 14px 10px; }
+.tiny { font-size: 11px; }
+.fix-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.checklist li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.warn-chip { background: #f6ecd0; color: #7a5a00; }

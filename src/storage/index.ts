@@ -5,5 +5,5 @@ export type { LockInfo, AcquireResult } from "./lock.ts";
 export { Autosaver, realTimers } from "./autosave.ts";
 export type { Timers } from "./autosave.ts";
 export { Library, LibraryError, WORLD_EXT, SYSTEM_EXT } from "./library.ts";
-export type { WorldInfo, SystemInfo, OpenWorld, BackupInfo, SnapshotInfo, RecycledInfo } from "./library.ts";
+export type { WorldInfo, SystemInfo, OpenWorld, BackupInfo, SnapshotInfo, RecycledInfo, LayerMeta } from "./library.ts";
 export { writeZip, readZip, ZipError } from "./zip.ts";
