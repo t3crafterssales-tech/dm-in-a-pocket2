@@ -10,6 +10,7 @@
     "erasableSyntaxOnly": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]

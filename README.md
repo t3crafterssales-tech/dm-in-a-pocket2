@@ -15,15 +15,25 @@ Your worlds live on your computer and you own them.
 - `docs/PROGRESS.md`: what has been built, what is next, and every technical decision
 - `src/engine/`: the engine (nodes, bricks, links, layers, flags, undo, recycle bin)
 - `src/storage/`: the main folder, world files, constant saving, backups, snapshots, locking
+- `src/app/`: the desktop app's back end (home screen, opening worlds, settings) and the Electron window
+- `src/ui/`: the screens you see
 - `test/`: automatic tests that guard the promises
 
-## Running the tests
+## Getting the Windows app
 
-Needs Node.js 22.18 or newer. No installs needed.
+Every push builds the Windows installer at GitHub: open the repository's **Actions** tab, click the
+newest **Windows installer** run, and download **DM-in-a-Pocket-Windows** under Artifacts. Unzip it
+and run `DM-in-a-Pocket-Setup-0.1.0.exe`. The installer isn't signed yet, so Windows may say
+"Windows protected your PC": click **More info**, then **Run anyway**.
+
+## Running it from the code
+
+Needs Node.js 22.18 or newer.
 
 ```
-npm test
+npm install          # once
+npm test             # the automatic tests
 npm run typecheck
+npm start            # opens the app
+npm run dist         # builds the Windows installer into release/ (on Windows)
 ```
-
-`npm run typecheck` needs TypeScript (`npm install -g typescript`).

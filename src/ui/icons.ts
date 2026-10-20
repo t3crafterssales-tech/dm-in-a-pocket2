@@ -1,0 +1,28 @@
+// Line icons and the logo, drawn for this app.
+
+const icon = (body: string) =>
+  `<svg class="icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
+export const ICONS = {
+  plus: icon(`<path d="M12 5v14M5 12h14"/>`),
+  trash: icon(`<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>`),
+  bin: icon(`<path d="M4 7h16M6 7l1 13h10l1-13M9 7V4h6v3"/><path d="M10 14l2-2 2 2M12 12v5"/>`),
+  gear: icon(`<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>`),
+  import: icon(`<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>`),
+  home: icon(`<path d="M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5"/>`),
+  close: icon(`<path d="M6 6l12 12M18 6L6 18"/>`),
+  image: icon(`<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>`),
+  folder: icon(`<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>`),
+  book: icon(`<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/>`),
+  globe: icon(`<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z"/>`),
+};
+
+/** The logo: a d20 tucked in a pocket. Its glow is the save indicator. */
+export const LOGO = `<svg class="logo" viewBox="0 0 64 64" width="34" height="34" aria-hidden="true">
+  <g class="logo-die" fill="#fffdf8" stroke="#2b2620" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M32 4 L45 11.5 V26.5 L32 34 L19 26.5 V11.5 Z"/>
+    <path d="M32 11 L39.5 24 H24.5 Z M32 4 V11 M45 11.5 L39.5 24 M19 11.5 L24.5 24 M45 26.5 L39.5 24 M19 26.5 L24.5 24 M32 34 L39.5 24 M32 34 L24.5 24" fill="none" stroke-width="1.8"/>
+  </g>
+  <path class="logo-pocket" d="M9 22 H55 V43 Q55 46 52.5 47.5 L33.5 58.5 Q32 59.3 30.5 58.5 L11.5 47.5 Q9 46 9 43 Z" fill="#8a4b2a" stroke="#2b2620" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M13.5 26.5 H50.5 V42 Q50.5 43.6 49 44.5 L32 54.3 L15 44.5 Q13.5 43.6 13.5 42 Z" fill="none" stroke="#f3d9b8" stroke-width="1.4" stroke-dasharray="3 2.6"/>
+</svg>`;

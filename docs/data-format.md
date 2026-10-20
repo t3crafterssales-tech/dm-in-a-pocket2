@@ -72,7 +72,8 @@ The field names that checks, sentences and the rulebook rely on (`beingKind`, `h
 ```
 
 - **main** is the layer the file is about.
-- **meta** holds home-screen details per layer: the card picture and when it last changed.
+- **meta** holds home-screen details per layer: the card picture and when it last changed. System
+  files carry it too.
 
 ## Files in the main folder
 
@@ -85,6 +86,7 @@ The field names that checks, sentences and the rulebook rely on (`beingKind`, `h
 | `Snapshots/<worldId>/<id>.json` | Named snapshots: name, time, and the world with its system chain. Pictures are not copied. |
 | `.pictures/<hash>.<ext>` | Every picture, once, named by its content. |
 | `Imported/` | Worlds and systems from other people. |
+| `Recycle bin/<entryId>/` | Worlds and systems deleted from the home screen: an `entry.json` (what was deleted, when, and everything that went in with it) beside the moved `.dmworld` and `.dmsys` files. Deleting a system takes the worlds that use it, and the systems built on it, into the same entry, so they are restored together. Emptying the bin removes the entry and those worlds' backups and snapshots. |
 
 Files and folders use permanent IDs as names, so renaming a world never moves a file.
 
