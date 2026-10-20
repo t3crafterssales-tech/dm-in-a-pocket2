@@ -9,6 +9,7 @@ import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { flagPanel, showNodeBin } from "./flag-panel.ts";
+import { showHistory } from "./history-dialog.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 
@@ -119,6 +120,7 @@ async function draw() {
       { class: "top-actions" },
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
+      iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
       iconButton(ICONS.bin, "Recycle bin", () => void showNodeBin(ctx), { iconOnly: true, title: "Recycle bin: restore deleted things" }),
       iconButton(ICONS.home, "Home", () => void goHome()),
       iconButton(ICONS.gear, isWorld ? "World settings" : "System settings", () => void placeSettings(view)),

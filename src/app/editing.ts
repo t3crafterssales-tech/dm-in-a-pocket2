@@ -84,6 +84,24 @@ export interface StepResult {
   label: string;
 }
 
+export interface HistoryStep {
+  id: Id;
+  label: string;
+  by: "user" | "ai";
+  time: number;
+  /** The things it changed, by name (links that point at nothing aren't counted). */
+  things: { id: Id; name: string }[];
+  /** For a removal: how many things used what was removed ("Removed Strength, 214 things affected"). */
+  affected: number;
+}
+
+export interface HistoryView {
+  /** Newest first. The first one is where the world is now. */
+  done: HistoryStep[];
+  /** Steps that were undone and can be redone, the next one to redo last. */
+  undone: HistoryStep[];
+}
+
 export interface BinView {
   binId: Id;
   nodeId: Id;
@@ -257,6 +275,82 @@ export class Editing {
     p.log = p.log.filter((e) => e.id !== id);
     this.setPanel(p);
     return r;
+  }
+
+  // ---------- History ----------
+
+  history(): HistoryView {
+    const view = (s: (typeof this.ws.history)[number]): HistoryStep => {
+      const ids = [...new Set(s.edits.filter((e) => e.what !== "bin").map((e) => e.id))];
+      return {
+        id: s.id,
+        label: s.label,
+        by: s.by,
+        time: s.time,
+        things: ids.map((id) => ({ id, name: this.ws.get(this.layer, id)?.name ?? this.ws.binEntryFor(id)?.node.name ?? "" })).filter((t) => t.name),
+        affected: s.edits.reduce((n, e) => {
+          const entry = e.what === "bin" && !e.before && e.after ? (e.after as { pointedHere?: { node: Id }[] }) : null;
+          return n + (entry?.pointedHere ? new Set(entry.pointedHere.map((p) => p.node)).size : 0);
+        }, 0),
+      };
+    };
+    return { done: [...this.ws.history].reverse().map(view), undone: [...this.ws.redoStack].reverse().map(view) };
+  }
+
+  /**
+   * Rolls back to just after a step, undoing everything since, newest first. Stops (and says so)
+   * if a step can't be undone safely. Everything undone can be redone.
+   */
+  rollBackTo(stepId: Id): StepResult {
+    const i = this.ws.history.findIndex((s) => s.id === stepId);
+    if (i < 0) throw new LibraryError("That step is no longer in History.");
+    const target = this.ws.history[i]!;
+    let n = 0;
+    try {
+      this.run(() => {
+        while (this.ws.history.length > i + 1) {
+          this.ws.undo();
+          n++;
+        }
+      });
+    } catch (e) {
+      if (!n) throw e;
+      return { label: `Rolled back ${n} step${n === 1 ? "" : "s"}, then stopped: ${e instanceof Error ? e.message : e}` };
+    }
+    return { label: n ? `Rolled back ${n} step${n === 1 ? "" : "s"} to "${target.label}"` : "Already there" };
+  }
+
+  /** Redoes undone steps up to and including this one. */
+  redoTo(stepId: Id): StepResult {
+    const i = this.ws.redoStack.findIndex((s) => s.id === stepId);
+    if (i < 0) throw new LibraryError("That can't be redone any more.");
+    let n = 0;
+    this.run(() => {
+      while (this.ws.redoStack.length > i) {
+        this.ws.redo();
+        n++;
+      }
+    });
+    return { label: `Redid ${n} step${n === 1 ? "" : "s"}` };
+  }
+
+  /** Rolls back to before anything in History was done. */
+  rollBackAll(): StepResult {
+    const n = this.ws.history.length;
+    if (!n) return { label: "Nothing to roll back" };
+    let done = 0;
+    try {
+      this.run(() => {
+        while (this.ws.history.length) {
+          this.ws.undo();
+          done++;
+        }
+      });
+    } catch (e) {
+      if (!done) throw e;
+      return { label: `Rolled back ${done} steps, then stopped: ${e instanceof Error ? e.message : e}` };
+    }
+    return { label: `Rolled back all ${done} steps` };
   }
 
   // ---------- The world's recycle bin ----------

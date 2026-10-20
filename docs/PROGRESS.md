@@ -15,8 +15,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
   asked to go on to milestone 5; merged into `main`). He hasn't installed it yet, so anything he
   finds when he does gets fixed in milestone 5.
 - **In progress:** Milestone 5, the flag panel, recycle bin, undo and history on screen (same
-  branch). Steps 1 and 2 of 4 done: the flag panel, and the world's recycle bin. Next: the History
-  list, then world rules on screen and Edit parent from a world up to its system.
+  branch). Steps 1 to 3 of 4 done: the flag panel, the world's recycle bin, and History. Next: world
+  rules on screen, and Edit parent from a world up to its system.
 
 ## Milestones to first playable
 
@@ -33,6 +33,16 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 5, step 3: History)
+
+- History (the clock button in the top bar): every step in plain words, newest first, with when
+  it happened, an AI label for AI steps, and "Removed Strength, 2 things affected" for removals.
+  Clicking a line shows what it changed (with links to go to each) and offers Roll back to here.
+  Rolled-back steps wait above as Undone, with Redo up to here. Roll back everything is there
+  too. If a step can't be undone safely, rolling back stops there and says why.
+- One brick dropped on several sheets now reads "Added Claw to 3 sheets".
+- 148 automatic tests pass (4 new). Driven in the real window here.
 
 ### 2026-10-20 (milestone 5, steps 1 and 2: the flag panel and the world's recycle bin)
 

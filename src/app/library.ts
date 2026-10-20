@@ -184,7 +184,8 @@ export function attachMany(ws: Workspace, layerId: Id, targets: Id[], bricks: Id
   const b = bricks.map((id) => ws.get(layerId, id)).filter((n): n is NodeRecord => !!n && (n.kind === "brick" || n.kind === "item"));
   if (!t.length) throw new Error("There is nothing to add it to.");
   if (!b.length) throw new Error("Only bricks and items can be added to a sheet.");
-  const label = b.length === 1 && t.length === 1 ? `Added ${b[0]!.name} to ${t[0]!.name}` : `Added ${count(b.length, "brick")} to ${t.length === 1 ? t[0]!.name : count(t.length, "sheet")}`;
+  const what = b.length === 1 ? b[0]!.name : count(b.length, "brick");
+  const label = `Added ${what} to ${t.length === 1 ? t[0]!.name : count(t.length, "sheet")}`;
   let added = 0;
   ws.transact(label, () => {
     for (const target of t) {

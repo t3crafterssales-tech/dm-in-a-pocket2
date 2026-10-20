@@ -8,7 +8,7 @@ import type { Activation, Id, NodeKind, Slot, Uses, Value } from "../engine/inde
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import type { RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
-import type { BinView, Choices, FlagView, NodeView, RestoreResult, StepResult } from "./editing.ts";
+import type { BinView, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
@@ -22,7 +22,7 @@ import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
-export type { BinView, Choices, FlagView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
+export type { BinView, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
@@ -193,6 +193,10 @@ export const BACKEND_METHODS = [
   "restoreNode",
   "reconnect",
   "emptyNodeBin",
+  "history",
+  "rollBackTo",
+  "redoTo",
+  "rollBackAll",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -619,6 +623,19 @@ export class Backend {
   emptyNodeBin(binIds: Id[] | null): true {
     this.editing.emptyNodeBin(binIds);
     return true;
+  }
+
+  history(): HistoryView {
+    return this.editing.history();
+  }
+  rollBackTo(stepId: Id): StepResult {
+    return this.editing.rollBackTo(stepId);
+  }
+  redoTo(stepId: Id): StepResult {
+    return this.editing.redoTo(stepId);
+  }
+  rollBackAll(): StepResult {
+    return this.editing.rollBackAll();
   }
 
   /** The app is closing normally. */
