@@ -583,3 +583,4 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .ai-tools { display: flex; gap: 8px; align-items: center; padding: 6px 12px 10px 40px; border-top: 1px solid var(--line); }
 .notes-box { width: 100%; font: 14px/1.5 var(--sans); user-select: text; }
 .ai-settings .text-input:not(.number-input) { min-width: 280px; }
+.ai-tip { background: #e6eef7; border-radius: 8px; margin: 0 12px 8px 40px; padding: 6px 10px; }

@@ -126,10 +126,24 @@ export interface AiStatus {
   threshold: number;
   /** This month's AI spending in words ("$1.24 this month"). */
   spent: string;
+  /** Live AI checking is on. */
+  live: boolean;
+  /** Show the one-time tip about live checking (a key was just added). */
+  tip: boolean;
 }
 
+/** How long after the last change a live AI check waits, so typing doesn't start one per letter. */
+export const LIVE_DELAY_MS = 6000;
+
 /** Events sent to the window. */
-export type BackendEvent = { type: "saved" } | { type: "saveFailed"; message: string } | { type: "readOnly"; reason: string };
+export type BackendEvent =
+  | { type: "saved" }
+  | { type: "saveFailed"; message: string }
+  | { type: "readOnly"; reason: string }
+  /** A live AI check finished: the flag panel has new findings. */
+  | { type: "aiFlags"; found: number }
+  /** A background AI job didn't finish; nothing from it was applied. */
+  | { type: "aiNotice"; message: string };
 
 export interface BackendOptions {
   settingsPath: string;
@@ -285,6 +299,10 @@ export const BACKEND_METHODS = [
   "setWorldNotes",
   "updateWorldNotes",
   "clearAiChat",
+  "aiCheck",
+  "aiFixFlag",
+  "setAiLive",
+  "dismissAiTip",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -447,7 +465,7 @@ export class Backend {
     const key = this.opts.secrets?.read() ?? null;
     const d = this.settingsFile.data;
     const spent = d.aiSpend.month === this.month() ? d.aiSpend.usd : 0;
-    return { hasKey: !!key, keyEnd: key ? key.slice(-4) : null, online: this.opts.isOnline?.() ?? true, model: d.aiModel, models: { quick: QUICK.name, careful: CAREFUL.name }, threshold: d.aiThreshold, spent: `${spent > 0 ? dollars(spent) : "$0.00"} this month` };
+    return { hasKey: !!key, keyEnd: key ? key.slice(-4) : null, online: this.opts.isOnline?.() ?? true, model: d.aiModel, models: { quick: QUICK.name, careful: CAREFUL.name }, threshold: d.aiThreshold, spent: `${spent > 0 ? dollars(spent) : "$0.00"} this month`, live: d.aiLive, tip: !!key && !d.aiTipShown };
   }
 
   /** Settings → AI: paste a key (kept in the operating system's protected storage), or remove it. */
@@ -520,6 +538,75 @@ export class Backend {
 
   clearAiChat(): AiView {
     return assistant.clearChat(this.aiSession());
+  }
+
+  /** Check for errors: the AI reviews the user's own work; what it finds arrives as yellow flags. */
+  async aiCheck(confirmed = false): Promise<assistant.CheckResult> {
+    const s = this.aiSession();
+    if (s.readOnly) throw new LibraryError(`${s.readOnlyReason ?? "This is read-only."} Nothing can be changed here.`);
+    return assistant.check(s, this.transport(), { choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, confirmed }, (usd) => this.recordSpend(usd), this.now);
+  }
+
+  /** Ask AI on a flag: the most reasonable fix, shown as a proposal. "Other ideas" asks for a different one. */
+  async aiFixFlag(key: string, other = false): Promise<AskResult> {
+    const s = this.aiSession();
+    const view = this.editing.flagPanel();
+    const f = [...view.blocks, ...view.ignored].find((b) => b.key === key);
+    if (!f || (f.color !== "red" && f.color !== "yellow")) throw new LibraryError("That flag has cleared already.");
+    const about = f.nodes.map((n) => n.name).join(", ");
+    const prompt = other
+      ? `Show me other ideas for fixing "${f.title}": suggest a different fix from the one before.`
+      : `Suggest the most reasonable fix for this ${f.color === "red" ? "red (broken)" : "yellow (looks off)"} flag: "${f.title}". ${f.detail} It is about: ${about}.`;
+    const shown = other ? `Show me other ideas for "${f.title}"` : `Ask AI to fix "${f.title}"`;
+    return assistant.ask(s, this.transport(), { prompt, shown, label: `AI: fixed "${f.title.length > 70 ? `${f.title.slice(0, 67)}…` : f.title}"`, workingOn: f.nodes[0]?.id ?? null, choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, confirmed: true }, (usd) => this.recordSpend(usd), this.now);
+  }
+
+  setAiLive(on: boolean): AiStatus {
+    this.settingsFile.update((s) => ((s.aiLive = !!on), (s.aiTipShown = true)));
+    return this.aiStatus();
+  }
+
+  dismissAiTip(): AiStatus {
+    this.settingsFile.update((s) => (s.aiTipShown = true));
+    return this.aiStatus();
+  }
+
+  // Live checking: changes the user makes are collected, and a few seconds after the last one the
+  // AI checks just those things. It never runs for the AI's own changes, read-only worlds or without a key.
+  private liveStop: (() => void) | null = null;
+  private liveIds = new Set<Id>();
+  private liveTimer: unknown = null;
+  private liveBusy = false;
+
+  private watchLive(s: Session) {
+    this.liveStop?.();
+    this.liveIds.clear();
+    this.liveStop = s.ws.onChange((step, kind) => {
+      if (kind !== "do" || step.by !== "user" || !this.settingsFile.data.aiLive || s.readOnly) return;
+      for (const e of step.edits) if (e.what === "node" || e.what === "change") this.liveIds.add(e.id);
+      if (this.liveTimer !== null) this.timers.clear(this.liveTimer);
+      this.liveTimer = this.timers.set(() => void this.runLive(s), LIVE_DELAY_MS);
+    });
+  }
+
+  /** Runs the waiting live check now (the timer calls this). */
+  async runLive(s: Session | null = this.session): Promise<void> {
+    this.liveTimer = null;
+    if (!s || s !== this.session || !this.liveIds.size || this.liveBusy) return;
+    const key = this.opts.secrets?.read() ?? null;
+    if (!key || !this.opts.aiTransport || (this.opts.isOnline && !this.opts.isOnline())) return;
+    const ids = [...this.liveIds].filter((id) => s.ws.exists(s.id, id));
+    this.liveIds.clear();
+    if (!ids.length) return;
+    this.liveBusy = true;
+    try {
+      const r = await assistant.check(s, this.opts.aiTransport(key), { choice: "quick", threshold: Infinity, only: ids }, (usd) => this.recordSpend(usd), this.now);
+      if (r.status === "done" && s === this.session) this.opts.emit({ type: "aiFlags", found: r.found });
+    } catch (e) {
+      if (s === this.session) this.opts.emit({ type: "aiNotice", message: `Live checking didn't finish: ${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      this.liveBusy = false;
+    }
   }
 
   // ---------- Sharing ----------
@@ -647,6 +734,7 @@ export class Backend {
       session = Session.openSystem(this.lib, place.id, events, this.timers);
     }
     this.session = session;
+    this.watchLive(session);
     const resumed = this.resumed?.type === place.type && this.resumed.id === place.id;
     this.resumed = null;
     this.markOpened(place.id, place);
@@ -658,6 +746,10 @@ export class Backend {
 
   /** Back to the home screen: saves anything waiting and lets go of the world. */
   goHome() {
+    this.liveStop?.();
+    this.liveStop = null;
+    if (this.liveTimer !== null) this.timers.clear(this.liveTimer);
+    this.liveTimer = null;
     this.session?.close();
     this.session = null;
     if (this.settingsFile.data.place) this.settingsFile.update((s) => (s.place = null));

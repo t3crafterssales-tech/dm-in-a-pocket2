@@ -9,7 +9,7 @@ import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { aiSettings } from "./ai-panel.ts";
-import { becameReadOnly, current, leavePlace, openPlace } from "./place.ts";
+import { becameReadOnly, current, leavePlace, openPlace, renderPlace } from "./place.ts";
 
 /** The last thing deleted from the home screen, so Ctrl+Z can put it back. */
 let lastDeleted: RecycledInfo | null = null;
@@ -20,7 +20,10 @@ window.dm.onEvent((e) => {
   else if (e.type === "readOnly") {
     becameReadOnly(e.reason);
     notice(`${e.reason} It is now read-only here.`, "blue", undefined, 0);
-  }
+  } else if (e.type === "aiFlags") {
+    if (e.found) notice(`Live AI checking found ${e.found === 1 ? "a problem" : `${e.found} problems`} with what you just changed. See the flag panel.`, "blue", undefined, 6000);
+    if (current) void renderPlace();
+  } else if (e.type === "aiNotice") notice(e.message, "blue", undefined, 8000);
 });
 
 // ---------- Home screen ----------

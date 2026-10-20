@@ -9,10 +9,11 @@ import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import type { PlaceCtx } from "./place.ts";
+import { askAiAboutFlag, checkForErrors } from "./ai-panel.ts";
 
 let showIgnored = false;
 /** The flag panel's filter: everything, red only, or one kind of yellow check. */
-let only: "all" | "red" | "balance" | "economy" | "filing" = "all";
+let only: "all" | "red" | "balance" | "economy" | "filing" | "lore" = "all";
 
 export async function flagPanel(ctx: PlaceCtx): Promise<HTMLElement> {
   const view: FlagPanelView = (await attempt(() => api.flagPanel())) ?? { blocks: [], ignored: [], counts: { red: 0, yellow: 0, blue: 0, green: 0, new: 0 } };
@@ -28,6 +29,7 @@ export async function flagPanel(ctx: PlaceCtx): Promise<HTMLElement> {
       h("span", null, "Flags"),
       h("span", { class: "head-count small" }, counter.flatMap((x, i) => (i ? [" · ", x] : [x]))),
       c.new ? h("button", { class: "new-count", title: "Mark them all as seen", onClick: async () => (await attempt(() => api.markSeen(null)), await ctx.refresh()) }, `${c.new} new`) : null,
+      ro ? null : h("button", { class: "icon-button head-button", title: "Check for errors: the AI reviews your own work against the ticked checks (World settings → Checks)", "aria-label": "Check for errors", onClick: () => void checkForErrors(ctx) }, svg(ICONS.spark)),
     ),
     (() => {
       const sel = h(
@@ -39,6 +41,7 @@ export async function flagPanel(ctx: PlaceCtx): Promise<HTMLElement> {
           ["balance", "Balance"],
           ["economy", "Economy"],
           ["filing", "Filing"],
+          ["lore", "Lore consistency"],
         ].map(([v, l]) => h("option", { value: v, selected: only === v }, l)),
       );
       sel.addEventListener("change", () => ((only = sel.value as typeof only), void ctx.refresh()));
@@ -120,6 +123,7 @@ export async function openFlag(b: FlagBlock, ctx: PlaceCtx) {
   await attempt(() => api.markSeen([b.key]));
   if (b.kind === "missing") return void openMissing(b, ctx);
   const d = openDialog(b.title, { wide: true, onClose: () => void ctx.refresh() });
+  const askAi = ctx.view.readOnly ? null : h("button", { class: "button plain", title: "The AI suggests the most reasonable fix, shown before anything changes", onClick: () => (d.close(), void askAiAboutFlag(ctx, b.key)) }, svg(ICONS.spark), "Ask AI");
   const ro = ctx.view.readOnly;
   const ticks = new Set(b.nodes.map((n) => n.id));
   const list = h(
@@ -135,6 +139,7 @@ export async function openFlag(b: FlagBlock, ctx: PlaceCtx) {
   if (b.kind === "rule") {
     d.body.append(h("p", { class: "muted small" }, "Change them so they follow the rule, or tick the ones that break it on purpose and choose I meant that."));
     d.footer.append(
+      ...(askAi ? [askAi] : []),
       h("span", { class: "spacer" }),
       h("button", { class: "button plain", onClick: () => d.close() }, "Leave for later"),
       ...(ro ? [] : [h("button", { class: "button primary", onClick: async () => (await attempt(() => api.meantThat(b.key, [...ticks]))) && d.close() }, "I meant that")]),
@@ -142,6 +147,7 @@ export async function openFlag(b: FlagBlock, ctx: PlaceCtx) {
   } else {
     d.footer.append(
       ...(ro ? [] : [h("button", { class: "button plain", onClick: async () => (await attempt(() => api.ignoreKind(b.kind)), d.close()) }, "Ignore all like this")]),
+      ...(askAi ? [askAi] : []),
       h("span", { class: "spacer" }),
       h("button", { class: "button plain", onClick: () => d.close() }, "Leave for later"),
       ...(ro ? [] : [h("button", { class: "button primary", title: "Nothing is wrong here", onClick: async () => (await attempt(() => api.markGood(b.key))) && d.close() }, "It's fine")]),
@@ -217,7 +223,11 @@ async function openMissing(b: FlagBlock, ctx: PlaceCtx) {
               : null,
           ),
     );
-    d.footer.replaceChildren(h("span", { class: "spacer" }), h("button", { class: "button plain", onClick: () => d.close() }, "Leave the rest for later"));
+    d.footer.replaceChildren(
+      ...(ro ? [] : [h("button", { class: "button plain", title: "The AI suggests the most reasonable fix, shown before anything changes", onClick: () => (d.close(), void askAiAboutFlag(ctx, b.key)) }, svg(ICONS.spark), "Ask AI")]),
+      h("span", { class: "spacer" }),
+      h("button", { class: "button plain", onClick: () => d.close() }, "Leave the rest for later"),
+    );
   };
   await draw();
 }

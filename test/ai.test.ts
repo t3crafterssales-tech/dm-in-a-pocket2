@@ -300,3 +300,145 @@ test("Offline: the AI buttons say so and nothing is sent", async () => {
   await assert.rejects(backend.aiAsk("Hi", null), /^Error: Offline/);
   assert.equal(sent, 0);
 });
+
+// ---------- Check for errors, Ask AI on a flag, live checking ----------
+
+test("Check for errors looks at the user's own work, and what it finds arrives as yellow flags in the ticked categories", async () => {
+  const s = setup();
+  s.backend.setAiKey("sk-ant-api03-abcdefghijklmnop1234");
+  s.backend.addRule("world", "No metal");
+  const seen: Parameters<AiTransport>[0][] = [];
+  s.t.current = pretend((params, round) => {
+    const tools = params.tools!.map((t) => (t as { name: string }).name);
+    assert.ok(tools.includes("report_problem") && !tools.includes("set_value") && !tools.includes("create_node"), "a check can only look and report");
+    if (round === 0)
+      return {
+        tools: [
+          { name: "report_problem", input: { nodes: [s.longsword], category: "lore", title: "The Longsword is metal in a world with no metal", detail: "Make it bronze-free stone, or remove it." } },
+          { name: "report_problem", input: { nodes: ["gone"], category: "balance", title: "Ghost", detail: "" } },
+          { name: "set_value", input: { nodes: [s.club], field: "cost", value: "9 gp" } },
+        ],
+      };
+    return { text: "I found 1 problem." };
+  }, seen);
+  const r = await s.backend.aiCheck();
+  assert.deepEqual(r.status === "done" && r.found, 1);
+  const extra = JSON.stringify(seen[0]!.system);
+  assert.match(extra, /World rules:\\n- No metal/);
+  assert.match(extra, /Lore consistency/);
+  assert.match(extra, /Longsword/, "the user's own things are sent");
+  assert.equal(s.backend.node(s.club).fields.cost, undefined, "a check changes nothing");
+  const flag = s.backend.flagPanel().blocks.find((b) => b.key.startsWith("ai:"))!;
+  assert.deepEqual([flag.color, flag.category, flag.title], ["yellow", "lore", "The Longsword is metal in a world with no metal"]);
+  assert.match(flag.detail, /Found by the AI/);
+  assert.match(s.backend.aiView().chat.at(-1)!.text, /flag panel/);
+  // Switching the category off hides them; "It's fine" removes one like any other yellow flag.
+  s.backend.setCheck("lore", { on: false });
+  assert.ok(!s.backend.flagPanel().blocks.some((b) => b.key.startsWith("ai:")));
+  s.backend.setCheck("lore", { on: true });
+  s.backend.markGood(flag.key);
+  assert.ok(!s.backend.flagPanel().blocks.some((b) => b.key === flag.key));
+  // A check with the categories switched off doesn't run.
+  for (const c of ["balance", "economy", "filing", "lore"] as const) s.backend.setCheck(c, { on: false });
+  await assert.rejects(s.backend.aiCheck(), /switched off/);
+});
+
+test("the next check replaces the old findings", async () => {
+  const s = setup();
+  s.backend.setAiKey("sk-ant-api03-abcdefghijklmnop1234");
+  s.t.current = pretend((_p, round) => (round === 0 ? { tools: [{ name: "report_problem", input: { nodes: [s.club], category: "economy", title: "The Club is too dear", detail: "" } }] } : { text: "1 problem." }));
+  await s.backend.aiCheck();
+  s.t.current = pretend(() => ({ text: "Nothing wrong now." }));
+  await s.backend.aiCheck();
+  assert.ok(!s.backend.flagPanel().blocks.some((b) => b.key.startsWith("ai:")));
+});
+
+test("Ask AI on a flag proposes a fix in the AI panel, working on what the flag is about; other ideas asks again", async () => {
+  const s = setup();
+  s.backend.setAiKey("sk-ant-api03-abcdefghijklmnop1234");
+  // A broken link: the Swords' attack uses Strength, which is deleted.
+  s.backend.deleteNode(s.str);
+  const red = s.backend.flagPanel().blocks.find((b) => b.color === "red")!;
+  const seen: Parameters<AiTransport>[0][] = [];
+  // Each job: propose a change first, then explain it.
+  s.t.current = pretend((p) => (typeof p.messages.at(-1)!.content === "string" ? { tools: [{ name: "set_value", input: { nodes: [s.attack], field: "ability", value: `@${s.dex}` } }] } : { text: "Use Dexterity instead." }), seen);
+  await s.backend.aiFixFlag(red.key);
+  assert.match(String(seen[0]!.messages.at(-1)!.content), /most reasonable fix.*red \(broken\)/);
+  assert.equal(s.backend.aiView().waiting, true);
+  s.backend.aiReject();
+  await s.backend.aiFixFlag(red.key, true);
+  assert.match(String(seen.at(-2)!.messages.at(-1)!.content), /different fix/, "the second job's request");
+  s.backend.aiAccept();
+  assert.ok(!s.backend.flagPanel().blocks.some((b) => b.color === "red"), "fixed");
+});
+
+test("live checking: off until switched on; then a few seconds after the user's changes, only those things are checked", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "dmip-ai-live-"));
+  const timers: (() => void)[] = [];
+  const seen: Parameters<AiTransport>[0][] = [];
+  let events: string[] = [];
+  const backend = new Backend({
+    settingsPath: join(dir, "s.json"),
+    defaultFolder: join(dir, "F"),
+    machine: "m",
+    pickPicture: async () => null,
+    pickFolder: async () => null,
+    emit: (e) => events.push(e.type),
+    secrets: { read: () => "sk-ant-api03-abcdefghijklmnop1234", write: () => {} },
+    aiTransport: () => pretend((params, round) => (round % 2 === 0 ? { tools: [{ name: "report_problem", input: { nodes: [String(JSON.stringify(params.system).match(/\\"id\\":\\"([0-9a-f]+)/)![1])], category: "balance", title: "Too tough", detail: "" } }] } : { text: "1." }), seen),
+    timers: { set: (fn) => timers.push(fn), clear: () => {}, now: () => Date.now() },
+  });
+  const sys = backend.createSystem({ name: "S", picture: null, start: "scratch" });
+  backend.open({ type: "system", id: sys });
+  assert.equal(backend.aiStatus().tip, true, "a one-time tip when a key is there");
+  const ogre = backend.addBeing({ name: "Ogre", kind: "monster", variantOf: null });
+  backend.setField(ogre, "hp", 500);
+  await backend.runLive();
+  assert.equal(seen.length, 0, "off by default: nothing is checked");
+  backend.setAiLive(true);
+  assert.equal(backend.aiStatus().tip, false);
+  backend.setField(ogre, "hp", 600);
+  backend.setField(ogre, "ac", 30);
+  await backend.runLive();
+  assert.equal(seen.length, 2, "one check for both changes");
+  assert.match(JSON.stringify(seen[0]!.system), /live check/);
+  assert.equal(seen[0]!.model, "claude-haiku-5-5", "the quick model");
+  assert.ok(events.includes("aiFlags"));
+  assert.equal(backend.flagPanel().blocks.filter((b) => b.key.startsWith("ai:")).length, 1);
+  // The AI's own accepted changes don't start a live check.
+  events = [];
+  await backend.runLive();
+  assert.deepEqual(events, []);
+});
+
+test("Check for errors on a starter system sends only what the user made or changed, not the whole SRD", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "dmip-ai-srd-"));
+  const seen: Parameters<AiTransport>[0][] = [];
+  let now = Date.now();
+  const backend = new Backend({
+    settingsPath: join(dir, "s.json"),
+    defaultFolder: join(dir, "F"),
+    machine: "m",
+    pickPicture: async () => null,
+    pickFolder: async () => null,
+    emit: () => {},
+    now: () => now,
+    secrets: { read: () => "sk-ant-api03-abcdefghijklmnop1234", write: () => {} },
+    aiTransport: () => pretend(() => ({ text: "Nothing wrong." }), seen),
+    timers: { set: () => 0, clear: () => {}, now: () => now },
+  });
+  const sys = backend.createSystem({ name: "SRD", picture: null, start: "d20" });
+  backend.open({ type: "system", id: sys });
+  assert.deepEqual(await backend.aiCheck(), { status: "done", found: 0, costUsd: 0, nothing: true }, "nothing of the user's own yet: nothing is sent");
+  assert.equal(seen.length, 0);
+  now += 60_000;
+  const goblin = backend.beingsList("monster").find((e) => e.name === "Goblin Warrior")!.id;
+  backend.setField(goblin, "hp", 30);
+  backend.addBeing({ name: "Bog Hag", kind: "monster", variantOf: null });
+  await backend.aiCheck();
+  const sent = JSON.stringify(seen[0]!.system);
+  assert.match(sent, /Goblin Warrior/);
+  assert.match(sent, /Bog Hag/);
+  assert.ok(!/Adult Red Dragon/.test(sent));
+  assert.ok(sent.length < 15000);
+});

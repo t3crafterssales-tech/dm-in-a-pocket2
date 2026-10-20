@@ -272,6 +272,7 @@ async function placeSettings(view: PlaceView) {
         balance: ["Balance", "damage or hit points far off for a challenge rating"],
         economy: ["Economy", "a weaker item that costs more than a stronger one in its category"],
         filing: ["Filing", "a weapon with no attack, a creature filed as an item, duplicate names, empty sheets"],
+        lore: ["Lore consistency", "found only by the AI's Check for errors: things that contradict the world or each other"],
       };
       parts.push(
         h("h3", null, "Checks"),

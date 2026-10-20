@@ -19,11 +19,15 @@ interface PanelState {
   busy: boolean;
   /** True when the user switched Working on to the whole world. */
   whole: boolean;
+  /** The flag the last proposal answers (Ask AI), for "Show me other ideas". */
+  flagKey: string | null;
+  /** Check for errors is running. */
+  checking: boolean;
 }
 const states = new Map<string, PanelState>();
 const stateFor = (id: string) => {
   let s = states.get(id);
-  if (!s) states.set(id, (s = { open: false, draft: "", busy: false, whole: false }));
+  if (!s) states.set(id, (s = { open: false, draft: "", busy: false, whole: false, flagKey: null, checking: false }));
   return s;
 };
 
@@ -99,13 +103,15 @@ export async function aiPanel(ctx: PlaceCtx, selectedName: string | null): Promi
     h("span", { class: "muted small ai-spent", title: "What the AI has cost this month, worked out from what Claude reports" }, status?.spent ?? ""),
     h("button", { class: "icon-button", title: st.open ? "Hide the conversation" : "Show the conversation", "aria-label": st.open ? "Hide the conversation" : "Show the conversation", onClick: () => ((st.open = !st.open), void ctx.refresh()) }, svg(ICONS.chevron)),
   );
-  if (!st.open) return h("section", { class: "ai-panel closed", "aria-label": "AI" }, bar, unavailable ? h("p", { class: "muted small ai-note" }, unavailable) : null);
+  const tip = status?.tip && !unavailable ? liveTip(ctx) : null;
+  if (!st.open) return h("section", { class: "ai-panel closed", "aria-label": "AI" }, bar, unavailable ? h("p", { class: "muted small ai-note" }, unavailable) : null, tip);
 
   return h(
     "section",
     { class: "ai-panel open", "aria-label": "AI" },
     bar,
     unavailable ? h("p", { class: "muted small ai-note" }, unavailable) : null,
+    tip,
     conversation(view, ctx, st),
     h(
       "div",
@@ -132,7 +138,9 @@ export async function aiPanel(ctx: PlaceCtx, selectedName: string | null): Promi
 }
 
 function conversation(view: AiView | null | undefined, ctx: PlaceCtx, st: PanelState): HTMLElement {
-  const box = h("div", { class: "ai-chat", "data-scroll": "ai-chat" });
+  const box = h("div", { class: "ai-chat" });
+  // The newest message is at the bottom, like any chat.
+  requestAnimationFrame(() => (box.scrollTop = box.scrollHeight));
   if (!view || !view.chat.length) {
     box.append(h("p", { class: "muted small" }, 'Ask for changes in plain words: "All swords use Dexterity", "Make a cave spider for challenge 1/2", or "Give the Goblin a sneakier description". You see every change before anything happens.'));
     return box;
@@ -168,14 +176,84 @@ function conversation(view: AiView | null | undefined, ctx: PlaceCtx, st: PanelS
             },
             "Accept",
           ),
-          h("button", { class: "button plain small-button", onClick: async () => (await attempt(() => api.aiReject()), await ctx.refresh()) }, "Reject"),
+          h("button", { class: "button plain small-button", onClick: async () => ((st.flagKey = null), await attempt(() => api.aiReject()), await ctx.refresh()) }, "Reject"),
+          st.flagKey
+            ? h(
+                "button",
+                {
+                  class: "button plain small-button",
+                  onClick: async () => {
+                    await attempt(() => api.aiReject());
+                    await askAiAboutFlag(ctx, st.flagKey!, true);
+                  },
+                },
+                "Show me other ideas",
+              )
+            : null,
         ),
       );
     }
     box.append(card);
   });
-  if (st.busy) box.append(h("div", { class: "ai-msg ai thinking" }, "Thinking…"));
+  if (st.busy) box.append(h("div", { class: "ai-msg ai thinking" }, st.checking ? "Checking for errors…" : "Thinking…"));
   return box;
+}
+
+function liveTip(ctx: PlaceCtx): HTMLElement {
+  return h(
+    "p",
+    { class: "small ai-note ai-tip" },
+    h("strong", null, "Tip: "),
+    "Live AI checking can look over each change as you make it, a few seconds after you stop, using the quick model. It costs a little each time, so it starts off. ",
+    h("button", { class: "link small", onClick: async () => (await attempt(() => api.setAiLive(true)), notice("Live AI checking is on. Switch it off in Settings → AI.", "green", undefined, 5000), await ctx.refresh()) }, "Turn it on"),
+    " · ",
+    h("button", { class: "link small", onClick: async () => (await attempt(() => api.dismissAiTip()), await ctx.refresh()) }, "No thanks"),
+  );
+}
+
+/** Ask AI on a flag: the fix is proposed in the AI panel, like any other request. */
+export async function askAiAboutFlag(ctx: PlaceCtx, key: string, other = false) {
+  const st = stateFor(ctx.view.id);
+  st.open = true;
+  st.busy = true;
+  st.flagKey = key;
+  await ctx.refresh();
+  try {
+    await api.aiFixFlag(key, other);
+  } catch (e) {
+    st.flagKey = null;
+    notice(e instanceof Error ? e.message : String(e), "blue", undefined, 9000);
+  } finally {
+    st.busy = false;
+    await ctx.refresh();
+  }
+}
+
+/** Check for errors (the flag panel's spark button). Big checks show their estimate first. */
+export async function checkForErrors(ctx: PlaceCtx, confirmed = false): Promise<void> {
+  const st = stateFor(ctx.view.id);
+  if (st.busy) return;
+  st.open = true;
+  st.busy = true;
+  st.checking = true;
+  await ctx.refresh();
+  try {
+    const r = await api.aiCheck(confirmed);
+    if (r.status === "estimate") {
+      st.busy = st.checking = false;
+      const go = await ask("Check for errors could cost more than usual", [r.estimate, "It looks at your own work and what it needs to compare it with. Switching off some checks in World settings → Checks makes it cheaper."], [
+        { label: "Cancel", value: false },
+        { label: "Go ahead", value: true, kind: "primary" },
+      ]);
+      if (go) return checkForErrors(ctx, true);
+    } else if (r.nothing) notice("There is nothing of your own to check yet: the starter content is the yardstick.", "blue", undefined, 6000);
+    else notice(r.found ? `The AI found ${r.found === 1 ? "1 problem" : `${r.found} problems`}. They are yellow flags in the flag panel.` : "The AI found nothing wrong.", r.found ? "blue" : "green", undefined, 6000);
+  } catch (e) {
+    notice(e instanceof Error ? e.message : String(e), "blue", undefined, 9000);
+  } finally {
+    st.busy = st.checking = false;
+    await ctx.refresh();
+  }
 }
 
 /** World Notes: what the AI remembers about this world. Lines you write are pinned and kept. */
@@ -245,6 +323,8 @@ function aiSettingsBody(s: AiStatus, redraw: () => void): HTMLElement[] {
   );
   model.addEventListener("change", () => void attempt(() => api.setAiOptions({ model: model.value as AiStatus["model"] })));
   const threshold = h("input", { class: "text-input number-input", type: "number", min: 0, step: 0.1, value: String(s.threshold), "aria-label": "Cost warning in dollars" });
+  const live = h("input", { type: "checkbox", checked: s.live });
+  live.addEventListener("change", () => void attempt(() => api.setAiLive(live.checked)));
   threshold.addEventListener("change", () => void attempt(() => api.setAiOptions({ threshold: Number(threshold.value) })));
   return [
     h("p", { class: "muted" }, "The AI is optional and you pay for it yourself through a Claude API key, which is separate from a Claude subscription. Get one at console.anthropic.com (Billing to add credit, then API Keys → Create Key). The key stays on this computer, in its protected storage, and is never put in a world file."),
@@ -253,6 +333,7 @@ function aiSettingsBody(s: AiStatus, redraw: () => void): HTMLElement[] {
     model,
     h("label", { class: "field-label spaced" }, "Warn me before a job that may cost more than ($)"),
     threshold,
+    h("label", { class: "check spaced" }, live, "Live AI checking: the AI checks each change as you make it (with the quick model; a little cost each time)"),
     h("p", { class: "muted small" }, `Small jobs just run. ${s.spent}, worked out from what Claude reports. Your Anthropic account shows the real bill.`),
   ];
 }

@@ -15,6 +15,16 @@ export interface LogEntry {
   nodes: Id[];
 }
 
+/** A problem the AI found (Check for errors or live checking). Kept until the next check replaces it. */
+export interface AiFlag {
+  id: string;
+  category: "balance" | "economy" | "filing" | "lore";
+  title: string;
+  detail: string;
+  nodes: Id[];
+  time: number;
+}
+
 /** What is kept with the world. */
 export interface PanelState {
   /** Flags the user chose to ignore, one by one. */
@@ -26,6 +36,8 @@ export interface PanelState {
   log: LogEntry[];
   /** Which yellow check categories run, and how sensitive each is (World settings). */
   checks: CheckSettings;
+  /** Problems the AI found. */
+  aiFlags: AiFlag[];
 }
 
 const LEVELS = ["relaxed", "normal", "strict"];
@@ -44,7 +56,11 @@ export function readPanel(raw: unknown): PanelState {
     if (typeof c.on === "boolean") checks[k].on = c.on;
     if (typeof c.level === "string" && LEVELS.includes(c.level)) checks[k].level = c.level as CheckSettings[typeof k]["level"];
   }
-  return { ignored: strings(r.ignored), ignoredKinds: strings(r.ignoredKinds), seen: strings(r.seen), log, checks };
+  const cats = ["balance", "economy", "filing", "lore"];
+  const aiFlags = Array.isArray(r.aiFlags)
+    ? r.aiFlags.filter((f): f is AiFlag => !!f && typeof f === "object" && typeof f.id === "string" && typeof f.title === "string" && cats.includes(f.category) && Array.isArray(f.nodes))
+    : [];
+  return { ignored: strings(r.ignored), ignoredKinds: strings(r.ignoredKinds), seen: strings(r.seen), log, checks, aiFlags };
 }
 
 export interface FlagBlock {
@@ -92,8 +108,15 @@ export function liveFlags(ws: Workspace, layerId: Id, redOnly = false, checks: C
   return [...red, ...yellow];
 }
 
+/** The AI's flags that still apply: their category is switched on and what they are about still exists. */
+export function aiBlocks(ws: Workspace, layerId: Id, state: PanelState): FlagBlock[] {
+  return state.aiFlags
+    .filter((f) => state.checks[f.category]?.on !== false && f.nodes.some((id) => ws.exists(layerId, id)))
+    .map((f) => ({ key: `ai:${f.id}`, color: "yellow" as const, kind: "ai", category: f.category, title: f.title, detail: `${f.detail} (Found by the AI.)`.trim(), nodes: f.nodes.filter((id) => ws.exists(layerId, id)).map((id) => ({ id, name: ws.get(layerId, id)!.name })), isNew: false, canUndo: false, time: f.time }));
+}
+
 export function panelView(ws: Workspace, layerId: Id, state: PanelState, now: number): FlagPanelView {
-  const live = liveFlags(ws, layerId, false, state.checks).map((b) => ({ ...b, isNew: !state.seen.includes(b.key) }));
+  const live = [...liveFlags(ws, layerId, false, state.checks), ...aiBlocks(ws, layerId, state)].map((b) => ({ ...b, isNew: !state.seen.includes(b.key) }));
   const isIgnored = (b: FlagBlock) => state.ignored.includes(b.key) || (b.color === "yellow" && state.ignoredKinds.includes(b.kind));
   const shown = live.filter((b) => !isIgnored(b));
   const latest = ws.history.at(-1)?.id ?? null;
@@ -128,9 +151,11 @@ export function panelView(ws: Workspace, layerId: Id, state: PanelState, now: nu
 
 /** Keeps the saved memory small: only flags that still exist, and log entries from the last 30 days. */
 export function tidy(ws: Workspace, layerId: Id, state: PanelState, now: number): PanelState {
-  const keys = new Set(liveFlags(ws, layerId, false, state.checks).map((b) => b.key));
+  const aiFlags = state.aiFlags.filter((f) => f.nodes.some((id) => ws.exists(layerId, id))).slice(-300);
+  const keys = new Set([...liveFlags(ws, layerId, false, state.checks).map((b) => b.key), ...aiFlags.map((f) => `ai:${f.id}`)]);
   return {
     checks: state.checks,
+    aiFlags,
     ignored: state.ignored.filter((k) => keys.has(k)),
     ignoredKinds: state.ignoredKinds,
     seen: state.seen.filter((k) => keys.has(k)),

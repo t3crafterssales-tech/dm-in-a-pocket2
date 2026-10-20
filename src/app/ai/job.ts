@@ -4,7 +4,7 @@
 
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Id, Workspace } from "../../engine/index.ts";
-import { ActionError, CHANGE_TOOLS, READ_TOOLS, TOOLS, applyActions, placeholderFor, runReadTool } from "./actions.ts";
+import { ActionError, CHANGE_TOOLS, READ_TOOLS, REPORT_TOOL, TOOLS, applyActions, placeholderFor, runReadTool } from "./actions.ts";
 import type { Applied, ChangeAction, ChangeTool } from "./actions.ts";
 import { CAREFUL, costOf } from "./models.ts";
 import type { ModelInfo } from "./models.ts";
@@ -41,10 +41,21 @@ export interface JobRequest {
   /** Extra instructions for special jobs (Check for errors, create from a document). */
   extra?: string;
   maxRounds?: number;
+  /** "check": the AI may only look things up, report problems and update its World Notes. */
+  mode?: "change" | "check";
+}
+
+export interface Report {
+  nodes: Id[];
+  category: "balance" | "economy" | "filing" | "lore";
+  title: string;
+  detail: string;
 }
 
 export interface JobResult {
   reply: string;
+  /** Check for errors: the problems found. */
+  reports: Report[];
   actions: ChangeAction[];
   preview: Applied;
   costUsd: number;
@@ -88,6 +99,9 @@ export async function runJob(send: AiTransport, ws: Workspace, layerId: Id, req:
   messages.push({ role: "user", content: req.prompt });
 
   const actions: ChangeAction[] = [];
+  const reports: Report[] = [];
+  const check = req.mode === "check";
+  const tools = check ? [...TOOLS.filter((t) => (READ_TOOLS as readonly string[]).includes(t.name) || t.name === "update_world_notes"), REPORT_TOOL] : TOOLS;
   let cost = 0;
   let reply = "";
   const rounds = req.maxRounds ?? 12;
@@ -97,7 +111,7 @@ export async function runJob(send: AiTransport, ws: Workspace, layerId: Id, req:
       model: req.model.id,
       max_tokens: 16000,
       system: systemPrompt(req),
-      tools: TOOLS as Anthropic.Beta.Messages.BetaTool[],
+      tools: tools as Anthropic.Beta.Messages.BetaTool[],
       tool_choice: { type: "auto" },
       output_config: { effort: "medium" },
       messages,
@@ -126,7 +140,15 @@ export async function runJob(send: AiTransport, ws: Workspace, layerId: Id, req:
     for (const u of uses) {
       const input = (u.input && typeof u.input === "object" ? u.input : {}) as Record<string, unknown>;
       try {
-        if ((READ_TOOLS as readonly string[]).includes(u.name)) {
+        if (check && u.name === "report_problem") {
+          const nodes = (Array.isArray(input.nodes) ? input.nodes : []).map((x) => String(x).replace(/^@/, "")).filter((x) => ws.peek(layerId, x));
+          if (!nodes.length) throw new ActionError("Name at least one thing that exists.");
+          const category = ["balance", "economy", "filing", "lore"].includes(String(input.category)) ? (String(input.category) as Report["category"]) : "lore";
+          reports.push({ nodes, category, title: String(input.title ?? "").slice(0, 200) || "Something looks off", detail: String(input.detail ?? "").slice(0, 600) });
+          results.push({ type: "tool_result", tool_use_id: u.id, content: "Noted." });
+        } else if (check && u.name !== "update_world_notes" && (CHANGE_TOOLS as string[]).includes(u.name)) {
+          throw new ActionError("This is a check: report problems with report_problem; don't change anything.");
+        } else if ((READ_TOOLS as readonly string[]).includes(u.name)) {
           results.push({ type: "tool_result", tool_use_id: u.id, content: JSON.stringify(runReadTool(ws, layerId, u.name, input)) });
         } else if ((CHANGE_TOOLS as string[]).includes(u.name)) {
           const next = [...actions, { tool: u.name as ChangeTool, input }];
@@ -144,7 +166,7 @@ export async function runJob(send: AiTransport, ws: Workspace, layerId: Id, req:
     messages.push({ role: "user", content: results });
   }
   const preview = actions.length ? tryOut(ws, layerId, actions) : { lines: [], suggestions: [], notes: null, touched: 0 };
-  return { reply: reply || (actions.length ? "Here is what I propose." : "I have nothing to change."), actions, preview, costUsd: cost, modelName: req.model.name };
+  return { reply: reply || (actions.length ? "Here is what I propose." : "I have nothing to change."), reports, actions, preview, costUsd: cost, modelName: req.model.name };
 }
 
 class PutBack extends Error {

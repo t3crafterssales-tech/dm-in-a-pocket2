@@ -28,10 +28,14 @@ export interface Settings {
   aiThreshold: number;
   /** What AI jobs cost this month, for the running total in the AI panel ("2026-10"). */
   aiSpend: { month: string; usd: number };
+  /** Live AI checking: the AI checks each change as it happens. Starts off (it costs money). */
+  aiLive: boolean;
+  /** The one-time tip about live checking, shown when a key is first added. */
+  aiTipShown: boolean;
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 } };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false };
 }
 
 export class SettingsFile {
@@ -56,6 +60,8 @@ export class SettingsFile {
         aiModel: raw.aiModel === "quick" || raw.aiModel === "careful" ? raw.aiModel : d.aiModel,
         aiThreshold: typeof raw.aiThreshold === "number" && raw.aiThreshold >= 0 ? raw.aiThreshold : d.aiThreshold,
         aiSpend: raw.aiSpend && typeof raw.aiSpend.month === "string" && typeof raw.aiSpend.usd === "number" ? raw.aiSpend : d.aiSpend,
+        aiLive: raw.aiLive === true,
+        aiTipShown: raw.aiTipShown === true,
       };
     } catch {
       return defaultSettings();

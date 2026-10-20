@@ -23,7 +23,7 @@ import type { TableModeView } from "./tablemode.ts";
 import { buildQuickStart } from "./quickstart.ts";
 import type { QuickStartAnswers } from "./quickstart.ts";
 import type { LoreSection } from "./lore.ts";
-import { describeSlot, fixMissing, liveFlags, meantThat, missingDetail, panelView, readPanel, tidy } from "./flagpanel.ts";
+import { aiBlocks, describeSlot, fixMissing, liveFlags, meantThat, missingDetail, panelView, readPanel, tidy } from "./flagpanel.ts";
 import type { FlagPanelView, MissingDetail, PanelState } from "./flagpanel.ts";
 import { newId } from "../engine/index.ts";
 import type { Slot } from "../engine/index.ts";
@@ -275,7 +275,7 @@ export class Editing {
   /** A yellow warning marked as fine: it turns green and stays out of the way. */
   markGood(key: string): StepResult {
     this.writable();
-    const f = liveFlags(this.ws, this.layer).find((x) => x.key === key);
+    const f = [...liveFlags(this.ws, this.layer, false, this.panel.checks), ...aiBlocks(this.ws, this.layer, this.panel)].find((x) => x.key === key);
     if (!f) throw new LibraryError("That flag has cleared already.");
     if (f.color === "red") throw new LibraryError("A broken link can't simply be marked fine: point it somewhere else, remove it, or leave it for later.");
     const p = this.panel;

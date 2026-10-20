@@ -55,19 +55,22 @@ function asLinks(v: Value | undefined): Id[] {
 
 // ---------- Yellow checks ----------
 
-export type CheckCategory = "balance" | "economy" | "filing";
+/** "lore" (Lore consistency) is found only by the AI's Check for errors. */
+export type CheckCategory = "balance" | "economy" | "filing" | "lore";
 export type Sensitivity = "relaxed" | "normal" | "strict";
 
 export interface CheckSettings {
   balance: { on: boolean; level: Sensitivity };
   economy: { on: boolean; level: Sensitivity };
   filing: { on: boolean; level: Sensitivity };
+  lore: { on: boolean; level: Sensitivity };
 }
 
 export const DEFAULT_CHECKS: CheckSettings = {
   balance: { on: true, level: "normal" },
   economy: { on: true, level: "normal" },
   filing: { on: true, level: "normal" },
+  lore: { on: true, level: "normal" },
 };
 
 /** How far from normal something must be before it is flagged. */

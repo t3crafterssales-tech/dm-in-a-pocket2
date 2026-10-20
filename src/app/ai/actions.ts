@@ -87,7 +87,21 @@ export const TOOLS: ToolDef[] = [
     input_schema: obj({ lines: { type: "array", items: { type: "string" }, description: "Your lines." } }, ["lines"]),
   },
 ];
-for (const t of TOOLS) t.strict = true;
+/** Check for errors only: the AI reports problems; it changes nothing. */
+export const REPORT_TOOL: ToolDef = {
+  name: "report_problem",
+  description: "Report one problem you found, as a yellow flag for the user. Only for real problems in the categories you were asked to check; say plainly what looks wrong and why.",
+  input_schema: obj(
+    {
+      nodes: ids("The ids of the things it is about."),
+      category: { type: "string", enum: ["balance", "economy", "filing", "lore"], description: "Which kind of check found it." },
+      title: S("A short title in plain words, such as 'The Iron Helm breaks the no-metal rule'."),
+      detail: S("One or two plain sentences: what looks wrong and what might fix it."),
+    },
+    ["nodes", "category", "title", "detail"],
+  ),
+};
+for (const t of [...TOOLS, REPORT_TOOL]) t.strict = true;
 
 // ---------- Reading ----------
 

@@ -67,6 +67,13 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
   pinned), a chat saved with the world, cost estimates before big jobs, a monthly total, and
   Settings → AI for the key, the model choice and the cost warning. Tested with a pretend AI in
   the automatic tests and with a pretend Claude server in the real window.
+- Part 2, checking: a Check for errors button (the spark at the top of the flag panel) has the AI
+  review your own work against the ticked checks, including the new AI-only Lore consistency.
+  What it finds arrives as yellow flags marked "Found by the AI", which work like any other
+  (It's fine, Ignore all like this, filter by kind); the next check replaces them. Every flag's
+  details have Ask AI, which proposes the most reasonable fix in the AI panel, with Show me other
+  ideas. Live AI checking (Settings → AI, starts off, with a one-time tip) checks just what you
+  changed, a few seconds after you stop, with the quick model.
 
 ### Milestone 10: what Jeff can test
 
@@ -678,3 +685,12 @@ One plain line each. Jeff can overrule any of these at a milestone.
   the whole world file. A proposal waiting for Accept is not saved: closing the world drops it.
 - 2026-10-20: Costs are worked out from what Claude reports for each reply. The monthly total is
   kept in this computer's settings; the real bill is on the user's Anthropic account.
+- 2026-10-20: Check for errors sends the user's own things (made by hand or by others, changed in
+  this world, or edited since the starter made them), newest first, at most 120, plus the world
+  rules and the World Notes. Starter content is only looked up as needed, so a check of a fresh
+  SRD system sends nothing and costs nothing.
+- 2026-10-20: The AI's findings are kept in the flag panel's memory with the world, and a check
+  replaces the findings of the categories it covered; a live check replaces those about the things
+  it looked at. A check can't change anything: it has only look-up, report and World Notes actions.
+- 2026-10-20: Live checking waits 6 seconds after the last change, never runs for the AI's own
+  changes or in read-only worlds, and if it fails a blue notice says so and nothing is applied.
