@@ -17,8 +17,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Done:** Milestone 5, the flag panel, recycle bin, undo and history on screen (approved by Jeff
   on October 20, 2026, when he asked for the next step; merged into `main`). Anything he finds when
   he installs it gets fixed in milestone 6.
-- **Next:** Milestone 6, the rulebook export (PDF) and the small d20 starter, which completes first
-  playable.
+- **In progress:** Milestone 6, the rulebook export (PDF) and the small d20 starter, which completes
+  first playable. Step 1 of 2 done: the rulebook. Next: the d20 starter.
 
 ## Milestones to first playable
 
@@ -35,6 +35,22 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 6, step 1: the rulebook)
+
+- The Rulebook tab: choose the book (Player's Handbook, Monster Manual, GM Guide, World Guide or
+  Complete Rulebook), tick or untick chapters, print variants in full or as differences, monsters
+  in order of challenge, a "Created by" line, and Letter or A4. The preview in the middle is the
+  same page that becomes the PDF. Save as PDF… and Print….
+- `src/book/`: the book page. It lays the book out into real pages (a cover, contents, a chapter
+  per section, an index and credits), then fills in the page numbers: the contents, the index,
+  and "See Poisoned (page 6)" under entries. Links in the PDF jump to the page.
+- The plain-English summaries moved into the engine (`src/engine/rulestext.ts`), so the book
+  prints exactly what each rule's editor says. The book builder now reads the Rules tab's values
+  (it had guessed older names), prints short labels, keeps abilities in the order they were made,
+  names effects ("Poison Bite. The target is Poisoned.") and points page references at what a
+  brick links to, never at library bricks, which don't print.
+- 157 automatic tests pass (3 new). A PDF was made and read back here, page by page.
 
 ### 2026-10-20 (milestone 5, step 4: world rules, and editing the system from a world)
 
@@ -451,3 +467,9 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: When the system is changed from inside a world, unticked worlds are protected by
   writing the old value into their own files at once. Undoing the change in this world puts the
   system back; the protected worlds then simply match the system again.
+- 2026-10-20: The PDF is made by the app's own browser engine from the same page as the preview,
+  with no outside library. Pages are laid out by the app so page numbers in the contents and index
+  are exact.
+- 2026-10-20 (Jeff may want to check): Each chapter starts on a new page, like a printed rulebook;
+  one simple look for now (book styles, two columns, cover pictures and Word export come later).
+- 2026-10-20: The page size defaults to Letter; A4 is a choice.

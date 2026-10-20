@@ -14,8 +14,10 @@ await Promise.all([
   build({ ...common, entryPoints: ["src/app/main.ts"], outfile: `${out}/main.cjs`, platform: "node", format: "cjs", target: "node22", external: ["electron"] }),
   build({ ...common, entryPoints: ["src/app/preload.ts"], outfile: `${out}/preload.cjs`, platform: "node", format: "cjs", target: "node22", external: ["electron"] }),
   build({ ...common, entryPoints: ["src/ui/renderer.ts"], outfile: `${out}/renderer.js`, platform: "browser", format: "iife", target: "chrome130" }),
+  build({ ...common, entryPoints: ["src/book/book-view.ts"], outfile: `${out}/book.js`, platform: "browser", format: "iife", target: "chrome130" }),
 ]);
 
 for (const f of ["index.html", "styles.css"]) copyFileSync(`src/ui/${f}`, `${out}/${f}`);
+for (const f of ["book.html", "book.css"]) copyFileSync(`src/book/${f}`, `${out}/${f}`);
 copyFileSync("build/icon.png", `${out}/icon.png`);
 console.log("Built the app into dist/");

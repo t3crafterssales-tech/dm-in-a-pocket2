@@ -1,10 +1,11 @@
 // The rulebook, written automatically from a system and world. This builds the book's content
 // and structure; turning it into a PDF or Word file happens in the export milestone.
 
-import { F, SRD_LICENSE } from "./conventions.ts";
-import { isLink } from "./links.ts";
+import { F, SRD_LICENSE, attachmentValues } from "./conventions.ts";
+import { findLinks, isLink } from "./links.ts";
+import { isCoreCheck, ruleText } from "./rulestext.ts";
 import { cap, sentence } from "./text.ts";
-import type { Id, NodeRecord, Value } from "./types.ts";
+import type { Attachment, Id, NodeRecord, Value } from "./types.ts";
 import type { Workspace } from "./workspace.ts";
 
 export type BookType = "players" | "monsters" | "gm" | "world" | "everything";
@@ -169,6 +170,8 @@ function arrange(ws: Workspace, layerId: Id, nodes: NodeRecord[], ch: ChapterId,
       const cr = (n: NodeRecord) => crNumber(ws.resolve(layerId, n.id)!.fields[F.cr]);
       return [...list].sort((a, b) => cr(a) - cr(b) || a.name.localeCompare(b.name));
     }
+    // Abilities keep the order they were made in, as on a character sheet (STR, DEX, CON...).
+    if (ch === "abilities") return [...list].sort((a, b) => a.created - b.created);
     return [...list].sort((a, b) => a.name.localeCompare(b.name));
   };
   if (variantsAs === "full") return sort(nodes).map((n) => entry(ws, layerId, n, false));
@@ -192,6 +195,7 @@ function crNumber(v: Value | undefined): number {
 }
 
 const STAT_LABELS: [string, string][] = [
+  [F.label, "Short label"],
   [F.hp, "HP"],
   [F.ac, "AC"],
   [F.speed, "Speed"],
@@ -214,32 +218,53 @@ function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): E
   }
   if (n.text.trim()) paragraphs.push(n.text.trim());
   paragraphs.push(...describeFields(ws, layerId, n, fields));
-  for (const { attachment } of attachments) paragraphs.push(sentence(ws, layerId, attachment));
+  for (const { attachment } of attachments) {
+    const s = sentence(ws, layerId, attachment);
+    // On a sheet the card shows the brick's name; in the book an effect needs it said: "Poison Bite. The target is Poisoned."
+    const target = attachment.brick ? ws.get(layerId, attachment.brick.link) : null;
+    const name = attachment.name || target?.name || "";
+    const type = attachmentValues(ws, layerId, attachment)[F.type];
+    paragraphs.push(name && (type === "effect" || type === "damage") && !s.toLowerCase().includes(name.toLowerCase()) ? `${name}. ${s}` : s);
+  }
+  // Page references go to things the book prints: what bricks link to (Poisoned), and carried items,
+  // never the library bricks themselves.
   const mentions = new Set<Id>();
   for (const v of Object.values(fields)) if (isLink(v)) mentions.add(v.link);
-  for (const { attachment } of attachments) if (attachment.brick) mentions.add(attachment.brick.link);
+  const fromAttachment = (a: Attachment) => {
+    const target = a.brick ? ws.get(layerId, a.brick.link) : null;
+    if (target?.kind === "item") mentions.add(target.id);
+    for (const l of findLinks({ values: attachmentValues(ws, layerId, a), save: a.save, choice: a.choice })) {
+      const n = ws.get(layerId, l.to);
+      if (n && n.kind !== "brick" && n.kind !== "category") mentions.add(l.to);
+    }
+    a.children.forEach(fromAttachment);
+  };
+  for (const { attachment } of attachments) fromAttachment(attachment);
   return { node: n.id, title: n.name, stats: !showOnlyOwn && stats.length ? stats.join(" · ") : null, paragraphs, mentions: [...mentions], variants: [], asParent: showOnlyOwn ? parent!.name : null, picture: n.picture };
 }
 
-/** Sentences for rule nodes, written from their fields. */
+/** "Strength (STR): scores from 3 to 18" printed under the heading Strength reads "Scores from 3 to 18". */
+function withoutName(text: string, n: NodeRecord, f: Record<string, Value>): string {
+  const label = typeof f[F.label] === "string" && f[F.label] ? ` (${f[F.label]})` : "";
+  for (const prefix of [`${n.name}${label}: `, `${n.name}: `]) if (text.startsWith(prefix)) return cap(text.slice(prefix.length));
+  return text;
+}
+
+/** Sentences for rule nodes, written from their fields (the same sentences the editor shows). */
 function describeFields(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<string, Value>): string[] {
   const name = (v: Value | undefined) => (isLink(v) ? ws.get(layerId, v.link)?.name ?? "something removed" : "");
   switch (n.kind) {
     case "ability":
-      return [[f.label ? `Short label: ${f.label}.` : "", f.min !== undefined && f.max !== undefined ? `Scores range from ${f.min} to ${f.max}.` : ""].filter(Boolean).join(" ")].filter(Boolean);
-    case "resource": {
-      const parts: string[] = [];
-      if (isLink(f.maxAbility)) parts.push(`Maximum: ${name(f.maxAbility)} ${f.maxPart ?? "score"}${f.plus ? ` + ${f.plus}` : ""}.`);
-      if (f.recovery) parts.push(`Comes back each ${f.recovery}.`);
-      const th = Array.isArray(f.thresholds) ? f.thresholds : [];
-      for (const t of th) if (t && typeof t === "object" && !Array.isArray(t) && !isLink(t)) parts.push(`At ${(t as Record<string, Value>).at}, you become ${name((t as Record<string, Value>).cond)}.`);
-      return parts.length ? [parts.join(" ")] : [];
+    case "resource":
+      return [withoutName(ruleText(ws, layerId, n.id), n, f)];
+    case "condition": {
+      const own = withoutName(ruleText(ws, layerId, n.id), n, f);
+      return [own.toLowerCase() === "described in its text." ? "" : own, typeof f.effects === "string" ? f.effects : "", f.tick ? cap(String(f.tick)) + "." : ""].filter(Boolean);
     }
-    case "condition":
-      return [f.effects, f.tick ? cap(String(f.tick)) + "." : ""].filter((x): x is string => typeof x === "string" && !!x);
     case "skill":
       return isLink(f.ability) ? [`Uses ${name(f.ability)}.`] : [];
     case "rule":
+      if (isCoreCheck(ws, layerId, n)) return [ruleText(ws, layerId, n.id)];
       return typeof f.ruleText === "string" && f.ruleText ? [f.ruleText] : [];
     case "lore": {
       const sections = f.sections;

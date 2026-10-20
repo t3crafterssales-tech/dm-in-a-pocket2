@@ -8,7 +8,8 @@ import type { Activation, Id, NodeKind, Slot, Uses, Value } from "../engine/inde
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import type { RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
-import type { BinView, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
+import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
+import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
@@ -24,7 +25,7 @@ import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
-export type { BinView, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
+export type { BinView, BookData, BookRequest, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
@@ -202,6 +203,8 @@ export const BACKEND_METHODS = [
   "rollBackAll",
   "upwardView",
   "changeInSystem",
+  "book",
+  "bookChoices",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -652,6 +655,18 @@ export class Backend {
   changeInSystem(nodeId: Id, changes: Record<string, Value | null>, ticked: Id[]): { label: string; kept: string[]; couldNot: string[] } {
     if (!this.session) throw new LibraryError("Open a world first.");
     return changeInSystem(this.lib, this.session, nodeId, changes, ticked);
+  }
+
+  /** The rulebook's content (the window lays it out into pages; main.ts turns it into a PDF). */
+  book(opts: BookRequest): BookData {
+    return this.editing.book(opts);
+  }
+  /** The book types and chapters to choose from, with each type's usual chapters. */
+  bookChoices() {
+    return {
+      types: Object.entries(BOOK_TITLES).map(([id, title]) => ({ id, title, chapters: BOOK_CHAPTERS[id as keyof typeof BOOK_CHAPTERS] })),
+      chapters: Object.entries(CHAPTER_TITLES).map(([id, title]) => ({ id, title })),
+    };
   }
 
   /** The app is closing normally. */

@@ -209,7 +209,8 @@ test("the book lists what each entry links to (for page references), has an inde
   t.ws.create(t.sys, "condition", "Grappled", { fields: { effects: "Speed becomes 0.", [F.license]: SRD_LICENSE } });
   const book = buildBook(t.ws, t.w, { type: "everything" });
   const entry = book.chapters.find((c) => c.id === "races")!.entries[0]!;
-  assert.ok(entry.mentions.includes(t.immune));
+  assert.ok(entry.mentions.includes(t.poisoned), "it points at what the brick links to");
+  assert.ok(!entry.mentions.includes(t.immune), "library bricks never print, so there is no page to point at");
   const terms = book.index.map((i) => i.term);
   assert.deepEqual(terms, [...terms].sort((a, b) => a.localeCompare(b)), "the index is alphabetical");
   assert.ok(terms.includes("Dwarf") && terms.includes("Grappled"));
