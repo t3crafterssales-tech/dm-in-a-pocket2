@@ -59,7 +59,7 @@ Kind-specific meaning lives in `fields`. For example a being has `beingKind` (`m
 | `id`, `name`, `type` | `type` is `system` or `world`. |
 | `base` | The layer underneath: a world's system, or a system variant's parent system. Null for a starter system. |
 | `nodes` | Nodes that are new in this layer, stored in full. |
-| `changes` | Changes to nodes from layers below, stored as only the changed parts. |
+| `changes` | Changes to nodes from layers below, stored as only the changed parts. A change can also list `removedFields`: fields this layer took away so they follow the layer below again. |
 | `hidden` | IDs of nodes from below that this layer has deleted (they are in the recycle bin). |
 
 ## Saved file
