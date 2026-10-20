@@ -60,6 +60,17 @@ export class Workspace {
   now: () => number = () => Date.now();
 
   private tx: { edits: Edit[]; seen: Set<string> } | null = null;
+  private listeners = new Set<(step: Step, kind: "do" | "undo" | "redo") => void>();
+
+  /** Runs after every finished step, undo and redo. Constant saving listens here. */
+  onChange(fn: (step: Step, kind: "do" | "undo" | "redo") => void): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  private emit(step: Step, kind: "do" | "undo" | "redo") {
+    for (const fn of this.listeners) fn(step, kind);
+  }
 
   static fromFile(file: SavedFile): Workspace {
     const ws = new Workspace();
@@ -70,10 +81,11 @@ export class Workspace {
     return ws;
   }
 
-  toFile(): SavedFile {
+  toFile(main?: Id): SavedFile {
     return {
       format: FORMAT_VERSION,
       app: APP_VERSION,
+      ...(main ? { main } : {}),
       layers: [...this.layers.values()].map(clone),
       bin: clone(this.bin),
       history: clone(this.history),
@@ -228,27 +240,47 @@ export class Workspace {
     for (const e of edits) e.after = clone(this.readEditTarget(e));
     const real = edits.filter((e) => !deepEqual(e.before, e.after));
     if (real.length) {
-      this.history.push({ id: newId(), label, by, time: this.now(), edits: real });
+      const step: Step = { id: newId(), label, by, time: this.now(), edits: real };
+      this.history.push(step);
       this.redoStack = [];
       this.pruneHistory();
+      this.emit(step, "do");
     }
     return result!;
   }
 
+  /**
+   * Undoes the last step. If something it touched was changed somewhere else since (for example
+   * the system was edited from another world), it refuses rather than overwrite that change.
+   */
   undo(): Step | null {
-    const s = this.history.pop();
+    const s = this.history.at(-1);
     if (!s) return null;
+    this.checkUnchanged(s, "after");
+    this.history.pop();
     for (const e of [...s.edits].reverse()) this.applyEdit(e, "before");
     this.redoStack.push(s);
+    this.emit(s, "undo");
     return s;
   }
 
   redo(): Step | null {
-    const s = this.redoStack.pop();
+    const s = this.redoStack.at(-1);
     if (!s) return null;
+    this.checkUnchanged(s, "before");
+    this.redoStack.pop();
     for (const e of s.edits) this.applyEdit(e, "after");
     this.history.push(s);
+    this.emit(s, "redo");
     return s;
+  }
+
+  private checkUnchanged(s: Step, side: "before" | "after") {
+    for (const e of s.edits) {
+      if (!deepEqual(this.readEditTarget(e) ?? undefined, e[side] ?? undefined) && !(e.what === "hidden" && !this.readEditTarget(e) && !e[side])) {
+        throw new EngineError(`"${s.label}" can't be undone safely, because something it changed was changed again somewhere else.`);
+      }
+    }
   }
 
   private pruneHistory() {

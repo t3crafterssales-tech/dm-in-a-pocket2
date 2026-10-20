@@ -4,8 +4,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
 
 ## Where we are
 
-- **Now:** Milestone 1, the engine core (branch `milestone-1-engine`).
-- **Next:** Milestone 2, files and saving.
+- **Done:** Milestone 1, the engine core (approved by Jeff, merged into `main`).
+- **Now:** Milestone 2, files and saving (branch `milestone-2-files`), waiting for Jeff's approval.
+- **Next:** Milestone 3, the desktop app shell. Needs a session that can install packages (Electron).
 
 ## Milestones to first playable
 
@@ -22,6 +23,25 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 2)
+
+- Milestone 2 written: `src/storage/` (zip, atomic, lock, autosave, library), plus two engine
+  additions: a change signal (`onChange`) for constant saving, and undo that refuses to overwrite
+  something changed elsewhere since.
+- 56 automatic tests pass. New ones cover: world files are standard ZIPs and damage is detected;
+  the main folder layout and home-screen lists; save, close and reopen with undo history; system
+  changes made inside a world reach other worlds; pictures stored once, carried inside the world
+  file, and recovered if the picture store is lost; a world sent without its system brings it
+  along; saving about a second after the last change and never waiting more than five; a failed
+  save is retried and nothing is lost; a power cut mid-save keeps the last good save and the app
+  reports it recovered; another computer gets read-only or takes over; an old lock from a
+  stopped computer doesn't block; backups kept daily for a week and weekly for a month; backups
+  don't copy pictures; restoring a backup or snapshot takes a snapshot first; snapshots hold
+  the system too; undo never overwrites a change made elsewhere; newer files open read-only and
+  are never saved over; damaged files give a clear message; ids can't reach outside the folder.
+- Still to do for saving, in milestone 3 (needs the app running): the heartbeat timer that
+  refreshes the lock every 15 seconds, and the pulsing logo wired to `onSaved`.
 
 ### 2026-10-20
 
@@ -73,6 +93,23 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: Undo history is kept for 30 days or 5,000 steps, whichever is smaller.
 - 2026-10-20: Node's type definitions are borrowed from tools already on the build machine until
   packages can be installed; `package.json` lists them for any normal machine.
+- 2026-10-20: World and system files are ordinary ZIP files (written by our own small ZIP code,
+  no library), so they can be opened with any unzip tool in an emergency.
+- 2026-10-20: Each world file carries a copy of its whole system chain, so a world can be sent
+  on its own. When the system's own file is on the shelf, that file wins.
+- 2026-10-20: Files are named by permanent ID, not by name, so renaming never moves a file.
+- 2026-10-20: Pictures are named by their content, so the same picture is only ever stored once.
+- 2026-10-20: Saving waits about 1 second after the last change, and never more than 5 seconds.
+- 2026-10-20: A world's lock is refreshed every 15 seconds; a lock not refreshed for 2 minutes
+  belongs to an app that stopped, and no longer blocks anyone.
+- 2026-10-20: The app will run as a single copy per computer, so a leftover lock from the same
+  computer always means the last session ended unexpectedly.
+- 2026-10-20: "Take over" moves the lock at once; the other computer finds out at its next save
+  or heartbeat and switches to read-only. Because saving is constant, it loses at most a few
+  seconds of work.
+- 2026-10-20: Backups are taken the first time a world is opened each day.
+- 2026-10-20: Undo refuses, with a plain message, if something the step changed was changed
+  again elsewhere (for example the system edited from another world). It never overwrites.
 - 2026-10-20: The cloud session used for building cannot reach the npm package registry, so
   Electron (milestone 3) waits until a session can install packages. Milestones 1 and 2 need no
   installs.

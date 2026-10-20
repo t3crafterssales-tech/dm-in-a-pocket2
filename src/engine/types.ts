@@ -178,6 +178,8 @@ export interface Step {
 export interface SavedFile {
   format: number;
   app: string;
+  /** The layer this file is about (the world, or the system for a system file). */
+  main?: Id;
   layers: Layer[];
   bin: BinEntry[];
   history: Step[];
