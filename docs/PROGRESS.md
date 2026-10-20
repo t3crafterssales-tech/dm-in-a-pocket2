@@ -24,9 +24,10 @@ Newest first. Every session reads this after `CLAUDE.md`.
   "next"; merged into `main`).
 - **Done:** Milestone 8, Quick start, roll tables, lore pages, and the check categories with
   sliders (approved by Jeff on October 20, 2026, when he asked for milestone 10; merged into `main`).
-- **Built, waiting for Jeff to test:** Milestone 10, Table mode, Word export and the full SRD 5.2
-  (Jeff chose it before milestone 9).
-- **Next:** Milestone 9, the AI (needs Jeff's own Claude API key; see the table below).
+- **Done:** Milestone 10, Table mode, Word export and the full SRD 5.2 (approved by Jeff on
+  October 20, 2026, when he asked to build milestone 9; merged into `main`).
+- **Next:** Milestone 9, the AI. It is built and tested with a pretend AI; Jeff's own Claude API
+  key is only needed to try it for real.
 
 ## Milestones to first playable
 
