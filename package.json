@@ -1,0 +1,14 @@
+{
+  "name": "dm-in-a-pocket",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build tabletop RPG systems and worlds, and print them as rulebooks.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit -p ."
+  }
+}
