@@ -40,7 +40,69 @@ export const F = {
   before: "before",
   /** marks content from the SRD 5.2, which needs a credit line */
   license: "license",
+  /** category: which Rules tab section it is ("core", "abilities", ...); a user's own section has none */
+  section: "section",
+  /** ability, resource: the short label, such as "STR" or "HP" */
+  label: "label",
+  /** ability: the lowest and highest score */
+  rangeMin: "rangeMin",
+  rangeMax: "rangeMax",
+  /** ability: how a score becomes a bonus: "d20" ((score - 10) / 2), "score", "table" or "none" */
+  bonus: "bonus",
+  /** resource: the maximum, a number or a formula (see Formula) */
+  maximum: "maximum",
+  /** resource: "full", "empty" or "set" (then startValue) */
+  start: "start",
+  startValue: "startValue",
+  /** resource: "short rest", "long rest", "day", "spend" or "never" */
+  recovery: "recovery",
+  /** resource: "number", "bar", "boxes" or "countdown" */
+  display: "display",
+  /** resource: [{ at: number, condition: link }] */
+  thresholds: "thresholds",
+  /** core check: the family ("rollOver", "rollUnder", "pool", "bands", "percentile", "step", "none", "other") */
+  family: "family",
+  /** core check: the dice rolled, such as "d20" or "3d6" */
+  die: "die",
+  /** core check: the number to beat or the success threshold, depending on the family */
+  target: "target",
+  /** condition: how many stages it has (fatigue 1 to 6) */
+  stages: "stages",
+  /** condition: how long it lasts or what ends it, in the user's words */
+  duration: "duration",
+  /** condition: a saving throw to resist or end it, { ability: link, dc } */
+  save: "save",
 } as const;
+
+/**
+ * A formula built from blocks, never typed: [Constitution] [score] [+] [10].
+ * Stored as { formula: [{ op: "+", ability: link, use: "score" }, { op: "+", number: 10 }] }.
+ */
+export interface FormulaTerm {
+  op: "+" | "-";
+  ability?: { link: Id };
+  use?: "score" | "bonus";
+  number?: number;
+}
+
+export function isFormula(v: Value | undefined): v is { formula: Value[] } {
+  return !!v && typeof v === "object" && !Array.isArray(v) && Array.isArray((v as Record<string, Value>).formula);
+}
+
+/** "Constitution score + 10". Numbers stay numbers; anything else reads as "not set". */
+export function formulaText(ws: Workspace, layerId: Id, v: Value | undefined): string {
+  if (typeof v === "number") return String(v);
+  if (!isFormula(v)) return "not set";
+  const parts = (v.formula as unknown as FormulaTerm[]).map((t, i) => {
+    let word: string;
+    if (t.ability) {
+      const n = ws.get(layerId, t.ability.link)?.name ?? `[missing: ${ws.binEntryFor(t.ability.link)?.node.name ?? "removed"}]`;
+      word = `${n} ${t.use === "bonus" ? "bonus" : "score"}`;
+    } else word = String(t.number ?? 0);
+    return i === 0 ? (t.op === "-" ? `-${word}` : word) : `${t.op} ${word}`;
+  });
+  return parts.join(" ") || "not set";
+}
 
 export const SRD_LICENSE = "SRD 5.2 (CC-BY-4.0)";
 

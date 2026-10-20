@@ -48,6 +48,9 @@ export function openDialog(title: string, opts: { wide?: boolean; onClose?: () =
   );
   const overlay = h("div", { class: "overlay" }, box);
   const onKey = (e: KeyboardEvent) => {
+    // With pop-ups stacked, Escape closes only the top one.
+    const overlays = document.querySelectorAll(".overlay");
+    if (overlays[overlays.length - 1] !== overlay) return;
     if (e.key === "Escape") {
       e.stopPropagation();
       close();

@@ -11,7 +11,10 @@ Newest first. Every session reads this after `CLAUDE.md`.
   and the rulebook builder. Built early because they need no installs.
 - **Done:** Milestone 3, the desktop app shell (approved by Jeff, merged into `main`). The Windows
   installer builds at GitHub and all tests pass on Windows.
-- **Next:** Milestone 4, the Rules tab and sheets.
+- **Done:** Milestone 4, the Rules tab and sheets (approved by Jeff on October 20, 2026, when he
+  asked to go on to milestone 5; merged into `main`). He hasn't installed it yet, so anything he
+  finds when he does gets fixed in milestone 5.
+- **Next:** Milestone 5, the flag panel, recycle bin, undo and history on screen.
 
 ## Milestones to first playable
 
@@ -28,6 +31,109 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 4: Jeff's answers, and finishing touches)
+
+- Jeff's answers: yes to the undo and redo buttons beside Home; yes to one Create new pop-up with
+  the variant choice inside it; yes to a variant not removing a brick it inherited.
+- Jeff asked Claude to decide what still belongs in milestone 4. Decided: templates, starting a
+  new sheet as a copy, and sorting by challenge now (all in first playable and small). Edit
+  parent from a world up to its system moves to milestone 5, because it has to change other
+  worlds' files safely. A system choosing what its own sheets show, and movable panels, come
+  after first playable.
+- Built: templates (Make it a template when creating, or Make template / Make it real on a
+  sheet; kept out of the lists, the checks and the rulebook; shown in the library's Templates
+  group; a new item filed under a category with a template suggests starting as its variant);
+  "Start from" in Create new (nothing, a variant of a thing or a template, or a copy of a thing);
+  and A to Z or By challenge for Monsters and NPCs.
+- A new system made from scratch now starts with the design's small set of categories (Weapon,
+  Armour, Item, Creature, Spell), so the first item can be filed as a Weapon straight away.
+- 133 automatic tests pass (5 new). Driven in the real window here.
+
+### 2026-10-20 (milestone 4, step 4: drilling in and Edit parent)
+
+- `src/app/drill.ts`: one sheet's copy of a brick (its own name, values with pencil marks, when it
+  works with several triggers joined by or/and, how often including formulas such as INT, a
+  saving throw), bricks nested inside bricks, the family checklist with notes ("set its own
+  Cost", "follows Axe"), and changing a parent with ticked and unticked children as one step.
+- Screens: `src/ui/drill-dialog.ts` (click a brick card on a sheet) and `src/ui/edit-parent.ts`
+  (the Edit parent button beside "Variant of", or Alt-click the sheet). Edit parent shows the
+  parent's values beside this sheet's with "Use my version", Up one level for grandparents, then
+  the checklist of the whole family, indented, with this sheet ticked. Unticking protects the
+  branch below unless a node in it is ticked again on its own.
+- Dropping a library brick onto a brick card nests it inside (Fire inside Knocked prone).
+- 128 automatic tests pass (6 new, using the design's Big Shield and Sword, Axe and Double Axe
+  examples). Driven in the real window here, end to end.
+
+### Milestone 4: what Jeff can test
+
+Build a small system and a few monsters by hand: add abilities, hit points as a formula, skills,
+conditions and the core check in the Rules tab; make monsters with variants in Beings; make
+bricks in the Library and drag them onto sheets (Ctrl/Shift to pick several, or several sheets
+at once); click a brick on a sheet to change that copy; use Edit parent from a variant. Delete
+Strength and watch the red flags, then Ctrl+Z.
+
+Still to come (decided October 20, 2026):
+- Milestone 5: Edit parent from a world up to its system.
+- After first playable: a system choosing what its own sheets show (every system uses the basic
+  sheets for now), and movable, dockable panels.
+- Not yet scheduled: Change parent for many nodes at once, choice bricks and upgrade tiers on
+  screen, and smart text.
+
+### 2026-10-20 (milestone 4, step 3: the library, drag and drop, selection)
+
+- `src/app/library.ts`: library bricks by type (attacks, spells, traits, effects, damage,
+  immunities, ability bonuses, armour) plus items to carry as gear; each with its plain-English
+  sentence; attaching many bricks to many sheets as one undo step; which section a brick lands in;
+  and the smart-drop rule (a spell on an item asks when it works and how often).
+- Screens: `src/ui/library-panel.ts`. The left panel switches between the tab's list and the
+  Library. Library sections fold up and filter on their own. Click, Ctrl-click and Shift-click
+  select, as in File Explorer, in both the library and the list. Drag onto the open sheet (or onto
+  a name in the list), or press "Add to …". With several sheets selected in the list, a drop adds
+  to all of them. Double-click a library brick to open the original; changing it changes every
+  sheet that uses it.
+- Sheets show their bricks as cards in the right section, with the sentence, "From Goblin" on
+  inherited ones, a remove button with Undo, and [missing: Claw] in red if the original was deleted.
+- 122 automatic tests pass (10 new). Driven in the real window here: dragging two bricks onto two
+  selected goblins, and a spell onto a shield with the question answered by pressing Enter.
+
+### 2026-10-20 (milestone 4, step 2: Beings and Items sheets)
+
+- `src/app/sheets.ts`: the five kinds of being, the sheet each kind shows (header numbers,
+  ability scores, sections), the starter categories (Weapon, Armour, Item, Creature, Spell) with
+  + New category up to three levels deep, lists with variants indented under their parents to any
+  depth, creating beings and items (optionally as a variant), and Detach.
+- Screens: `src/ui/sheets-tab.ts`. Beings has the sub-tabs Characters, Classes, Races, Monsters
+  and NPCs; Items are grouped by where they are filed. Lists filter by name and by favourites.
+  A sheet has its picture, name, star, kind, Filed under, "Variant of" with Detach, the header
+  numbers, the system's abilities as score boxes with the bonus worked out, its sections (empty
+  until the library arrives in step 3), the description, and Used by.
+- Pencil marks now cover variants too: "Use Goblin's" puts a value back to following the parent.
+- 112 automatic tests pass (9 new), including the Part 4 rules: a parent's change reaches a variant
+  unless it set that value itself, through every generation; Detach keeps everything as it was.
+
+### 2026-10-20 (milestone 4, step 1: the Rules tab)
+
+- `src/app/rules.ts`: the Rules tab's ten sections from the design (Core check, Abilities,
+  Resources, Skills, Conditions, Combat, Magic and powers, Advancement, Time and rest, Currency
+  and economy), plus sections of the user's own; each kind's defaults; and the plain-English
+  summary at the top of each rule.
+- `src/app/editing.ts`: the named actions for changing things (add, rename, change a value, use
+  the system's value, move to a section, delete, undo, redo), each one step in history, and the
+  views the window shows (a node with its links' names and Used by, the drop-down choices, flags).
+- Screens: `src/ui/place.ts` (an open world or system) and `src/ui/rules-tab.ts` (sections on
+  the left, the open rule in the middle, flags on the right).
+- Each kind has its main choices up front and the fine print under More options: abilities
+  (label, score range, how the bonus works), resources (label, maximum built from blocks such as
+  [Constitution score] [+] [10], how it starts; recovery, display and thresholds that link to
+  conditions), skills (linked ability), conditions (duration, saving throw; stages), the core
+  check (the eight families and their settings), and free-text rules.
+- Inside a world, a system rule changed there shows a pencil mark with "Use the system's".
+- The red flags show in the flag panel straight away: deleting Constitution flags Hit points
+  ("Constitution removed: 1 thing affected", with [missing: Constitution] in its formula), and
+  Ctrl+Z puts it all back.
+- 103 automatic tests pass (11 new). Driven in the real window here, which found and fixed two
+  problems (a new rule's name box didn't get the cursor; a redraw could cut the logo's glow short).
 
 ### 2026-10-20 (milestone 3 approved)
 
@@ -225,3 +331,51 @@ One plain line each. Jeff can overrule any of these at a milestone.
   all tests pass, so Jeff can download it without setting anything up.
 - 2026-10-20: A system opened on its own has no "one copy open" lock yet; only worlds do. Worth
   adding before systems are edited from two computers at once.
+- 2026-10-20: Rules tab sections are category nodes under one "Rules" category, each built-in one
+  marked with a section key, so renaming a section never breaks anything. They are made the first
+  time something is added, in the same undo step. The rulebook finds the core check through it.
+- 2026-10-20: Abilities, resources, skills and conditions always show in their own sections;
+  only general rules can move between sections.
+- 2026-10-20: New field names for rules are listed in `src/engine/conventions.ts` (label, score
+  range, bonus, maximum, start, recovery, display, thresholds, family, die, target, stages,
+  duration, save). Formulas are stored as blocks with links, so deleting an ability flags them.
+- 2026-10-20: A value is saved when you leave its box or press Enter, as one undo step, rather
+  than on every key press, so Ctrl+Z undoes a whole change.
+- 2026-10-20: Ctrl+Z inside a text box undoes typing in that box, as everywhere else; outside a
+  box it undoes the last change in the world.
+- 2026-10-20: Deleting a rule doesn't ask first, because it goes to the recycle bin and a notice
+  offers Undo (the "always quiet" flag design).
+- 2026-10-20 (Jeff may want to check): Undo and Redo also have small arrow buttons in the top bar,
+  beside Home, for anyone who doesn't know Ctrl+Z.
+- 2026-10-20: The Creatures tab is now called Beings, following the October 20 design decision.
+- 2026-10-20: Each ability score on a sheet is its own value, so a variant that changes only its
+  Dexterity keeps following its parent's other scores, and deleting an ability flags every sheet.
+- 2026-10-20: Abilities are listed in the order they were made (STR, DEX, CON...), not
+  alphabetically; everything else is alphabetical.
+- 2026-10-20: Until a system can edit its own sheets, every system uses the basic sheets in
+  `src/app/sheets.ts` (monster: hit points, armour, speed, challenge; and so on).
+- 2026-10-20 (Jeff may want to check): Create new is one short pop-up (name, what it is, Variant
+  of…) instead of a second pop-up for "Variant of".
+- 2026-10-20: New beings are filed under Creature and new items under Item, unless chosen
+  otherwise. A variant starts in its parent's category.
+- 2026-10-20: In the library, a single click selects (for dragging) and a double-click opens the
+  original, like files in File Explorer. Some rarer library sections start folded.
+- 2026-10-20: For now the only drop that asks questions is a spell on an item (when it works,
+  how often). Other drops just land, with the sheet's copy following the original.
+- 2026-10-20: A variant shows its parent's bricks but can't remove them; the message says to
+  change the parent or Detach. (Removing an inherited brick from just one variant would need a
+  new kind of stored value, which would be a data format change for Jeff to approve.)
+- 2026-10-20: The library selection is kept while switching between the list and the library,
+  so you can pick sheets in the list, then bricks in the library, then drop.
+- 2026-10-20: Changing a brick on a sheet saves straight away, like everything else; setting a
+  value back to the original's removes the pencil mark rather than storing a copy.
+- 2026-10-20: Edit parent collects its changes and saves them only after the checklist, as one
+  undo step. It covers a sheet's header numbers and ability scores for now.
+- 2026-10-20: A variant's checklist row is greyed out when it set every changed value itself,
+  since ticking it would make no difference.
+- 2026-10-20: A copy of a variant stays a variant of the same parent (with the same own changes),
+  so it looks the same and keeps getting the parent's changes; a copy of anything else stands alone.
+- 2026-10-20: Setting up a new system's starter categories isn't an undo step; it is the starting
+  point, like an empty page.
+- 2026-10-20: Templates are opened from the library, not dragged onto sheets; a sheet uses a
+  template by being its variant.

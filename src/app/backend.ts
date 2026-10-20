@@ -4,16 +4,28 @@
 import { readFileSync, statSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { DEFAULT_CHECKS, newId, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Id } from "../engine/index.ts";
+import type { Activation, Id, Uses, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import type { RecycledInfo, Timers } from "../storage/index.ts";
+import { Editing } from "./editing.ts";
+import type { Choices, FlagView, NodeView, StepResult } from "./editing.ts";
+import type { RulesSection } from "./rules.ts";
+import type { BeingKind, CategoryOption, ListEntry, TemplateEntry } from "./sheets.ts";
+import type { BrickType, LibrarySection } from "./library.ts";
+import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { Session } from "./session.ts";
+import { ensureCategories } from "./sheets.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
 export type { RecycledInfo } from "../storage/index.ts";
+export type { Choices, FlagView, NodeView, Option, StepResult } from "./editing.ts";
+export type { RulesSection } from "./rules.ts";
+export type { BeingKind, CategoryOption, ListEntry, SheetDef, TemplateEntry } from "./sheets.ts";
+export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
+export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 
 export interface SystemCard {
   id: Id;
@@ -122,6 +134,47 @@ export const BACKEND_METHODS = [
   "goHome",
   "backups",
   "restoreBackup",
+  // Inside an open world or system: the named actions in editing.ts.
+  "rulesTab",
+  "node",
+  "choices",
+  "flags",
+  "sections",
+  "addRule",
+  "addSection",
+  "rename",
+  "setText",
+  "setField",
+  "useSystemValue",
+  "moveToSection",
+  "deleteNode",
+  "undo",
+  "redo",
+  "beingsList",
+  "itemsList",
+  "categories",
+  "addBeing",
+  "addItem",
+  "addCategory",
+  "setCategory",
+  "setPicture",
+  "toggleFavourite",
+  "setScore",
+  "useParentValue",
+  "detach",
+  "library",
+  "addBrick",
+  "dropNeedsAnswers",
+  "attach",
+  "removeAttachment",
+  "attachmentDetail",
+  "editAttachment",
+  "attachInside",
+  "familyChecklist",
+  "changeParent",
+  "templates",
+  "copyNode",
+  "setTemplate",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -205,6 +258,12 @@ export class Backend {
     if (!start) throw new LibraryError("Choose a starting point.");
     if (!start.ready) throw new LibraryError(`${start.label} isn't ready yet. Choose From scratch for now.`);
     const id = this.lib.createSystem(name);
+    // From scratch starts with the small set of categories from the design. It is the starting
+    // point, not a change, so it isn't an undo step.
+    const { ws } = this.lib.openSystem(id);
+    ws.transact("Started from scratch", () => ensureCategories(ws, id));
+    ws.history = [];
+    this.lib.saveSystem(ws, id);
     if (input.picture) this.lib.setPicture("system", id, input.picture);
     this.markOpened(id);
     return id;
@@ -341,6 +400,150 @@ export class Backend {
     if (!this.lib.listBackups(s.id).some((b) => b.file === file)) throw new LibraryError("That backup is gone.");
     s.restoreBackup(file);
     return true;
+  }
+
+  // ---------- Inside an open world or system ----------
+
+  private get editing(): Editing {
+    if (!this.session) throw new LibraryError("Open a world or system first.");
+    return new Editing(this.session);
+  }
+
+  rulesTab(): RulesSection[] {
+    return this.editing.rulesTab();
+  }
+  node(id: Id): NodeView {
+    return this.editing.node(id);
+  }
+  choices(): Choices {
+    return this.editing.choices();
+  }
+  flags(): FlagView[] {
+    return this.editing.flags();
+  }
+  sections(): { key: string; title: string }[] {
+    return this.editing.sections();
+  }
+  addRule(sectionKey: string, name: string): Id {
+    return this.editing.addRule(sectionKey, name);
+  }
+  addSection(title: string): Id {
+    return this.editing.addSection(title);
+  }
+  rename(id: Id, name: string): true {
+    this.editing.rename(id, name);
+    return true;
+  }
+  setText(id: Id, text: string): true {
+    this.editing.setText(id, text);
+    return true;
+  }
+  setField(id: Id, key: string, value: Value): true {
+    this.editing.setField(id, key, value);
+    return true;
+  }
+  useSystemValue(id: Id, key: string): true {
+    this.editing.useSystemValue(id, key);
+    return true;
+  }
+  moveToSection(id: Id, sectionKey: string): true {
+    this.editing.moveToSection(id, sectionKey);
+    return true;
+  }
+  deleteNode(id: Id): StepResult {
+    return this.editing.deleteNode(id);
+  }
+  undo(): StepResult | null {
+    return this.editing.undo();
+  }
+  redo(): StepResult | null {
+    return this.editing.redo();
+  }
+
+  beingsList(kind: BeingKind, sort: "name" | "challenge" = "name"): ListEntry[] {
+    return this.editing.beingsList(kind, sort);
+  }
+  templates(): TemplateEntry[] {
+    return this.editing.templates();
+  }
+  copyNode(sourceId: Id, name: string): Id {
+    return this.editing.copyNode(sourceId, name);
+  }
+  setTemplate(id: Id, on: boolean): true {
+    this.editing.setTemplate(id, on);
+    return true;
+  }
+  itemsList(): ListEntry[] {
+    return this.editing.itemsList();
+  }
+  categories(): CategoryOption[] {
+    return this.editing.categories();
+  }
+  addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null; template?: boolean }): Id {
+    return this.editing.addBeing(input);
+  }
+  addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null; template?: boolean }): Id {
+    return this.editing.addItem(input);
+  }
+  addCategory(name: string, under: Id | null): Id {
+    return this.editing.addCategory(name, under);
+  }
+  setCategory(id: Id, categoryId: Id | null): true {
+    this.editing.setCategory(id, categoryId);
+    return true;
+  }
+  setPicture(id: Id, picture: Id | null): true {
+    this.editing.setPicture(id, picture);
+    return true;
+  }
+  toggleFavourite(id: Id): true {
+    this.editing.toggleFavourite(id);
+    return true;
+  }
+  setScore(id: Id, ability: Id, score: number | null): true {
+    this.editing.setScore(id, ability, score);
+    return true;
+  }
+  useParentValue(id: Id, key: string): true {
+    this.editing.useParentValue(id, key);
+    return true;
+  }
+  detach(id: Id): true {
+    this.editing.detach(id);
+    return true;
+  }
+
+  library(): LibrarySection[] {
+    return this.editing.library();
+  }
+  addBrick(type: BrickType, name: string): Id {
+    return this.editing.addBrick(type, name);
+  }
+  dropNeedsAnswers(targets: Id[], bricks: Id[]): boolean {
+    return this.editing.dropNeedsAnswers(targets, bricks);
+  }
+  attach(input: { targets: Id[]; bricks: Id[]; activation?: Activation; uses?: Uses | null }): StepResult {
+    return this.editing.attach(input);
+  }
+  removeAttachment(nodeId: Id, aid: Id): StepResult {
+    return this.editing.removeAttachment(nodeId, aid);
+  }
+
+  attachmentDetail(nodeId: Id, aid: Id): AttachmentDetail {
+    return this.editing.attachmentDetail(nodeId, aid);
+  }
+  editAttachment(nodeId: Id, aid: Id, patch: AttachmentPatch): true {
+    this.editing.editAttachment(nodeId, aid, patch);
+    return true;
+  }
+  attachInside(nodeId: Id, aid: Id, bricks: Id[]): StepResult {
+    return this.editing.attachInside(nodeId, aid, bricks);
+  }
+  familyChecklist(parentId: Id, fields: string[], labels: Record<string, string> = {}): FamilyRow[] {
+    return this.editing.familyChecklist(parentId, fields, labels);
+  }
+  changeParent(parentId: Id, changes: Record<string, Value | null>, ticked: Id[] | null): StepResult {
+    return this.editing.changeParent(parentId, changes, ticked);
   }
 
   /** The app is closing normally. */

@@ -143,7 +143,7 @@ export function chapterOf(ws: Workspace, layerId: Id, n: NodeRecord): ChapterId 
     case "skill":
       return "skills";
     case "rule":
-      return f[F.forbid] ? null : f.section === "Core check" ? "core" : "rules";
+      return f[F.forbid] ? null : f.section === "Core check" || sectionKey(ws, layerId, n) === "core" ? "core" : "rules";
     case "item":
       return "items";
     case "lore":
@@ -153,6 +153,13 @@ export function chapterOf(ws: Workspace, layerId: Id, n: NodeRecord): ChapterId 
     default:
       return null;
   }
+}
+
+/** The Rules tab section a node is filed in, from its category ("core", "combat", ...). */
+function sectionKey(ws: Workspace, layerId: Id, n: NodeRecord): string | null {
+  const c = n.category ? ws.get(layerId, n.category.link) : null;
+  const key = c?.fields[F.section];
+  return typeof key === "string" ? key : null;
 }
 
 function arrange(ws: Workspace, layerId: Id, nodes: NodeRecord[], ch: ChapterId, variantsAs: "differences" | "full", byCr: boolean): Entry[] {
