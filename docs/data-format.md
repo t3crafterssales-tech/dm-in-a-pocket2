@@ -37,6 +37,9 @@ Kind-specific meaning lives in `fields`. For example a being has `beingKind` (`m
 `character`, `race`, `class`); a library brick has `type` (`attack`, `trait`, `spell`, `effect`,
 `damage`, ...) and `wording` for the rulebook.
 
+The field names that checks, sentences and the rulebook rely on (`beingKind`, `hp`, `cr`, `cost`,
+`type`, `dice`, `forbid`, ...) are listed with explanations in `src/engine/conventions.ts`.
+
 ## Attachments (a brick on a sheet)
 
 | Field | What it holds |

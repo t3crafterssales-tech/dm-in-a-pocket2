@@ -1,0 +1,247 @@
+// The rulebook, written automatically from a system and world. This builds the book's content
+// and structure; turning it into a PDF or Word file happens in the export milestone.
+
+import { F, SRD_LICENSE } from "./conventions.ts";
+import { isLink } from "./links.ts";
+import { cap, sentence } from "./text.ts";
+import type { Id, NodeRecord, Value } from "./types.ts";
+import type { Workspace } from "./workspace.ts";
+
+export type BookType = "players" | "monsters" | "gm" | "world" | "everything";
+export type ChapterId = "core" | "abilities" | "resources" | "conditions" | "skills" | "rules" | "races" | "classes" | "monsters" | "npcs" | "items" | "lore";
+
+export const CHAPTER_TITLES: Record<ChapterId, string> = {
+  core: "Core rules",
+  abilities: "Abilities",
+  resources: "Resources",
+  conditions: "Conditions",
+  skills: "Skills",
+  rules: "Rules of play",
+  races: "Races",
+  classes: "Classes",
+  monsters: "Monsters",
+  npcs: "Characters of the world",
+  items: "Equipment",
+  lore: "The world",
+};
+
+/** Each book type comes with a sensible set of chapters ticked. */
+export const BOOK_CHAPTERS: Record<BookType, ChapterId[]> = {
+  players: ["core", "abilities", "resources", "conditions", "skills", "rules", "races", "classes", "items"],
+  monsters: ["monsters", "npcs"],
+  gm: ["core", "rules", "conditions", "monsters", "npcs", "items", "lore"],
+  world: ["lore", "races", "npcs"],
+  everything: ["core", "abilities", "resources", "conditions", "skills", "rules", "races", "classes", "monsters", "npcs", "items", "lore"],
+};
+
+export const BOOK_TITLES: Record<BookType, string> = {
+  players: "Player's Handbook",
+  monsters: "Monster Manual",
+  gm: "GM Guide",
+  world: "World Guide",
+  everything: "Complete Rulebook",
+};
+
+export const SRD_CREDIT =
+  'This work includes material from the System Reference Document 5.2 ("SRD 5.2") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.';
+
+export interface BookOptions {
+  type: BookType;
+  /** Chapters to include, in order. Defaults to the book type's chapters. */
+  chapters?: ChapterId[];
+  /** "differences" prints variants as "As Elf, plus..."; "full" prints every entry in full. */
+  variants?: "differences" | "full";
+  /** Sort monsters by challenge instead of alphabetically. */
+  monstersByChallenge?: boolean;
+  author?: string | null;
+}
+
+export interface Entry {
+  /** The node this entry is about (used for the index and page references). */
+  node: Id;
+  title: string;
+  /** Short numbers line for stat blocks, such as "HP 7 · AC 15 · Speed 30 ft · Challenge 1/4". */
+  stats: string | null;
+  paragraphs: string[];
+  /** Nodes this entry links to, so the PDF can add "see Poisoned, page 42". */
+  mentions: Id[];
+  /** Variants printed under this entry. */
+  variants: Entry[];
+  /** For variants printed as differences: the entry they are "as". */
+  asParent: string | null;
+  picture: Id | null;
+}
+
+export interface Chapter {
+  id: ChapterId | `page:${string}`;
+  title: string;
+  /** Free text for book pages (foreword, How to play). */
+  text: string | null;
+  entries: Entry[];
+}
+
+export interface Book {
+  title: string;
+  subtitle: string;
+  chapters: Chapter[];
+  /** Every entry title, alphabetically, with the node it points at. */
+  index: { term: string; node: Id }[];
+  credits: string[];
+}
+
+export function buildBook(ws: Workspace, layerId: Id, opts: BookOptions): Book {
+  const chapters = opts.chapters ?? BOOK_CHAPTERS[opts.type];
+  const layer = ws.layer(layerId);
+  const variantsAs = opts.variants ?? "differences";
+  const visible = ws.list(layerId).filter((n) => !n.template);
+  const out: Chapter[] = [];
+  const pages = visible.filter((n) => n.kind === "lore" && n.fields[F.bookPage] === true && inBook(n, opts.type));
+
+  for (const ch of chapters) {
+    for (const p of pages.filter((p) => p.fields[F.before] === ch)) out.push(pageChapter(p));
+    const nodes = visible.filter((n) => chapterOf(ws, layerId, n) === ch);
+    if (!nodes.length) continue;
+    out.push({ id: ch, title: CHAPTER_TITLES[ch], text: null, entries: arrange(ws, layerId, nodes, ch, variantsAs, !!opts.monstersByChallenge) });
+  }
+  for (const p of pages.filter((p) => !chapters.includes(p.fields[F.before] as ChapterId))) out.push(pageChapter(p));
+
+  const index: Book["index"] = [];
+  const walk = (e: Entry) => {
+    index.push({ term: e.title, node: e.node });
+    e.variants.forEach(walk);
+  };
+  out.forEach((c) => c.entries.forEach(walk));
+  index.sort((a, b) => a.term.localeCompare(b.term));
+
+  const credits: string[] = [];
+  const author = opts.author ?? layer.author;
+  if (author) credits.push(`Created by ${author}.`);
+  if (visible.some((n) => n.fields[F.license] === SRD_LICENSE)) credits.push(SRD_CREDIT);
+
+  return { title: layer.name, subtitle: BOOK_TITLES[opts.type], chapters: out, index, credits };
+}
+
+function inBook(n: NodeRecord, type: BookType): boolean {
+  const books = n.fields[F.books];
+  if (!Array.isArray(books) || books.length === 0) return true;
+  return type === "everything" || books.includes(type);
+}
+
+function pageChapter(p: NodeRecord): Chapter {
+  return { id: `page:${p.id}`, title: p.name, text: p.text, entries: [] };
+}
+
+export function chapterOf(ws: Workspace, layerId: Id, n: NodeRecord): ChapterId | null {
+  const f = ws.resolve(layerId, n.id)!.fields;
+  switch (n.kind) {
+    case "ability":
+      return "abilities";
+    case "resource":
+      return "resources";
+    case "condition":
+      return "conditions";
+    case "skill":
+      return "skills";
+    case "rule":
+      return f[F.forbid] ? null : f.section === "Core check" ? "core" : "rules";
+    case "item":
+      return "items";
+    case "lore":
+      return f[F.bookPage] === true ? null : "lore";
+    case "being":
+      return ({ race: "races", class: "classes", monster: "monsters", npc: "npcs", character: null } as Record<string, ChapterId | null>)[String(f[F.beingKind])] ?? null;
+    default:
+      return null;
+  }
+}
+
+function arrange(ws: Workspace, layerId: Id, nodes: NodeRecord[], ch: ChapterId, variantsAs: "differences" | "full", byCr: boolean): Entry[] {
+  const ids = new Set(nodes.map((n) => n.id));
+  const sort = (list: NodeRecord[]) => {
+    if (ch === "monsters" && byCr) {
+      const cr = (n: NodeRecord) => crNumber(ws.resolve(layerId, n.id)!.fields[F.cr]);
+      return [...list].sort((a, b) => cr(a) - cr(b) || a.name.localeCompare(b.name));
+    }
+    return [...list].sort((a, b) => a.name.localeCompare(b.name));
+  };
+  if (variantsAs === "full") return sort(nodes).map((n) => entry(ws, layerId, n, false));
+  // Variants go under their parent, unless the parent is a template or isn't in this chapter.
+  const top = nodes.filter((n) => !n.parent || !ids.has(n.parent.link));
+  const build = (n: NodeRecord, asVariant: boolean): Entry => {
+    const e = entry(ws, layerId, n, asVariant);
+    e.variants = sort(nodes.filter((c) => c.parent?.link === n.id)).map((c) => build(c, true));
+    return e;
+  };
+  return sort(top).map((n) => build(n, false));
+}
+
+function crNumber(v: Value | undefined): number {
+  if (typeof v === "number") return v;
+  if (typeof v === "string" && v.includes("/")) {
+    const [a, b] = v.split("/").map(Number);
+    return a !== undefined && b ? a / b : 0;
+  }
+  return Number(v) || 0;
+}
+
+const STAT_LABELS: [string, string][] = [
+  [F.hp, "HP"],
+  [F.ac, "AC"],
+  [F.speed, "Speed"],
+  [F.cr, "Challenge"],
+  [F.cost, "Cost"],
+  [F.weight, "Weight"],
+];
+
+function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): Entry {
+  const r = ws.resolve(layerId, n.id)!;
+  const parent = n.parent ? ws.get(layerId, n.parent.link) : null;
+  const showOnlyOwn = asVariant && !!parent && !parent.template;
+  const fields = showOnlyOwn ? n.fields : r.fields;
+  const attachments = showOnlyOwn ? r.attachments.filter((x) => x.from === null) : r.attachments;
+  const stats = STAT_LABELS.filter(([k]) => fields[k] !== undefined && fields[k] !== null && fields[k] !== "").map(([k, label]) => `${label} ${String(fields[k])}`);
+  const paragraphs: string[] = [];
+  if (showOnlyOwn) {
+    const changed = stats.length ? ` (${stats.join(", ")})` : "";
+    paragraphs.push(`As ${parent!.name}${changed}${attachments.length ? ", plus:" : "."}`);
+  }
+  if (n.text.trim()) paragraphs.push(n.text.trim());
+  paragraphs.push(...describeFields(ws, layerId, n, fields));
+  for (const { attachment } of attachments) paragraphs.push(sentence(ws, layerId, attachment));
+  const mentions = new Set<Id>();
+  for (const v of Object.values(fields)) if (isLink(v)) mentions.add(v.link);
+  for (const { attachment } of attachments) if (attachment.brick) mentions.add(attachment.brick.link);
+  return { node: n.id, title: n.name, stats: !showOnlyOwn && stats.length ? stats.join(" · ") : null, paragraphs, mentions: [...mentions], variants: [], asParent: showOnlyOwn ? parent!.name : null, picture: n.picture };
+}
+
+/** Sentences for rule nodes, written from their fields. */
+function describeFields(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<string, Value>): string[] {
+  const name = (v: Value | undefined) => (isLink(v) ? ws.get(layerId, v.link)?.name ?? "something removed" : "");
+  switch (n.kind) {
+    case "ability":
+      return [[f.label ? `Short label: ${f.label}.` : "", f.min !== undefined && f.max !== undefined ? `Scores range from ${f.min} to ${f.max}.` : ""].filter(Boolean).join(" ")].filter(Boolean);
+    case "resource": {
+      const parts: string[] = [];
+      if (isLink(f.maxAbility)) parts.push(`Maximum: ${name(f.maxAbility)} ${f.maxPart ?? "score"}${f.plus ? ` + ${f.plus}` : ""}.`);
+      if (f.recovery) parts.push(`Comes back each ${f.recovery}.`);
+      const th = Array.isArray(f.thresholds) ? f.thresholds : [];
+      for (const t of th) if (t && typeof t === "object" && !Array.isArray(t) && !isLink(t)) parts.push(`At ${(t as Record<string, Value>).at}, you become ${name((t as Record<string, Value>).cond)}.`);
+      return parts.length ? [parts.join(" ")] : [];
+    }
+    case "condition":
+      return [f.effects, f.tick ? cap(String(f.tick)) + "." : ""].filter((x): x is string => typeof x === "string" && !!x);
+    case "skill":
+      return isLink(f.ability) ? [`Uses ${name(f.ability)}.`] : [];
+    case "rule":
+      return typeof f.ruleText === "string" && f.ruleText ? [f.ruleText] : [];
+    case "lore": {
+      const sections = f.sections;
+      if (!sections || typeof sections !== "object" || Array.isArray(sections) || isLink(sections)) return [];
+      return Object.entries(sections as Record<string, Value>).filter(([, v]) => typeof v === "string" && v).map(([k, v]) => `${k}. ${v}`);
+    }
+    default: {
+      const origin = f.origin;
+      return isLink(origin) ? [`Origin: ${name(origin)}.`] : [];
+    }
+  }
+}
