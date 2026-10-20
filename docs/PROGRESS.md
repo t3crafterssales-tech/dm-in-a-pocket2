@@ -9,8 +9,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Also done (approved by Jeff, merged):** engine parts of milestones 5 and 6 (branch
   `engine-checks-and-book`): world-rule red flags, free yellow checks, plain-English sentences,
   and the rulebook builder. Built early because they need no installs.
-- **Built, waiting for Jeff to test:** Milestone 3, the desktop app shell (branch
-  `claude/electron-desktop-app-shell-2arspv`).
+- **Done:** Milestone 3, the desktop app shell (approved by Jeff, merged into `main`). The Windows
+  installer builds at GitHub and all tests pass on Windows.
 - **Next:** Milestone 4, the Rules tab and sheets.
 
 ## Milestones to first playable
@@ -28,6 +28,14 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 3 approved)
+
+- Jeff approved milestone 3 and all six open points as built: Generic d20 greyed out until the
+  starter exists; "Move them to another system" greyed out until copying a world into another
+  system exists; after creating a world the app stays on the home screen with the new card
+  highlighted; renaming and pictures in World settings come later; the Recycle bin folder in the
+  main folder; and the paper and leather-pocket look.
 
 ### 2026-10-20 (milestone 3)
 
