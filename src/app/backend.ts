@@ -17,6 +17,7 @@ import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
 import type { LoreSection } from "./lore.ts";
+import type { TableModeView } from "./tablemode.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
@@ -246,6 +247,7 @@ export const BACKEND_METHODS = [
   "loreList",
   "addLore",
   "rollTable",
+  "tableMode",
   "linkTargets",
   "quickQuestions",
   "quickStart",
@@ -819,6 +821,10 @@ export class Backend {
   }
   rollTable(id: Id): { roll: number; text: string; result: { id: Id; name: string } | null } {
     return this.editing.rollTable(id);
+  }
+  /** Table mode: the world as a read-only reading view for running a game. */
+  tableMode(): TableModeView {
+    return this.editing.tableMode();
   }
   linkTargets(): { id: Id; name: string; group: string }[] {
     return this.editing.linkTargets();

@@ -59,6 +59,11 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
   cover, contents with page numbers, chapters (Word's own Heading styles, so the navigation pane
   works), stat lines, pictures, "See Poisoned (page 42)", the index and the credits. Checked by
   opening it in LibreOffice, which filled in every page number.
+- Part 2, Table mode: a Table mode button in the top bar opens the world as a read-only reading
+  view with tabs Rules, Monsters, Items and Tables. Search (Ctrl+F; "Also in Monsters (4)" when
+  other tabs match), Starred only, stars on every entry, up to three entries side by side
+  (Ctrl-click opens one beside the others, like a browser tab; "See Scimitar" links open things
+  too), and a Roll button on tables that highlights the row it lands on. Edit goes back.
 
 ### 2026-10-20 (milestone 8: Quick start, lore, roll tables, check settings)
 
@@ -593,3 +598,7 @@ One plain line each. Jeff can overrule any of these at a milestone.
   library. Page numbers are Word fields that fill in when the file opens; Word may ask once to
   update fields, and Yes fills them in. Pictures go in if they are PNG, JPEG or GIF (WebP is left
   out of the Word file because older Word can't show it).
+- 2026-10-20: Table mode shows the rulebook's own words (Complete Rulebook, variants in full), so
+  what is read at the table is what prints. Lore pages, places and factions sit in the Rules tab
+  under Lore, since the design lists only four tabs. Starring is the one thing that works there; it
+  is an ordinary undo step.

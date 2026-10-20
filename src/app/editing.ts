@@ -18,6 +18,8 @@ import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { createLore, loreList, rollTable } from "./lore.ts";
+import { tableModeView } from "./tablemode.ts";
+import type { TableModeView } from "./tablemode.ts";
 import { buildQuickStart } from "./quickstart.ts";
 import type { QuickStartAnswers } from "./quickstart.ts";
 import type { LoreSection } from "./lore.ts";
@@ -481,6 +483,11 @@ export class Editing {
       .filter((n) => group[n.kind] && !n.template)
       .map((n) => ({ id: n.id, name: n.name, group: group[n.kind]! }))
       .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
+  }
+
+  /** Table mode: the world as a reading view for running a game. */
+  tableMode(): TableModeView {
+    return tableModeView(this.ws, this.layer);
   }
 
   /** Rolls a roll table. Nothing changes, so it isn't an undo step (and works read-only too). */

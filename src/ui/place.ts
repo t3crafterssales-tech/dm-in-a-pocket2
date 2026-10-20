@@ -15,6 +15,7 @@ import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
+import { drawTableMode, focusTableSearch, forgetTableData } from "./table-mode.ts";
 
 const TABS = ["Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
 type Tab = (typeof TABS)[number];
@@ -22,6 +23,8 @@ type Tab = (typeof TABS)[number];
 /** What is open right now, or null on the home screen. */
 export let current: PlaceView | null = null;
 let tab: Tab = "Rules";
+/** True while the world is shown in Table mode, the read-only reading view for running a game. */
+let tableMode = false;
 /** The node open in the editor, per tab. */
 const selected: Partial<Record<Tab, string | null>> = {};
 
@@ -50,6 +53,7 @@ export async function openPlace(place: Place, mode: "normal" | "read-only" | "ta
   }
   current = res.view;
   tab = "Rules";
+  tableMode = false;
   for (const t of TABS) selected[t] = null;
   await renderPlace();
   if (res.view.recovered) notice("Recovered after an unexpected close.", "blue", undefined, 0);
@@ -94,6 +98,7 @@ export async function renderPlace(): Promise<void> {
 async function draw() {
   const view = current;
   if (!view) return;
+  if (tableMode) return drawTableMode(view, () => ((tableMode = false), forgetTableData(), void renderPlace()), () => void goHome());
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key ?? null;
   const caret = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement ? document.activeElement.selectionStart : null;
   const scroll = [...document.querySelectorAll<HTMLElement>("[data-scroll]")].map((el) => [el.dataset.scroll!, el.scrollTop] as const);
@@ -122,6 +127,7 @@ async function draw() {
     h(
       "nav",
       { class: "top-actions" },
+      iconButton(ICONS.dice, "Table mode", () => ((tableMode = true), void renderPlace()), { title: "Table mode: read and roll while you run a game, with nothing to change by accident" }),
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
       iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
@@ -193,9 +199,15 @@ async function redo() {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (!current || document.querySelector(".overlay") || typingIn(e)) return;
+  if (!current || document.querySelector(".overlay")) return;
   if (!(e.ctrlKey || e.metaKey)) return;
   const k = e.key.toLowerCase();
+  if (tableMode) {
+    // Nothing to undo in a read-only view; Ctrl+F finds things.
+    if (k === "f" && focusTableSearch()) e.preventDefault();
+    return;
+  }
+  if (typingIn(e)) return;
   if (k === "z" && !e.shiftKey) {
     e.preventDefault();
     void undo();
