@@ -2,14 +2,16 @@
 // undo and redo. Each one is a single step in history. The window and, later, the AI change
 // things only through these.
 
-import { DEFAULT_CHECKS, EngineError, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Id, NodeKind, Value, Workspace } from "../engine/index.ts";
+import { DEFAULT_CHECKS, EngineError, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
+import type { Activation, Id, NodeKind, Uses, Value, Workspace } from "../engine/index.ts";
 import { LibraryError } from "../storage/index.ts";
 import { createRuleNode, createSection, ensureSections, ruleSummary, rulesTab, sectionOf } from "./rules.ts";
 import type { RulesSection, SectionKey } from "./rules.ts";
 import type { Session } from "./session.ts";
 import { beingsList, categoryTree, createBeing, createCategory, createItem, detach, itemsList, scoreKey, scoresOf, scoreValue, sheetFor } from "./sheets.ts";
 import type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
+import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, librarySections } from "./library.ts";
+import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 
 export interface Option {
   id: Id;
@@ -53,6 +55,8 @@ export interface NodeView {
   /** The sheet for beings and items, from the system. */
   sheet: SheetDef | null;
   scores: { ability: Id; score: number }[];
+  /** The bricks on a sheet, own first, then inherited ones. */
+  attachments: AttachmentView[];
 }
 
 export interface Choices {
@@ -151,7 +155,7 @@ export class Editing {
       names,
       missing,
       usedBy: usedBy.sort((a, b) => a.name.localeCompare(b.name)),
-      summary: n.kind === "being" || n.kind === "item" ? "" : ruleSummary(ws, this.layer, id),
+      summary: n.kind === "being" || n.kind === "item" ? "" : n.kind === "brick" ? `${brickNote(ws, this.layer, id)}.` : ruleSummary(ws, this.layer, id),
       readOnly: this.session.readOnly,
       picture: n.picture,
       favourite: n.favourite,
@@ -162,6 +166,7 @@ export class Editing {
       variants: ws.childrenOf(this.layer, id).length,
       sheet: sheetFor(n, r.fields),
       scores: scoresOf(r.fields),
+      attachments: n.kind === "being" || n.kind === "item" ? attachmentsOf(ws, this.layer, id) : [],
     };
   }
 
@@ -319,6 +324,37 @@ export class Editing {
 
   detach(id: Id) {
     this.run(() => detach(this.ws, this.layer, id));
+  }
+
+  // ---------- The library ----------
+
+  library(): LibrarySection[] {
+    return librarySections(this.ws, this.layer);
+  }
+
+  addBrick(type: BrickType, name: string): Id {
+    const n = cleanName(name);
+    return this.run(() => createBrick(this.ws, this.layer, type, n));
+  }
+
+  /** True when a drop should ask when and how often first (a spell on an item). */
+  dropNeedsAnswers(targets: Id[], bricks: Id[]): boolean {
+    return dropNeedsAnswers(this.ws, this.layer, targets, bricks);
+  }
+
+  /** Drops bricks onto sheets: one undo step however many there are. */
+  attach(input: { targets: Id[]; bricks: Id[]; activation?: Activation; uses?: Uses | null }): StepResult {
+    const n = this.run(() => attachMany(this.ws, this.layer, input.targets, input.bricks, { activation: input.activation, uses: input.uses }));
+    return { label: this.ws.history.at(-1)?.label ?? `Added ${n}` };
+  }
+
+  removeAttachment(nodeId: Id, aid: Id): StepResult {
+    const node = this.must(nodeId);
+    const a = findAttachment(node.attachments, aid);
+    if (!a) throw new LibraryError(node.parent ? "That comes from its parent. Change it there, or Detach this one first." : "That isn't on this sheet any more.");
+    const name = a.name || (a.brick ? (this.ws.get(this.layer, a.brick.link)?.name ?? "it") : "the choice");
+    this.run(() => this.ws.transact(`Removed ${name} from ${node.name}`, () => this.ws.removeAttachment(this.layer, nodeId, aid)));
+    return { label: `Removed ${name} from ${node.name}` };
   }
 
   /** Sections a rule can be moved to (abilities, resources, skills and conditions stay in their own). */

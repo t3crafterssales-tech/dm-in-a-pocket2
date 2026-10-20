@@ -1,13 +1,14 @@
 // The Beings and Items tabs: a list on the left (variants indented under their parents) and the
 // open sheet in the middle, with its header numbers, ability scores and sections.
 
-import type { BeingKind, CategoryOption, Choices, ListEntry, NodeView } from "../app/backend.ts";
+import type { AttachmentView, BeingKind, CategoryOption, Choices, ListEntry, NodeView } from "../app/backend.ts";
 import { api, pictureUrl } from "./api.ts";
 import { attempt } from "./common.ts";
 import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
+import { DRAG_TYPE, brickEditor, drop, libraryPanel } from "./library-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 
 export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
@@ -20,6 +21,13 @@ export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
 
 let beingTab: BeingKind = "monster";
 const filters: Record<string, { text: string; favourites: boolean }> = {};
+/** The left panel shows the tab's list or the library. */
+const leftMode: Record<string, "list" | "library"> = {};
+/** Sheets selected in each list with Ctrl-click and Shift-click; dropping adds to all of them. */
+const listSelection = new Map<string, Set<string>>();
+const listAnchor = new Map<string, string>();
+
+const listKey = (which: "beings" | "items") => (which === "beings" ? `beings-${beingTab}` : "items");
 
 export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Promise<{ list: HTMLElement; editor: HTMLElement }> {
   const [entries, categories, choices] = await Promise.all([
@@ -31,7 +39,7 @@ export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Pro
   if (ctx.selected) {
     try {
       view = await api.node(ctx.selected);
-      if (view.kind !== (which === "beings" ? "being" : "item")) view = null;
+      if (view.kind !== (which === "beings" ? "being" : "item") && view.kind !== "brick") view = null;
     } catch {
       view = null;
     }
@@ -41,16 +49,30 @@ export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Pro
     beingTab = view.fields.beingKind as BeingKind;
     return sheetPanels(ctx, which);
   }
+  const key = listKey(which);
+  const sel = listSelection.get(key) ?? new Set<string>();
+  listSelection.set(key, sel);
+  for (const id of [...sel]) if (!(entries ?? []).some((e) => e.id === id)) sel.delete(id);
+  const open = view;
+  // Where a drop goes: every selected sheet if the open one is among them, else the open sheet.
+  const targets = () => {
+    if (!open || open.kind === "brick") return { ids: [] as string[], names: "" };
+    if (sel.size > 1 && sel.has(open.id)) return { ids: [...sel], names: `${sel.size} selected` };
+    return { ids: [open.id], names: open.name };
+  };
+  const library = (leftMode[which] ?? "list") === "library" ? await libraryPanel(ctx, targets) : null;
+  const c = choices ?? { abilities: [], conditions: [], resources: [] };
   return {
-    list: listPanel(which, entries ?? [], categories ?? [], ctx),
-    editor: sheetEditor(view, which, categories ?? [], choices ?? { abilities: [], conditions: [], resources: [] }, ctx),
+    list: listPanel(which, entries ?? [], categories ?? [], ctx, library),
+    editor: open?.kind === "brick" ? brickEditor(open, c, ctx, () => void remove(open.id, ctx)) : sheetEditor(open, which, categories ?? [], c, ctx, targets),
   };
 }
 
 // ---------- The list ----------
 
-function listPanel(which: "beings" | "items", all: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx) {
-  const key = which === "beings" ? `beings-${beingTab}` : "items";
+function listPanel(which: "beings" | "items", all: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx, library: HTMLElement | null) {
+  const key = listKey(which);
+  const sel = listSelection.get(key)!;
   const f = (filters[key] ??= { text: "", favourites: false });
   const noun = which === "beings" ? BEING_TABS.find((t) => t.id === beingTab)!.label.toLowerCase() : "item";
   const match = (e: ListEntry) => (!f.text || e.name.toLowerCase().includes(f.text.toLowerCase())) && (!f.favourites || e.favourite);
@@ -65,18 +87,57 @@ function listPanel(which: "beings" | "items", all: ListEntry[], categories: Cate
   });
   const star = h("button", { class: `icon-button small star${f.favourites ? " on" : ""}`, title: f.favourites ? "Showing favourites only" : "Show favourites only", "aria-pressed": f.favourites ? "true" : "false", onClick: () => ((f.favourites = !f.favourites), void ctx.refresh()) }, svg(ICONS.star));
 
+  // Click opens one; Ctrl-click adds or removes one; Shift-click selects a run, like File Explorer.
+  const click = (e: ListEntry, ev: MouseEvent) => {
+    const anchor = listAnchor.get(key);
+    if (ev.shiftKey && anchor) {
+      const a = entries.findIndex((x) => x.id === anchor);
+      const b = entries.findIndex((x) => x.id === e.id);
+      if (a >= 0 && b >= 0) {
+        if (!(ev.ctrlKey || ev.metaKey)) sel.clear();
+        for (const x of entries.slice(Math.min(a, b), Math.max(a, b) + 1)) sel.add(x.id);
+      }
+      return ctx.select(e.id);
+    }
+    if (ev.ctrlKey || ev.metaKey) {
+      if (!sel.size && ctx.selected && entries.some((x) => x.id === ctx.selected)) sel.add(ctx.selected);
+      if (sel.has(e.id)) sel.delete(e.id);
+      else sel.add(e.id);
+      listAnchor.set(key, e.id);
+      return sel.has(e.id) ? ctx.select(e.id) : void ctx.refresh();
+    }
+    sel.clear();
+    sel.add(e.id);
+    listAnchor.set(key, e.id);
+    ctx.select(e.id);
+  };
+  const dropOnItem = (e: ListEntry) => ({
+    onDragover: (ev: DragEvent) => {
+      if (!ev.dataTransfer?.types.includes(DRAG_TYPE) || ctx.view.readOnly) return;
+      ev.preventDefault();
+      (ev.currentTarget as HTMLElement).classList.add("drop-over");
+    },
+    onDragleave: (ev: DragEvent) => (ev.currentTarget as HTMLElement).classList.remove("drop-over"),
+    onDrop: (ev: DragEvent) => {
+      ev.preventDefault();
+      const bricks = JSON.parse(ev.dataTransfer!.getData(DRAG_TYPE) || "[]") as string[];
+      void drop(sel.size > 1 && sel.has(e.id) ? [...sel] : [e.id], bricks, ctx);
+    },
+  });
   const item = (e: ListEntry) =>
     h(
       "li",
       {
-        class: `item depth-${Math.min(e.depth, 6)}${e.id === ctx.selected ? " selected" : ""}`,
+        class: `item depth-${Math.min(e.depth, 6)}${e.id === ctx.selected ? " selected" : sel.size > 1 && sel.has(e.id) ? " multi" : ""}`,
         tabindex: 0,
         "data-key": `item-${e.id}`,
-        onClick: () => ctx.select(e.id),
+        "aria-selected": sel.has(e.id) || e.id === ctx.selected ? "true" : "false",
+        onClick: (ev: MouseEvent) => click(e, ev),
         onKeydown: (ev: KeyboardEvent) => {
           if (ev.key === "Enter") ctx.select(e.id);
           if (ev.key === "Delete" && !ctx.view.readOnly) void remove(e.id, ctx);
         },
+        ...dropOnItem(e),
       },
       e.depth ? h("span", { class: "variant-mark", "aria-hidden": "true" }, "↳") : null,
       h("span", { class: "item-name" }, e.name),
@@ -103,15 +164,31 @@ function listPanel(which: "beings" | "items", all: ListEntry[], categories: Cate
     );
   } else body = h("ul", { class: "items flat" }, entries.map(item));
 
+  const mode = leftMode[which] ?? "list";
+  const switcher = h(
+    "div",
+    { class: "switch", role: "tablist", "aria-label": "Show" },
+    h("button", { class: `switch-button${mode === "list" ? " active" : ""}`, role: "tab", "aria-selected": mode === "list" ? "true" : "false", onClick: () => ((leftMode[which] = "list"), void ctx.refresh()) }, which === "beings" ? "Beings" : "Items"),
+    h("button", { class: `switch-button${mode === "library" ? " active" : ""}`, role: "tab", "aria-selected": mode === "library" ? "true" : "false", onClick: () => ((leftMode[which] = "library"), void ctx.refresh()) }, "Library"),
+  );
+  if (library)
+    return h(
+      "aside",
+      { class: "panel list-panel library-mode", "aria-label": "Library" },
+      h("div", { class: "panel-head" }, switcher),
+      sel.size > 1 ? h("div", { class: "multi-note small" }, `${sel.size} sheets are selected in the list: what you add goes to all of them.`) : null,
+      library,
+    );
   return h(
     "aside",
     { class: "panel list-panel", "aria-label": which === "beings" ? "Beings" : "Items", "data-scroll": `list-${key}` },
     h(
       "div",
       { class: "panel-head" },
-      which === "beings" ? "Beings" : "Items",
+      switcher,
       ctx.view.readOnly ? null : h("button", { class: "button primary small-button head-button", onClick: () => void createNew(which, all, categories, ctx) }, svg(ICONS.plus), `New ${noun}`),
     ),
+    sel.size > 1 ? h("div", { class: "multi-note small" }, `${sel.size} selected. Open the Library and drop bricks on any one of them to add to all.`) : null,
     which === "beings"
       ? h(
           "div",
@@ -179,7 +256,7 @@ async function remove(id: string, ctx: PlaceCtx) {
 
 // ---------- The sheet ----------
 
-function sheetEditor(view: NodeView | null, which: "beings" | "items", categories: CategoryOption[], choices: Choices, ctx: PlaceCtx) {
+function sheetEditor(view: NodeView | null, which: "beings" | "items", categories: CategoryOption[], choices: Choices, ctx: PlaceCtx, targets: () => { ids: string[]; names: string }) {
   if (!view)
     return h(
       "section",
@@ -270,18 +347,49 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
   );
 
   const scores = sheet.scores ? scoreRow(view, choices, ed) : null;
+  const bySection = new Map<string, AttachmentView[]>();
+  for (const a of view.attachments) bySection.set(a.section, [...(bySection.get(a.section) ?? []), a]);
+  const extra = [...bySection.keys()].filter((s) => !sheet.sections.includes(s));
   const sections = h(
     "div",
     { class: "sheet-sections" },
-    sheet.sections.map((s) => h("div", { class: "sheet-section" }, h("div", { class: "sheet-section-title" }, s), h("div", { class: "drop-hint muted small" }, "Bricks from the library go here. Dragging them in comes in the next step."))),
+    [...sheet.sections, ...extra].map((s) =>
+      h(
+        "div",
+        { class: "sheet-section" },
+        h("div", { class: "sheet-section-title" }, s),
+        (bySection.get(s) ?? []).map((a) => brickCard(view, a, ctx)),
+        bySection.get(s)?.length ? null : h("div", { class: "drop-hint muted small" }, ro ? "Nothing here." : "Drag bricks from the Library onto the sheet; they land in the right section."),
+      ),
+    ),
   );
 
   const textBox = h("textarea", { class: "text-input rules-text", "data-key": "f-text", rows: 5, disabled: ro, placeholder: "Description: what it looks like, how it behaves, where it comes from." }, view.text);
   textBox.addEventListener("change", () => void ed.save(() => api.setText(view.id, textBox.value)));
 
-  return h(
+  const t = targets();
+  const panel: HTMLElement = h(
     "section",
-    { class: "panel editor", "data-scroll": "editor" },
+    {
+      class: "panel editor sheet-drop",
+      "data-scroll": "editor",
+      onDragover: (ev: DragEvent) => {
+        if (!ev.dataTransfer?.types.includes(DRAG_TYPE) || ro) return;
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = "copy";
+        panel.classList.add("drop-over");
+      },
+      onDragleave: (ev: DragEvent) => {
+        if (!panel.contains(ev.relatedTarget as Node)) panel.classList.remove("drop-over");
+      },
+      onDrop: (ev: DragEvent) => {
+        ev.preventDefault();
+        panel.classList.remove("drop-over");
+        const bricks = JSON.parse(ev.dataTransfer!.getData(DRAG_TYPE) || "[]") as string[];
+        void drop(targets().ids, bricks, ctx);
+      },
+    },
+    t.ids.length > 1 ? h("div", { class: "multi-banner" }, `${t.names}: what you drop here is added to all of them.`) : null,
     h(
       "div",
       { class: "editor-inner wide" },
@@ -297,6 +405,42 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
         view.usedBy.length ? h("ul", { class: "link-list" }, view.usedBy.map((u) => h("li", null, h("button", { class: "link", onClick: () => ctx.select(u.id) }, u.name)))) : h("p", { class: "muted small" }, "Nothing uses this yet."),
       ),
     ),
+  );
+  return panel;
+}
+
+/** A brick on a sheet: what it does in plain words, where it came from, and a remove button. */
+function brickCard(view: NodeView, a: AttachmentView, ctx: PlaceCtx) {
+  const own = !a.from;
+  return h(
+    "div",
+    { class: `brick-card${a.missing ? " broken" : ""}${own ? "" : " inherited"}`, "data-key": `card-${a.aid}` },
+    h(
+      "div",
+      { class: "brick-card-head" },
+      a.brickId && !a.missing
+        ? h("button", { class: "brick-name link-plain", title: "Open the original in the library", onClick: () => ctx.select(a.brickId!) }, a.name)
+        : h("span", { class: "brick-name" }, a.missing ? `[missing: ${a.name}]` : a.name),
+      a.from ? h("span", { class: "chip muted small-chip", title: `Comes from ${a.from.name}. Change it there.` }, `From ${a.from.name}`) : null,
+      own && !view.readOnly
+        ? h(
+            "button",
+            {
+              class: "icon-button small",
+              title: "Remove from this sheet",
+              "aria-label": `Remove ${a.name}`,
+              onClick: async () => {
+                const r = await attempt(() => api.removeAttachment(view.id, a.aid));
+                if (r) notice(`${r.label}.`, "blue", { label: "Undo", run: async () => (await attempt(() => api.undo()), await ctx.refresh()) }, 6000);
+                await ctx.refresh();
+              },
+            },
+            svg(ICONS.close),
+          )
+        : null,
+    ),
+    // The card already shows the name, so the sentence doesn't repeat it.
+    h("div", { class: "brick-sentence" }, a.sentence.startsWith(`${a.name}: `) ? capFirst(a.sentence.slice(a.name.length + 2)) : a.sentence),
   );
 }
 
@@ -322,6 +466,10 @@ function scoreRow(view: NodeView, choices: Choices, ed: FieldMaker) {
     }),
     missing.map((s) => h("div", { class: "score broken", title: "This ability was removed. See the flag panel." }, h("span", { class: "score-label" }, `[missing: ${view.missing[s.ability] ?? "removed"}]`), h("span", null, String(s.score)))),
   );
+}
+
+function capFirst(s: string): string {
+  return s ? s[0]!.toUpperCase() + s.slice(1) : s;
 }
 
 function signed(n: number): string {

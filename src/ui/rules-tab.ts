@@ -94,7 +94,7 @@ function listPanel(sections: RulesSection[], ctx: PlaceCtx) {
 }
 
 /** A name box like a new folder in File Explorer: Enter creates, Escape cancels. */
-function newNameBox(placeholder: string, key: string, create: (name: string) => void, cancel?: () => void) {
+export function newNameBox(placeholder: string, key: string, create: (name: string) => void, cancel?: () => void) {
   const input = h("input", { class: "text-input small-input", placeholder, "data-key": key, "data-autofocus": "", maxlength: 200 });
   let done = false;
   const finish = (ok: boolean) => {

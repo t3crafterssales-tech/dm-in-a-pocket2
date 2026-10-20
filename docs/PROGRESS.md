@@ -13,8 +13,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
   installer builds at GitHub and all tests pass on Windows.
 - **In progress:** Milestone 4, the Rules tab and sheets (branch
   `claude/electron-desktop-app-shell-2arspv`, the branch this build session is allowed to use).
-  Steps 1 and 2 of 4 done: the Rules tab, and the Beings and Items sheets. Next: the library with
-  drag and drop and Shift/Ctrl selection, then drilling into a brick and Edit parent.
+  Steps 1 to 3 of 4 done: the Rules tab, the Beings and Items sheets, and the library with drag
+  and drop and Shift/Ctrl selection. Next: drilling into a brick on a sheet, and Edit parent with
+  the checklist of children.
 
 ## Milestones to first playable
 
@@ -31,6 +32,23 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 4, step 3: the library, drag and drop, selection)
+
+- `src/app/library.ts`: library bricks by type (attacks, spells, traits, effects, damage,
+  immunities, ability bonuses, armour) plus items to carry as gear; each with its plain-English
+  sentence; attaching many bricks to many sheets as one undo step; which section a brick lands in;
+  and the smart-drop rule (a spell on an item asks when it works and how often).
+- Screens: `src/ui/library-panel.ts`. The left panel switches between the tab's list and the
+  Library. Library sections fold up and filter on their own. Click, Ctrl-click and Shift-click
+  select, as in File Explorer, in both the library and the list. Drag onto the open sheet (or onto
+  a name in the list), or press "Add to …". With several sheets selected in the list, a drop adds
+  to all of them. Double-click a library brick to open the original; changing it changes every
+  sheet that uses it.
+- Sheets show their bricks as cards in the right section, with the sentence, "From Goblin" on
+  inherited ones, a remove button with Undo, and [missing: Claw] in red if the original was deleted.
+- 122 automatic tests pass (10 new). Driven in the real window here: dragging two bricks onto two
+  selected goblins, and a spell onto a shield with the question answered by pressing Enter.
 
 ### 2026-10-20 (milestone 4, step 2: Beings and Items sheets)
 
@@ -293,3 +311,12 @@ One plain line each. Jeff can overrule any of these at a milestone.
   of…) instead of a second pop-up for "Variant of".
 - 2026-10-20: New beings are filed under Creature and new items under Item, unless chosen
   otherwise. A variant starts in its parent's category.
+- 2026-10-20: In the library, a single click selects (for dragging) and a double-click opens the
+  original, like files in File Explorer. Some rarer library sections start folded.
+- 2026-10-20: For now the only drop that asks questions is a spell on an item (when it works,
+  how often). Other drops just land, with the sheet's copy following the original.
+- 2026-10-20: A variant shows its parent's bricks but can't remove them; the message says to
+  change the parent or Detach. (Removing an inherited brick from just one variant would need a
+  new kind of stored value, which would be a data format change for Jeff to approve.)
+- 2026-10-20: The library selection is kept while switching between the list and the library,
+  so you can pick sheets in the list, then bricks in the library, then drop.

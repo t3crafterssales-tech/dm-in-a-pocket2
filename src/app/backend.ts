@@ -4,13 +4,14 @@
 import { readFileSync, statSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { DEFAULT_CHECKS, newId, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
-import type { Id, Value } from "../engine/index.ts";
+import type { Activation, Id, Uses, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import type { RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
 import type { Choices, FlagView, NodeView, StepResult } from "./editing.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry } from "./sheets.ts";
+import type { BrickType, LibrarySection } from "./library.ts";
 import { Session } from "./session.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
@@ -21,6 +22,7 @@ export type { RecycledInfo } from "../storage/index.ts";
 export type { Choices, FlagView, NodeView, Option, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
+export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
 
 export interface SystemCard {
   id: Id;
@@ -157,6 +159,11 @@ export const BACKEND_METHODS = [
   "setScore",
   "useParentValue",
   "detach",
+  "library",
+  "addBrick",
+  "dropNeedsAnswers",
+  "attach",
+  "removeAttachment",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -477,6 +484,22 @@ export class Backend {
   detach(id: Id): true {
     this.editing.detach(id);
     return true;
+  }
+
+  library(): LibrarySection[] {
+    return this.editing.library();
+  }
+  addBrick(type: BrickType, name: string): Id {
+    return this.editing.addBrick(type, name);
+  }
+  dropNeedsAnswers(targets: Id[], bricks: Id[]): boolean {
+    return this.editing.dropNeedsAnswers(targets, bricks);
+  }
+  attach(input: { targets: Id[]; bricks: Id[]; activation?: Activation; uses?: Uses | null }): StepResult {
+    return this.editing.attach(input);
+  }
+  removeAttachment(nodeId: Id, aid: Id): StepResult {
+    return this.editing.removeAttachment(nodeId, aid);
   }
 
   /** The app is closing normally. */
