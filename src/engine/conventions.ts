@@ -167,13 +167,22 @@ export function categoryRole(ws: Workspace, layerId: Id, node: NodeRecord): stri
   return null;
 }
 
-/** Average damage a round from a node's attacks, including attacks on items it carries. */
+/**
+ * Average damage a round from a node's attacks. Natural attacks (a bear's bite and claws) all
+ * happen in a round; carried weapons are used one at a time, so only the best one counts.
+ */
 export function damagePerRound(ws: Workspace, layerId: Id, nodeId: Id): number {
   const r = ws.resolve(layerId, nodeId);
   if (!r) return 0;
-  let total = 0;
-  for (const { attachment } of r.attachments) total += attachmentDamage(ws, layerId, attachment, new Set([nodeId]));
-  return total;
+  let natural = 0;
+  let bestItem = 0;
+  for (const { attachment } of r.attachments) {
+    const d = attachmentDamage(ws, layerId, attachment, new Set([nodeId]));
+    const target = attachment.brick ? ws.get(layerId, attachment.brick.link) : null;
+    if (target?.kind === "item") bestItem = Math.max(bestItem, d);
+    else natural += d;
+  }
+  return natural + bestItem;
 }
 
 function attachmentDamage(ws: Workspace, layerId: Id, a: Attachment, seen: Set<Id>): number {

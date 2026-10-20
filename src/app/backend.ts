@@ -17,6 +17,7 @@ import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
 import { ensureCategories } from "./sheets.ts";
+import { buildD20Starter } from "./starters/d20.ts";
 import { changeInSystem, upwardView } from "./upward.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
@@ -63,7 +64,7 @@ export interface StartingPoint {
 }
 
 export const STARTING_POINTS: StartingPoint[] = [
-  { id: "d20", label: "Generic d20", ready: false, note: "Coming with the d20 starter (milestone 6)" },
+  { id: "d20", label: "Generic d20", ready: true, note: null },
   { id: "scratch", label: "From scratch", ready: true, note: null },
 ];
 
@@ -291,7 +292,8 @@ export class Backend {
     // From scratch starts with the small set of categories from the design. It is the starting
     // point, not a change, so it isn't an undo step.
     const { ws } = this.lib.openSystem(id);
-    ws.transact("Started from scratch", () => ensureCategories(ws, id));
+    if (start.id === "d20") ws.transact("Started from the generic d20", () => buildD20Starter(ws, id));
+    else ws.transact("Started from scratch", () => ensureCategories(ws, id));
     ws.history = [];
     this.lib.saveSystem(ws, id);
     if (input.picture) this.lib.setPicture("system", id, input.picture);
