@@ -11,10 +11,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
   and the rulebook builder. Built early because they need no installs.
 - **Done:** Milestone 3, the desktop app shell (approved by Jeff, merged into `main`). The Windows
   installer builds at GitHub and all tests pass on Windows.
-- **Built, waiting for Jeff to test:** Milestone 4, the Rules tab and sheets (branch
-  `claude/electron-desktop-app-shell-2arspv`, the branch this build session is allowed to use).
-  All four steps done: the Rules tab; Beings and Items sheets; the library with drag and drop and
-  Shift/Ctrl selection; drilling into a brick and Edit parent with the checklist.
+- **Done:** Milestone 4, the Rules tab and sheets (approved by Jeff on October 20, 2026, when he
+  asked to go on to milestone 5; merged into `main`). He hasn't installed it yet, so anything he
+  finds when he does gets fixed in milestone 5.
 - **Next:** Milestone 5, the flag panel, recycle bin, undo and history on screen.
 
 ## Milestones to first playable
