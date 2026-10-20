@@ -13,7 +13,8 @@ Your worlds live on your computer and you own them.
 - `docs/design.md`: the full design
 - `docs/data-format.md`: how everything is stored
 - `docs/PROGRESS.md`: what has been built, what is next, and every technical decision
-- `src/engine/`: the engine (nodes, bricks, links, layers, flags, undo, recycle bin, saving)
+- `src/engine/`: the engine (nodes, bricks, links, layers, flags, undo, recycle bin)
+- `src/storage/`: the main folder, world files, constant saving, backups, snapshots, locking
 - `test/`: automatic tests that guard the promises
 
 ## Running the tests

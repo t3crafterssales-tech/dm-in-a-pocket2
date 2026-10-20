@@ -65,8 +65,25 @@ Kind-specific meaning lives in `fields`. For example a being has `beingKind` (`m
 ## Saved file
 
 ```json
-{ "format": 1, "app": "0.1.0", "layers": [...], "bin": [...], "history": [...] }
+{ "format": 1, "app": "0.1.0", "main": "<world or system id>", "layers": [...], "bin": [...], "history": [...], "redo": [...], "meta": {...} }
 ```
+
+- **main** is the layer the file is about.
+- **meta** holds home-screen details per layer: the card picture and when it last changed.
+
+## Files in the main folder
+
+| Where | What |
+| --- | --- |
+| `Systems/<id>.dmsys` | One system: a ZIP holding `system.json` (that system's layer, its history and bin) and `pictures/`. |
+| `Worlds/<id>.dmworld` | One world: a ZIP holding `world.json` (the world's layer **plus a copy of its whole system chain**, its history and bin) and `pictures/`. The copy lets a world travel on its own; when the system's own file is present, that file wins, so system changes made elsewhere flow in. |
+| `Worlds/<id>.dmworld.lock` | Present while the world is open: which computer, which session, and a heartbeat time. |
+| `Backups/<worldId>/<YYYY-MM-DD>.json` | Automatic backups: the world JSON only, pictures are not copied. |
+| `Snapshots/<worldId>/<id>.json` | Named snapshots: name, time, and the world with its system chain. Pictures are not copied. |
+| `.pictures/<hash>.<ext>` | Every picture, once, named by its content. |
+| `Imported/` | Worlds and systems from other people. |
+
+Files and folders use permanent IDs as names, so renaming a world never moves a file.
 
 - **format** is the data format version. An app opens any file with an equal or lower number
   (upgrading it after a backup) and opens a higher number read-only.
