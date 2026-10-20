@@ -1,7 +1,7 @@
 // Everything the app's window can ask for. Plain TypeScript with no Electron in it, so it is tested
 // like the engine. `main.ts` only connects these methods to the window.
 
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, extname } from "node:path";
 import { newId } from "../engine/index.ts";
 import { panelView, readPanel } from "./flagpanel.ts";
@@ -10,12 +10,14 @@ import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import { SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
 import type { ImportResult, RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
+import { bookDocx } from "./docx.ts";
 import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
 import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
 import type { LoreSection } from "./lore.ts";
+import type { TableModeView } from "./tablemode.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
@@ -123,6 +125,8 @@ export interface BackendOptions {
   pickSave?: (defaultName: string, kind: "world" | "system") => Promise<string | null>;
   /** Show an Open dialog for a world or system file to import; resolves to a path or null. */
   pickImport?: () => Promise<string | null>;
+  /** Show a Save dialog for the rulebook as a Word file; resolves to a path or null. */
+  pickWord?: (defaultName: string) => Promise<string | null>;
   emit: (event: BackendEvent) => void;
   now?: () => number;
   timers?: Timers;
@@ -229,6 +233,7 @@ export const BACKEND_METHODS = [
   "changeInSystem",
   "book",
   "bookChoices",
+  "bookWord",
   "setAuthor",
   "importFile",
   "share",
@@ -242,6 +247,7 @@ export const BACKEND_METHODS = [
   "loreList",
   "addLore",
   "rollTable",
+  "tableMode",
   "linkTargets",
   "quickQuestions",
   "quickStart",
@@ -782,6 +788,15 @@ export class Backend {
   book(opts: BookRequest): BookData {
     return this.editing.book(opts);
   }
+  /** Saves the rulebook as a Word file (.docx). Resolves to where it went, or null if cancelled. */
+  async bookWord(opts: BookRequest, dest?: string): Promise<string | null> {
+    const data = this.book(opts);
+    const name = `${data.book.title} - ${data.book.subtitle}.docx`.replace(/[\\/:*?"<>|]+/g, " ");
+    const path = dest ?? (this.opts.pickWord ? await this.opts.pickWord(name) : null);
+    if (!path) return null;
+    writeFileSync(path, bookDocx(data, (id) => this.picture(id)));
+    return path;
+  }
   /** The book types and chapters to choose from, with each type's usual chapters. */
   bookChoices() {
     return {
@@ -806,6 +821,10 @@ export class Backend {
   }
   rollTable(id: Id): { roll: number; text: string; result: { id: Id; name: string } | null } {
     return this.editing.rollTable(id);
+  }
+  /** Table mode: the world as a read-only reading view for running a game. */
+  tableMode(): TableModeView {
+    return this.editing.tableMode();
   }
   linkTargets(): { id: Id; name: string; group: string }[] {
     return this.editing.linkTargets();

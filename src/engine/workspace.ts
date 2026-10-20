@@ -131,9 +131,19 @@ export class Workspace {
 
   /** The node as seen from a layer, with layer changes applied but not variant inheritance. */
   get(layerId: Id, nodeId: Id): NodeRecord | null {
+    const rec = this.peek(layerId, nodeId);
+    return rec ? clone(rec) : null;
+  }
+
+  /**
+   * The same as get, without making a copy: the engine's own read-only look-ups use it, since
+   * copying every record to follow a link is what made big systems slow. Never change what it
+   * returns.
+   */
+  peek(layerId: Id, nodeId: Id): NodeRecord | null {
     let rec: NodeRecord | null = null;
     for (const l of this.chain(layerId)) {
-      if (l.nodes[nodeId]) rec = clone(l.nodes[nodeId]!);
+      if (l.nodes[nodeId]) rec = l.nodes[nodeId]!;
       if (!rec) continue;
       if (l.hidden.includes(nodeId)) return null;
       const ch = l.changes[nodeId];
@@ -143,7 +153,7 @@ export class Workspace {
   }
 
   exists(layerId: Id, nodeId: Id): boolean {
-    return this.get(layerId, nodeId) !== null;
+    return this.peek(layerId, nodeId) !== null;
   }
 
   /** Ids of every node visible from a layer. */
@@ -153,9 +163,10 @@ export class Workspace {
     return [...seen].filter((id) => this.exists(layerId, id));
   }
 
+  /** Every node visible from a layer. Read-only, like peek: change nodes with edit. */
   list(layerId: Id, kind?: NodeKind): NodeRecord[] {
     return this.ids(layerId)
-      .map((id) => this.get(layerId, id)!)
+      .map((id) => this.peek(layerId, id)!)
       .filter((n) => !kind || n.kind === kind);
   }
 
@@ -165,8 +176,9 @@ export class Workspace {
     return null;
   }
 
+  /** A node with what it inherits from its parents filled in. Read-only, like peek. */
   resolve(layerId: Id, nodeId: Id, seen: Set<Id> = new Set()): Resolved | null {
-    const rec = this.get(layerId, nodeId);
+    const rec = this.peek(layerId, nodeId);
     if (!rec) return null;
     const own = { fields: rec.fields, ownFields: Object.keys(rec.fields), attachments: rec.attachments.map((a) => ({ attachment: a, from: null as Id | null })) };
     if (!rec.parent || seen.has(nodeId)) return { record: rec, ...own, parentMissing: false };
@@ -194,7 +206,7 @@ export class Workspace {
   links(layerId: Id): (Slot & { to: Id })[] {
     const out: (Slot & { to: Id })[] = [];
     for (const id of this.ids(layerId)) {
-      for (const f of findLinks(this.get(layerId, id)!)) out.push({ layer: layerId, node: id, path: f.path, to: f.to });
+      for (const f of findLinks(this.peek(layerId, id)!)) out.push({ layer: layerId, node: id, path: f.path, to: f.to });
     }
     return out;
   }
@@ -206,7 +218,7 @@ export class Workspace {
 
   /** Variants of a node (direct children), seen from a layer. */
   childrenOf(layerId: Id, nodeId: Id): Id[] {
-    return this.ids(layerId).filter((id) => this.get(layerId, id)!.parent?.link === nodeId);
+    return this.ids(layerId).filter((id) => this.peek(layerId, id)!.parent?.link === nodeId);
   }
 
   family(layerId: Id, nodeId: Id, field?: string): FamilyMember {

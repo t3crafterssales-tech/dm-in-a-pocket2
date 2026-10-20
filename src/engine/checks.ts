@@ -3,7 +3,7 @@
 // - yellow "looks off" checks: balance, economy, filing (incl. duplicate names, empty sheets)
 // "Normal" is always measured against the system's own content.
 
-import { F, attachmentValues, averageDice, categoryRole, challenge, costInGold, damagePerRound, hasAttack } from "./conventions.ts";
+import { F, SRD_LICENSE, attachmentValues, averageDice, categoryRole, challenge, costInGold, damagePerRound, hasAttack } from "./conventions.ts";
 import { deepEqual, isLink } from "./links.ts";
 import type { Id, NodeRecord, Value } from "./types.ts";
 import type { Workspace } from "./workspace.ts";
@@ -102,6 +102,16 @@ function median(v: number[]): number {
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 }
 
+/**
+ * Content from a starter (the SRD 5.2) is the yardstick, not a suspect: the free checks measure
+ * homemade things against it, but don't flag it, unless this world changed it.
+ */
+function judged(ws: Workspace, layerId: Id, n: NodeRecord): boolean {
+  if (n.source !== "template" || ws.resolve(layerId, n.id)!.fields[F.license] !== SRD_LICENSE) return true;
+  const layer = ws.layer(layerId);
+  return !!layer.base && !!layer.changes[n.id];
+}
+
 const isMonster = (ws: Workspace, layerId: Id, n: NodeRecord) => n.kind === "being" && ws.resolve(layerId, n.id)!.fields[F.beingKind] === "monster";
 const round = (n: number) => Math.round(n * 10) / 10;
 
@@ -115,6 +125,7 @@ function balance(ws: Workspace, layerId: Id, all: NodeRecord[], factor: number):
     .filter((m) => m.cr !== null);
   const out: YellowFlag[] = [];
   for (const m of monsters) {
+    if (!judged(ws, layerId, m.n)) continue;
     const peers = monsters.filter((o) => o.n.id !== m.n.id && o.cr === m.cr);
     if (peers.length < MIN_PEERS) continue;
     for (const what of ["dmg", "hp"] as const) {
@@ -140,6 +151,7 @@ function economy(ws: Workspace, layerId: Id, all: NodeRecord[], factor: number):
     .filter((i) => i.cost !== null && i.cost > 0 && i.dmg > 0 && i.cat);
   const out: YellowFlag[] = [];
   for (const a of items) {
+    if (!judged(ws, layerId, a.n)) continue;
     const cheaperStronger = items.find((b) => b.n.id !== a.n.id && b.cat === a.cat && b.dmg > a.dmg && a.cost! > b.cost! * factor);
     if (cheaperStronger) {
       out.push({ key: `economy:price:${a.n.id}`, color: "yellow", category: "economy", kind: "price", nodes: [a.n.id, cheaperStronger.n.id], title: `${a.n.name} costs more than ${cheaperStronger.n.name}`, detail: `${cheaperStronger.n.name} hits harder but costs less.` });
@@ -161,7 +173,7 @@ function filing(ws: Workspace, layerId: Id, all: NodeRecord[]): YellowFlag[] {
     if (n.kind === "being") {
       const r = ws.resolve(layerId, n.id)!;
       const bk = r.fields[F.beingKind];
-      if ((bk === "monster" || bk === "npc") && (r.fields[F.hp] === undefined || !hasAttack(ws, layerId, n.id))) {
+      if ((bk === "monster" || bk === "npc") && judged(ws, layerId, n) && (r.fields[F.hp] === undefined || !hasAttack(ws, layerId, n.id))) {
         const missing = [r.fields[F.hp] === undefined ? "hit points" : null, !hasAttack(ws, layerId, n.id) ? "attacks" : null].filter(Boolean).join(" or ");
         out.push({ key: `filing:empty-sheet:${n.id}`, color: "yellow", category: "filing", kind: "empty-sheet", nodes: [n.id], title: `${n.name} has no ${missing}`, detail: "Probably not finished yet." });
       }

@@ -9,7 +9,7 @@ import type { Attachment, Id, NodeRecord, Value } from "./types.ts";
 import type { Workspace } from "./workspace.ts";
 
 export type BookType = "players" | "monsters" | "gm" | "world" | "everything";
-export type ChapterId = "core" | "abilities" | "resources" | "conditions" | "skills" | "rules" | "races" | "classes" | "monsters" | "npcs" | "items" | "lore";
+export type ChapterId = "core" | "abilities" | "resources" | "conditions" | "skills" | "rules" | "races" | "classes" | "spells" | "monsters" | "npcs" | "items" | "lore";
 
 export const CHAPTER_TITLES: Record<ChapterId, string> = {
   core: "Core rules",
@@ -20,6 +20,7 @@ export const CHAPTER_TITLES: Record<ChapterId, string> = {
   rules: "Rules of play",
   races: "Races",
   classes: "Classes",
+  spells: "Spells",
   monsters: "Monsters",
   npcs: "Characters of the world",
   items: "Equipment",
@@ -28,11 +29,11 @@ export const CHAPTER_TITLES: Record<ChapterId, string> = {
 
 /** Each book type comes with a sensible set of chapters ticked. */
 export const BOOK_CHAPTERS: Record<BookType, ChapterId[]> = {
-  players: ["core", "abilities", "resources", "conditions", "skills", "rules", "races", "classes", "items"],
+  players: ["core", "abilities", "resources", "conditions", "skills", "rules", "races", "classes", "spells", "items"],
   monsters: ["monsters", "npcs"],
   gm: ["core", "rules", "conditions", "monsters", "npcs", "items", "lore"],
   world: ["lore", "races", "npcs"],
-  everything: ["core", "abilities", "resources", "conditions", "skills", "rules", "races", "classes", "monsters", "npcs", "items", "lore"],
+  everything: ["core", "abilities", "resources", "conditions", "skills", "rules", "races", "classes", "spells", "monsters", "npcs", "items", "lore"],
 };
 
 export const BOOK_TITLES: Record<BookType, string> = {
@@ -151,6 +152,9 @@ export function chapterOf(ws: Workspace, layerId: Id, n: NodeRecord): ChapterId 
       return f[F.bookPage] === true ? null : "lore";
     case "table":
       return "lore";
+    case "brick":
+      // Spells print in their own chapter; other library bricks print where they are used.
+      return f[F.type] === "spell" ? "spells" : null;
     case "being":
       return ({ race: "races", class: "classes", monster: "monsters", npc: "npcs", character: null } as Record<string, ChapterId | null>)[String(f[F.beingKind])] ?? null;
     default:
@@ -212,13 +216,14 @@ function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): E
   const showOnlyOwn = asVariant && !!parent && !parent.template;
   const fields = showOnlyOwn ? n.fields : r.fields;
   const attachments = showOnlyOwn ? r.attachments.filter((x) => x.from === null) : r.attachments;
-  const stats = STAT_LABELS.filter(([k]) => fields[k] !== undefined && fields[k] !== null && fields[k] !== "").map(([k, label]) => `${label} ${String(fields[k])}`);
+  const stats = n.kind === "brick" ? spellStats(fields) : STAT_LABELS.filter(([k]) => fields[k] !== undefined && fields[k] !== null && fields[k] !== "").map(([k, label]) => `${label} ${String(fields[k])}`);
   const paragraphs: string[] = [];
   if (showOnlyOwn) {
     const changed = stats.length ? ` (${stats.join(", ")})` : "";
     paragraphs.push(`As ${parent!.name}${changed}${attachments.length ? ", plus:" : "."}`);
   }
-  if (n.text.trim()) paragraphs.push(n.text.trim());
+  // One text box per node; each line in it is a paragraph.
+  paragraphs.push(...n.text.split(/\n+/).map((p) => p.trim()).filter(Boolean));
   paragraphs.push(...describeFields(ws, layerId, n, fields));
   for (const { attachment } of attachments) {
     const s = sentence(ws, layerId, attachment);
@@ -245,6 +250,15 @@ function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): E
   return { node: n.id, title: n.name, stats: !showOnlyOwn && stats.length ? stats.join(" · ") : null, paragraphs, mentions: [...mentions], variants: [], asParent: showOnlyOwn ? parent!.name : null, picture: n.picture };
 }
 
+/** A spell's numbers line: "Level 3 Evocation · Action · 150 feet · V, S, M · Instantaneous". */
+function spellStats(f: Record<string, Value>): string[] {
+  const level = typeof f[F.spellLevel] === "number" ? (f[F.spellLevel] as number) : null;
+  const school = typeof f[F.school] === "string" ? (f[F.school] as string) : "";
+  const head = level === null ? school : level === 0 ? `${school} cantrip`.trim() : `Level ${level} ${school}`.trim();
+  const ritual = f[F.ritual] === true ? " (ritual)" : "";
+  return [head + ritual, f[F.castingTime], f[F.range], f[F.components], f[F.duration]].filter((x): x is string => typeof x === "string" && x !== "").map((x) => x[0]!.toUpperCase() + x.slice(1));
+}
+
 /** "Strength (STR): scores from 3 to 18" printed under the heading Strength reads "Scores from 3 to 18". */
 function withoutName(text: string, n: NodeRecord, f: Record<string, Value>): string {
   const label = typeof f[F.label] === "string" && f[F.label] ? ` (${f[F.label]})` : "";
@@ -256,6 +270,9 @@ function withoutName(text: string, n: NodeRecord, f: Record<string, Value>): str
 function describeFields(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<string, Value>): string[] {
   const name = (v: Value | undefined) => (isLink(v) ? ws.get(layerId, v.link)?.name ?? "something removed" : "");
   switch (n.kind) {
+    case "brick":
+      // Only spells print as entries of their own.
+      return typeof f[F.spellClasses] === "string" && f[F.spellClasses] ? [`Classes: ${f[F.spellClasses]}.`] : [];
     case "ability":
     case "resource":
       return [withoutName(ruleText(ws, layerId, n.id), n, f)];

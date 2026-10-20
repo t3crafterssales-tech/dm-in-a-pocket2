@@ -72,6 +72,10 @@ void app.whenReady().then(() => {
       const r = await dialog.showOpenDialog(win!, { title: "Import a world or system", properties: ["openFile"], filters: [{ name: "DM in a Pocket files", extensions: ["dmworld", "dmsys"] }] });
       return r.canceled ? null : (r.filePaths[0] ?? null);
     },
+    pickWord: async (defaultName) => {
+      const r = await dialog.showSaveDialog(win!, { title: "Save the rulebook as a Word file", defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: "Word document", extensions: ["docx"] }] });
+      return r.canceled ? null : (r.filePath ?? null);
+    },
     pickFolder: async () => {
       const r = await dialog.showOpenDialog(win!, { title: "Choose the main folder", properties: ["openDirectory", "createDirectory"] });
       return r.canceled ? null : (r.filePaths[0] ?? null);
@@ -130,7 +134,7 @@ void app.whenReady().then(() => {
       return { ok: false, message: e instanceof Error ? e.message : String(e) };
     }
   });
-  ipcMain.handle("dm:openPath", (_e, path: string) => (typeof path === "string" && path.toLowerCase().endsWith(".pdf") ? shell.openPath(path) : ""));
+  ipcMain.handle("dm:openPath", (_e, path: string) => (typeof path === "string" && /\.(pdf|docx)$/i.test(path) ? shell.openPath(path) : ""));
 
   createWindow();
 });

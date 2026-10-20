@@ -68,8 +68,20 @@ export const F = {
   target: "target",
   /** condition: how many stages it has (fatigue 1 to 6) */
   stages: "stages",
-  /** condition: how long it lasts or what ends it, in the user's words */
+  /** condition, spell: how long it lasts or what ends it, in the user's words */
   duration: "duration",
+  /** spell brick: its level, 0 for a cantrip */
+  spellLevel: "spellLevel",
+  /** spell brick: its school of magic, such as "Evocation" */
+  school: "school",
+  /** spell brick: casting time, range and components, in words ("Action", "150 feet", "V, S, M (a pinch of sulfur)") */
+  castingTime: "castingTime",
+  range: "range",
+  components: "components",
+  /** spell brick: true if it can be cast as a ritual */
+  ritual: "ritual",
+  /** spell brick: the classes that can learn it, in words ("Sorcerer, Wizard") */
+  spellClasses: "spellClasses",
   /** condition: a saving throw to resist or end it, { ability: link, dc } */
   save: "save",
 } as const;

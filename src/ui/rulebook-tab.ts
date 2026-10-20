@@ -61,6 +61,13 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
     if (!r.ok) return notice(r.message, "red");
     if (r.value) notice(`Saved ${String(r.value).split(/[\\/]/).pop()}.`, "green", { label: "Open it", run: () => void window.dm.openPdf(String(r.value)) }, 9000);
   });
+  const word = h("button", { class: "button plain" }, "Save as Word…");
+  word.addEventListener("click", async () => {
+    word.disabled = true;
+    const path = await attempt(() => api.bookWord(req));
+    word.disabled = false;
+    if (path) notice(`Saved ${path.split(/[\\/]/).pop()}. When Word asks to update the fields, choose Yes to fill in the page numbers.`, "green", { label: "Open it", run: () => void window.dm.openPdf(path) }, 12000);
+  });
   const print = h("button", { class: "button plain" }, "Print…");
   print.addEventListener("click", async () => {
     const r = await window.dm.bookPrint(req);
@@ -87,7 +94,7 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
       author,
       h("label", { class: "field-label spaced" }, "Page size"),
       size,
-      h("div", { class: "book-actions" }, save, print),
+      h("div", { class: "book-actions" }, save, word, print),
     ),
   );
 

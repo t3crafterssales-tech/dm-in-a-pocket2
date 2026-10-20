@@ -41,6 +41,7 @@ const CHAPTERS = [
   ["rules", "Rules of play"],
   ["races", "Races"],
   ["classes", "Classes"],
+  ["spells", "Spells"],
   ["monsters", "Monsters"],
   ["npcs", "Characters of the world"],
   ["items", "Equipment"],

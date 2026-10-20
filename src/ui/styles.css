@@ -519,3 +519,34 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .quick-option:hover, .quick-option:focus-visible { border-color: var(--accent); background: #fffaf2; }
 .quick-option.chosen { border-color: var(--accent); background: var(--accent-soft); }
 .quick-label { font-weight: 600; }
+
+/* ---------- Table mode ---------- */
+
+.topbar.table-mode { background: #efe6d4; }
+.table-workspace { grid-template-columns: 280px 1fr; }
+.table-search { flex-direction: column; align-items: stretch; gap: 6px; }
+.table-search .text-input { width: 100%; }
+.table-group { padding: 8px 14px 2px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.table-items { padding-left: 8px; }
+.table-items .item { cursor: pointer; }
+.star-button { display: inline-flex; padding: 2px; border: none; background: none; color: var(--line); cursor: pointer; border-radius: 4px; }
+.star-button:hover { color: #c8901a; }
+.star-button .icon { width: 15px; height: 15px; }
+.star-button.on { color: #c8901a; }
+.star-button.on .icon { fill: #e9b949; }
+.reading-row { display: grid; gap: 12px; min-height: 0; }
+.reading-row.panels-1 { grid-template-columns: 1fr; }
+.reading-row.panels-2 { grid-template-columns: 1fr 1fr; }
+.reading-row.panels-3 { grid-template-columns: 1fr 1fr 1fr; }
+.reading.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.reading .panel-head { align-items: center; }
+.reading .panel-head .icon-button { margin-left: auto; }
+.reading-title { margin: 0; font: 600 19px var(--serif); }
+.reading-body { padding: 12px 18px 18px; max-width: 760px; font-family: var(--serif); font-size: 15px; line-height: 1.5; }
+.reading-body p { margin: 0 0 10px; }
+.reading-stats { padding: 6px 10px; margin-bottom: 12px; border-top: 2px solid var(--accent); border-bottom: 2px solid var(--accent); background: var(--accent-soft); font: 600 13.5px var(--sans); }
+.reading-picture { float: right; max-width: 40%; max-height: 220px; margin: 0 0 10px 14px; border-radius: 8px; }
+.reading-see { font-style: italic; color: var(--muted); clear: both; }
+.roll-line { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-family: var(--sans); }
+.roll-table tr.hit td { background: var(--accent-soft); font-weight: 600; }
+.reading-body a, .list-panel .pad a { color: var(--accent); }
