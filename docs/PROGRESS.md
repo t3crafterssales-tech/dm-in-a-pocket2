@@ -11,11 +11,11 @@ Newest first. Every session reads this after `CLAUDE.md`.
   and the rulebook builder. Built early because they need no installs.
 - **Done:** Milestone 3, the desktop app shell (approved by Jeff, merged into `main`). The Windows
   installer builds at GitHub and all tests pass on Windows.
-- **In progress:** Milestone 4, the Rules tab and sheets (branch
+- **Built, waiting for Jeff to test:** Milestone 4, the Rules tab and sheets (branch
   `claude/electron-desktop-app-shell-2arspv`, the branch this build session is allowed to use).
-  Steps 1 to 3 of 4 done: the Rules tab, the Beings and Items sheets, and the library with drag
-  and drop and Shift/Ctrl selection. Next: drilling into a brick on a sheet, and Edit parent with
-  the checklist of children.
+  All four steps done: the Rules tab; Beings and Items sheets; the library with drag and drop and
+  Shift/Ctrl selection; drilling into a brick and Edit parent with the checklist.
+- **Next:** Milestone 5, the flag panel, recycle bin, undo and history on screen.
 
 ## Milestones to first playable
 
@@ -32,6 +32,38 @@ flags work and print a rulebook, with no AI (see `docs/design.md`, First playabl
 | 6 | Rulebook export (PDF) and the small d20 starter | Print a rulebook from your own world |
 
 ## Log
+
+### 2026-10-20 (milestone 4, step 4: drilling in and Edit parent)
+
+- `src/app/drill.ts`: one sheet's copy of a brick (its own name, values with pencil marks, when it
+  works with several triggers joined by or/and, how often including formulas such as INT, a
+  saving throw), bricks nested inside bricks, the family checklist with notes ("set its own
+  Cost", "follows Axe"), and changing a parent with ticked and unticked children as one step.
+- Screens: `src/ui/drill-dialog.ts` (click a brick card on a sheet) and `src/ui/edit-parent.ts`
+  (the Edit parent button beside "Variant of", or Alt-click the sheet). Edit parent shows the
+  parent's values beside this sheet's with "Use my version", Up one level for grandparents, then
+  the checklist of the whole family, indented, with this sheet ticked. Unticking protects the
+  branch below unless a node in it is ticked again on its own.
+- Dropping a library brick onto a brick card nests it inside (Fire inside Knocked prone).
+- 128 automatic tests pass (6 new, using the design's Big Shield and Sword, Axe and Double Axe
+  examples). Driven in the real window here, end to end.
+
+### Milestone 4: what Jeff can test
+
+Build a small system and a few monsters by hand: add abilities, hit points as a formula, skills,
+conditions and the core check in the Rules tab; make monsters with variants in Beings; make
+bricks in the Library and drag them onto sheets (Ctrl/Shift to pick several, or several sheets
+at once); click a brick on a sheet to change that copy; use Edit parent from a variant. Delete
+Strength and watch the red flags, then Ctrl+Z.
+
+Not in this milestone, still to come (some need Jeff's decisions):
+- A system editing its own sheets (which numbers and sections each kind shows). Every system
+  uses the basic sheets for now.
+- Edit parent from a world up to its system (it works between parents and variants inside one
+  world or system).
+- Templates (the Templates group, and new items suggesting their category's template), Change
+  parent for many nodes at once, starting a new monster as a copy of another, choice bricks and
+  upgrade tiers on screen, smart text, sorting lists by challenge, and movable panels.
 
 ### 2026-10-20 (milestone 4, step 3: the library, drag and drop, selection)
 
@@ -320,3 +352,9 @@ One plain line each. Jeff can overrule any of these at a milestone.
   new kind of stored value, which would be a data format change for Jeff to approve.)
 - 2026-10-20: The library selection is kept while switching between the list and the library,
   so you can pick sheets in the list, then bricks in the library, then drop.
+- 2026-10-20: Changing a brick on a sheet saves straight away, like everything else; setting a
+  value back to the original's removes the pencil mark rather than storing a copy.
+- 2026-10-20: Edit parent collects its changes and saves them only after the checklist, as one
+  undo step. It covers a sheet's header numbers and ability scores for now.
+- 2026-10-20: A variant's checklist row is greyed out when it set every changed value itself,
+  since ticking it would make no difference.

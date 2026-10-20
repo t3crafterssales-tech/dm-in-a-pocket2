@@ -12,6 +12,8 @@ import { beingsList, categoryTree, createBeing, createCategory, createItem, deta
 import type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
 import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, librarySections } from "./library.ts";
 import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
+import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
+import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 
 export interface Option {
   id: Id;
@@ -355,6 +357,36 @@ export class Editing {
     const name = a.name || (a.brick ? (this.ws.get(this.layer, a.brick.link)?.name ?? "it") : "the choice");
     this.run(() => this.ws.transact(`Removed ${name} from ${node.name}`, () => this.ws.removeAttachment(this.layer, nodeId, aid)));
     return { label: `Removed ${name} from ${node.name}` };
+  }
+
+  // ---------- Drilling in, and Edit parent ----------
+
+  attachmentDetail(nodeId: Id, aid: Id): AttachmentDetail {
+    try {
+      return attachmentDetail(this.ws, this.layer, nodeId, aid);
+    } catch (e) {
+      throw new LibraryError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  editAttachment(nodeId: Id, aid: Id, patch: AttachmentPatch) {
+    this.run(() => editAttachment(this.ws, this.layer, nodeId, aid, patch));
+  }
+
+  attachInside(nodeId: Id, aid: Id, bricks: Id[]): StepResult {
+    this.run(() => attachInside(this.ws, this.layer, nodeId, aid, bricks));
+    return { label: this.ws.history.at(-1)?.label ?? "Added" };
+  }
+
+  familyChecklist(parentId: Id, fields: string[], labels: Record<string, string> = {}): FamilyRow[] {
+    this.must(parentId);
+    return familyChecklist(this.ws, this.layer, parentId, fields, labels);
+  }
+
+  /** Edit parent's Save: the parent changes, and ticked children get it (null ticks everyone). */
+  changeParent(parentId: Id, changes: Record<string, Value | null>, ticked: Id[] | null): StepResult {
+    this.run(() => changeParent(this.ws, this.layer, parentId, changes, ticked));
+    return { label: this.ws.history.at(-1)?.label ?? "Changed" };
   }
 
   /** Sections a rule can be moved to (abilities, resources, skills and conditions stay in their own). */

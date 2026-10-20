@@ -429,3 +429,28 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .brick-sentence { margin-top: 3px; font-size: 13px; color: var(--muted); user-select: text; }
 .list-panel { overflow-x: hidden; }
 .list-panel > .panel-head { flex-wrap: wrap; row-gap: 8px; }
+
+/* ---------- Drilling in and Edit parent ---------- */
+
+.brick-card.clickable { cursor: pointer; }
+.brick-card.clickable:hover { border-color: #c5b79f; }
+.brick-card.drop-over { outline: 2px dashed var(--accent); background: #fffaf2; }
+.brick-card.nested { margin: 0; width: 100%; }
+.broken-note { background: #fbeeec; color: var(--red); }
+.compare { width: 100%; border-collapse: collapse; margin: 6px 0 12px; }
+.compare th, .compare td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.compare thead th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.compare tbody th { font-weight: 600; width: 26%; }
+.compare .text-input { padding: 5px 8px; }
+.compare td.differs { color: var(--accent); font-weight: 600; }
+.compare tr.staged th::after { content: " •"; color: var(--accent); }
+.checklist { list-style: none; padding: 0; margin: 10px 0; border: 1px solid var(--line); border-radius: var(--radius); max-height: 50vh; overflow: auto; }
+.checklist li { padding: 7px 12px; }
+.checklist li + li { border-top: 1px solid var(--line); }
+.checklist li.current { background: var(--accent-soft); }
+.checklist .check { gap: 8px; flex-wrap: wrap; }
+.checklist li.depth-1 { padding-left: 34px; }
+.checklist li.depth-2 { padding-left: 56px; }
+.checklist li.depth-3 { padding-left: 78px; }
+.checklist li.depth-4 { padding-left: 100px; }
+.checklist li.depth-5, .checklist li.depth-6 { padding-left: 122px; }

@@ -12,6 +12,7 @@ import type { Choices, FlagView, NodeView, StepResult } from "./editing.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry } from "./sheets.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
+import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { Session } from "./session.ts";
 import { SettingsFile } from "./settings.ts";
 import type { Place } from "./settings.ts";
@@ -23,6 +24,7 @@ export type { Choices, FlagView, NodeView, Option, StepResult } from "./editing.
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef } from "./sheets.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
+export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 
 export interface SystemCard {
   id: Id;
@@ -164,6 +166,11 @@ export const BACKEND_METHODS = [
   "dropNeedsAnswers",
   "attach",
   "removeAttachment",
+  "attachmentDetail",
+  "editAttachment",
+  "attachInside",
+  "familyChecklist",
+  "changeParent",
 ] as const;
 export type BackendMethod = (typeof BACKEND_METHODS)[number];
 
@@ -500,6 +507,23 @@ export class Backend {
   }
   removeAttachment(nodeId: Id, aid: Id): StepResult {
     return this.editing.removeAttachment(nodeId, aid);
+  }
+
+  attachmentDetail(nodeId: Id, aid: Id): AttachmentDetail {
+    return this.editing.attachmentDetail(nodeId, aid);
+  }
+  editAttachment(nodeId: Id, aid: Id, patch: AttachmentPatch): true {
+    this.editing.editAttachment(nodeId, aid, patch);
+    return true;
+  }
+  attachInside(nodeId: Id, aid: Id, bricks: Id[]): StepResult {
+    return this.editing.attachInside(nodeId, aid, bricks);
+  }
+  familyChecklist(parentId: Id, fields: string[], labels: Record<string, string> = {}): FamilyRow[] {
+    return this.editing.familyChecklist(parentId, fields, labels);
+  }
+  changeParent(parentId: Id, changes: Record<string, Value | null>, ticked: Id[] | null): StepResult {
+    return this.editing.changeParent(parentId, changes, ticked);
   }
 
   /** The app is closing normally. */

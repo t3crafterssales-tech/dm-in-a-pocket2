@@ -8,6 +8,8 @@ import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
+import { openDrill } from "./drill-dialog.ts";
+import { openEditParent } from "./edit-parent.ts";
 import { DRAG_TYPE, brickEditor, drop, libraryPanel } from "./library-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 
@@ -325,7 +327,14 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
         h("span", { class: "chip" }, kindLabel),
         h("label", { class: "chip-select" }, "Filed under ", categorySelect),
         view.parent
-          ? h("span", { class: "chip variant-chip" }, "Variant of ", h("button", { class: "link", onClick: () => ctx.select(view.parent!.id) }, view.parent.name), ro ? null : h("button", { class: "link small detach", title: "Make it a fully independent copy", onClick: () => void ed.save(() => api.detach(view.id)) }, "Detach"))
+          ? h(
+              "span",
+              { class: "chip variant-chip" },
+              "Variant of ",
+              h("button", { class: "link", onClick: () => ctx.select(view.parent!.id) }, view.parent.name),
+              ro ? null : h("button", { class: "link small", title: `Change ${view.parent.name} without leaving this sheet (or Alt-click the sheet)`, onClick: () => void openEditParent(view, ctx) }, "Edit parent"),
+              ro ? null : h("button", { class: "link small detach", title: "Make it a fully independent copy", onClick: () => void ed.save(() => api.detach(view.id)) }, "Detach"),
+            )
           : view.parentMissing
             ? h("span", { class: "chip broken-chip" }, "Its parent was removed")
             : null,
@@ -373,6 +382,10 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
     {
       class: "panel editor sheet-drop",
       "data-scroll": "editor",
+      title: view.parent && !ro ? `Alt-click to edit ${view.parent.name}` : "",
+      onClick: (ev: MouseEvent) => {
+        if (ev.altKey && view.parent && !ro) (ev.preventDefault(), void openEditParent(view, ctx));
+      },
       onDragover: (ev: DragEvent) => {
         if (!ev.dataTransfer?.types.includes(DRAG_TYPE) || ro) return;
         ev.preventDefault();
@@ -414,7 +427,37 @@ function brickCard(view: NodeView, a: AttachmentView, ctx: PlaceCtx) {
   const own = !a.from;
   return h(
     "div",
-    { class: `brick-card${a.missing ? " broken" : ""}${own ? "" : " inherited"}`, "data-key": `card-${a.aid}` },
+    {
+      class: `brick-card clickable${a.missing ? " broken" : ""}${own ? "" : " inherited"}`,
+      "data-key": `card-${a.aid}`,
+      tabindex: 0,
+      title: own ? "Click to change it on this sheet only. Drop a brick here to put it inside." : `Comes from ${a.from!.name}`,
+      onClick: (ev: MouseEvent) => {
+        if ((ev.target as HTMLElement).closest("button") || ev.altKey) return;
+        void openDrill(view, a.aid, ctx);
+      },
+      onKeydown: (ev: KeyboardEvent) => ev.key === "Enter" && ev.target === ev.currentTarget && void openDrill(view, a.aid, ctx),
+      // Dropping a brick onto a card nests it inside: it happens only when this one does.
+      onDragover: (ev: DragEvent) => {
+        if (!own || view.readOnly || !ev.dataTransfer?.types.includes(DRAG_TYPE)) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        (ev.currentTarget as HTMLElement).classList.add("drop-over");
+      },
+      onDragleave: (ev: DragEvent) => (ev.currentTarget as HTMLElement).classList.remove("drop-over"),
+      onDrop: (ev: DragEvent) => {
+        if (!own || view.readOnly) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        document.querySelector(".sheet-drop")?.classList.remove("drop-over");
+        const bricks = JSON.parse(ev.dataTransfer!.getData(DRAG_TYPE) || "[]") as string[];
+        void (async () => {
+          const r = await attempt(() => api.attachInside(view.id, a.aid, bricks));
+          if (r) notice(`${r.label}.`, "green", { label: "Undo", run: async () => (await attempt(() => api.undo()), await ctx.refresh()) }, 6000);
+          await ctx.refresh();
+        })();
+      },
+    },
     h(
       "div",
       { class: "brick-card-head" },
