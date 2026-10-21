@@ -639,6 +639,15 @@ new, so the same five characters start a different module. All of that must just
 - **At character creation, a Method drop-down defaults to the system's rule.** The DM can switch
   it for this character in one click ("this time, point buy"). A world or module can also change
   its own default, like any other rule.
+- **Appearance folds away (Jeff, October 21, 2026).** One line, "Appearance", that opens to more:
+  height, weight, age, hair, eyes, skin, distinguishing marks, voice and mannerisms. A fast
+  character skips it; a meticulous player fills in everything.
+- **Empty means it doesn't print (rule, Jeff, October 21, 2026).** The character sheet is laid out
+  as if everything is filled in, and anything left empty disappears: no "Hair:" with a blank after
+  it, the line just isn't there, so the sheet is sparser but never shows empty labels. The only
+  exception is **player name and character name**, which always print (with a blank line to write
+  on). Things the game needs, such as ability scores, are asked for; if one is left empty it is
+  flagged, never blocked (Promise 4).
 - **Level-ups reuse the same screens**, showing what the class gains at the new level.
 - **Bringing in an existing character (Jeff, October 21, 2026).** The Method drop-down always has
   **Enter my own**: click a box and type the score, no rolling. With it, the builder can start at
