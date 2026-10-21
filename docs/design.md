@@ -1104,13 +1104,15 @@ Kept deliberately simple: groups you drag around, not a full page designer.
   groups slide out of the way.
 - **Empty groups and lines disappear** (the empty-fields rule); character and player name always
   show.
-- **Each group and line has three print choices (Jeff, October 21, 2026):** **Print it** (the
-  value in ink), **Blank to write in** (the label and an empty box, to fill in by pencil: spells,
-  hit points, armour class, anything that changes), or **Don't print**. It only changes the paper;
-  everything stays with the character. "Blank to write in" is the one deliberate exception to the
-  empty-fields rule. Likely pencil things, set blank by default in the d20 sheet: current hit
-  points, temporary hit points, spell slots used, gold and coins, experience, ammunition and
-  torches, conditions, Inspiration, and the inventory list.
+- **What prints: a collapsible panel on the right (Jeff, October 21, 2026).** By default
+  everything prints. The panel lists every group with its lines under it, each with a tick, plus
+  **Check all** and **Uncheck all**. Unticked lines become **blank to write in** (the label and an
+  empty box for pencil: spells, hit points, armour class...), with a small switch to **hide it
+  completely** instead. It only changes the paper; everything stays with the character. A
+  deliberate untick beats every other rule, so even the name can be left off. Things players often
+  want in pencil are easy to find at the top of the panel: current and temporary hit points, armour
+  class, spell slots used, spells, gold and coins, experience, ammunition and torches,
+  conditions, Inspiration and the inventory list.
 - **Save the layout, then print or export it** (PDF), over as many pages as it needs.
 - **Suggested by Claude:** the system's designer saves the default layout for everyone; a player can
   adjust the layout of their own sheet, which stays theirs (the usual pencil mark and "Use the
