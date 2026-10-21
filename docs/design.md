@@ -397,9 +397,8 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   DM shows the rule to players: the usual "Show to players" list, everyone ticked by default,
   untick anyone to leave out. It pops up on their screens as a small card they can drag around,
   minimize, and close with an X when they're done; it stays until they close it. Works for any
-  block: a rule, a condition, a spell, a price list. (How the DM triggers it is to be settled:
-  Jeff suggested Shift-click, which elsewhere selects a run of things in a list, so a "Show"
-  button that appears on hover may be clearer.)
+  block: a rule, a condition, a spell, a price list. Triggered by a small **Show** button (an eye)
+  that appears on hover (decided by Jeff, October 21, 2026; Shift-click stays "select a run").
 - **A Codex section or category can be bookmarked as a little table**, such as every potion with
   its price, so a price list is always one glance away.
 
