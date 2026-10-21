@@ -1069,6 +1069,27 @@ poisoned, paralysed, frozen or mind-controlled.
 - Whether players can put conditions on their own characters (marking themselves Hidden) is the
   DM's choice, a column in the permissions grid.
 
+### The first-time experience (Jeff, October 21, 2026)
+
+- **A welcome screen:** "Welcome to DM in a Pocket: build any tabletop game, then run it." No
+  account. Three big buttons: **Show me around**, **I know what I'm doing** (straight to the home
+  screen, New system glowing), **Open the sample**.
+- **A sample to explore (Jeff: a small fantasy valley):** a sample system (the d20 starter), a
+  sample world (a valley with a town, a mill and a cave) and a short sample module: three or four
+  encounters, an NPC or two, a map with pins, a roll table and a journal handout. Written for the
+  app. Deleting it is one click; Help can bring it back.
+- **Helpers (Jeff: all four):**
+  - a **guided tour** of about six highlighted stops with speech bubbles, skippable, replayable from
+    Help;
+  - a **first steps checklist** in a corner that ticks itself off (make your first monster, copy a
+    starter weapon and change it, roll on a table, print a page) and disappears when done or
+    closed;
+  - **tips on first use**: one small tip the first time each tool opens, with a Don't show tips
+    switch;
+  - **short how-to videos**, linked from Help and the tips (to be made later).
+- **The first system, the user's choice, explained (Jeff):** two big cards, "Start from a ready game
+  (d20)" and "Build my own with Quick start", each with one line on who it suits.
+
 ### Open questions for version 2
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
