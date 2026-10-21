@@ -270,6 +270,14 @@ export async function ownCopy(view: NodeView, ctx: PlaceCtx) {
   await ctx.open(id);
 }
 
+/** Ctrl+Shift+D: a separate copy of anything in the Codex, by its id. */
+export async function separateCopy(id: string, ctx: PlaceCtx) {
+  const made = await attempt(() => api.makeOwnCopy(id));
+  if (!made) return;
+  notice("Made your own copy. It goes its own way; the original stays as it is.", "green", { label: "Undo", run: async () => (await attempt(() => api.undo()), ctx.select(id)) }, 6000);
+  await ctx.open(made, { focusName: true });
+}
+
 /** Ctrl+D: a child copy that keeps following the original. */
 export async function variantOf(id: string, ctx: PlaceCtx) {
   const made = await attempt(() => api.makeVariant(id));

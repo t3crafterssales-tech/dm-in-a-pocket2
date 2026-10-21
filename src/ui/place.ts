@@ -11,7 +11,7 @@ import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { flagStrip, showNodeBin } from "./flag-panel.ts";
 import { startOver } from "./start-screen.ts";
-import { variantOf } from "./item-sheet.ts";
+import { separateCopy, variantOf } from "./item-sheet.ts";
 import { showHistory } from "./history-dialog.ts";
 import { lorePanels } from "./lore-tab.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
@@ -352,11 +352,14 @@ document.addEventListener("keydown", (e) => {
   }
   if (typingIn(e)) return;
   if (k === "d" && !current.readOnly) {
-    // Ctrl+D: a child copy (variant) of what the mouse is over, or else of the open sheet.
+    // Like Blender: Ctrl+D is a connected copy (a variant that keeps following the original);
+    // Ctrl+Shift+D is a separate copy (your own copy that goes its own way).
     e.preventDefault();
     const id = hovered ?? (tab === "Beings" || tab === "Items" ? (selected[tab] ?? null) : null);
-    if (id) void variantOf(id, { view: current, selected: selected[tab] ?? null, select: (x) => ((selected[tab] = x), void renderPlace()), refresh: () => renderPlace(), open: (x, o) => openNode(x, o) });
-    else notice("Point at something in the Codex, or open a sheet, then press Ctrl+D to make a variant of it.", "blue", undefined, 5000);
+    const ctx: PlaceCtx = { view: current, selected: selected[tab] ?? null, select: (x) => ((selected[tab] = x), void renderPlace()), refresh: () => renderPlace(), open: (x, o) => openNode(x, o) };
+    if (!id) notice(`Point at something in the Codex, or open a sheet, then press ${e.shiftKey ? "Ctrl+Shift+D to make your own copy" : "Ctrl+D to make a variant"} of it.`, "blue", undefined, 5000);
+    else if (e.shiftKey) void separateCopy(id, ctx);
+    else void variantOf(id, ctx);
     return;
   }
   if (k === "z" && !e.shiftKey) {
@@ -373,7 +376,8 @@ function showShortcuts() {
   const d = openDialog("Keyboard shortcuts");
   const rows: [string, string][] = [
     ["Ctrl+N", "Make something new"],
-    ["Ctrl+D", "Make a variant of what the mouse is over (or the open sheet)"],
+    ["Ctrl+D", "Connected copy: a variant of what the mouse is over (or the open sheet) that keeps following it"],
+    ["Ctrl+Shift+D", "Separate copy: your own copy that goes its own way"],
     ["Ctrl+Z", "Undo"],
     ["Ctrl+Y", "Redo (Ctrl+Shift+Z works too)"],
     ["Ctrl+F", "Search everything"],

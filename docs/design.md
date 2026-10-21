@@ -652,6 +652,11 @@ printing at real size for miniatures is not needed (maps print in the booklet an
   marker with a small symbol for what it links to (a house, a dragon, a sword, a scroll, a map).
   Pins start **black** with the symbol for their kind; each pin's colour and symbol can be changed
   (make every pin a star if you like). Select several with Shift or Ctrl to change them together.
+- **Copying, the Blender way (decided by Jeff, October 21, 2026), the same everywhere in the app:**
+  **Ctrl+D is a connected copy** (an item or monster becomes a variant that keeps following the
+  original; a pin keeps the same look and the same link). **Ctrl+Shift+D is a separate copy** (an
+  item or monster becomes your own copy; a pin keeps the look but has no link, a map symbol just
+  for looks). Any pin can be relinked by dropping something from the Codex onto it.
 - **Maps inside maps:** a pin can open another map (world → region → town → building → room
   encounter), shown in the same File Explorer style tree, with a breadcrumb at the top to go back
   up ("Greyhollow region > Greyhollow town > The Mill").

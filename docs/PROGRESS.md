@@ -73,7 +73,8 @@ the starter, so older systems don't have them), then a world on it. It opens str
 - The Codex on the right: open a section, sort, Show "Made by me", drag something onto another
   section to move it (or hover and use Move to).
 - Flags are the small strip under the Codex; click it for all of them.
-- Ctrl+D with the mouse over something makes a variant; press ? for every shortcut.
+- Ctrl+D with the mouse over something makes a variant (a connected copy); Ctrl+Shift+D makes
+  your own separate copy; press ? for every shortcut.
 - A class: hit die chips, + Add a choice, then drag options onto the Choices box.
 - Rules → a new core check has standard wording; change "How a check works" and it follows.
 
@@ -802,3 +803,5 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-21: Backup days are read as noon UTC so "Today" is today in every time zone.
 - 2026-10-21: The window imports shared lists from `src/app/codex-lists.ts`, which has no imports,
   so nothing from the back end is bundled into the window.
+- 2026-10-21: Jeff chose Blender-style copy keys for the whole app: Ctrl+D a connected copy (a
+  variant), Ctrl+Shift+D a separate copy (your own copy). Ctrl+Shift+D is in the feel-pass build.
