@@ -469,6 +469,11 @@ DM's table), so they are there next time.
   sending anything to anyone just happens, whatever their level: a New player can be sent a
   journal page they normally couldn't see. Sending it shares that one thing; their level and the
   grid are unchanged. (Like everything else, it shows in the session log.)
+- **Always exactly one DM (rule, Jeff, October 21, 2026).** Every module and session has one DM,
+  the absolute boss, never none and never two. The DM can't make themselves an assistant GM or a
+  player. To change who runs the game (groups that take turns), **Hand over DM** moves the DM
+  level to someone else in one step, and the old DM gets the level they pick, so there is never a
+  moment without exactly one. There can be several assistant GMs, all under the one DM.
 - **The assistant GM can share what they can see (Jeff, October 21, 2026).** An assistant GM can
   show or send anything they are allowed to see, to any player, also with no confirmation: if Ken
   can see the journal, he can send a journal page to anyone. What is hidden from him he can't
