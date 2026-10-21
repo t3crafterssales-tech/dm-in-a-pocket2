@@ -526,7 +526,10 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
   encounter and see what's inside. Drag to rearrange: drop between two encounters to move it there
   (the first encounter can become the ninth), drop onto an encounter to put it inside. Shift and
   Ctrl select several to move together, and the numbers (1, 1.1, 2...) update by themselves. Each
-  move is one undo step.
+  move is one undo step. An encounter always moves with everything inside it: drag encounter 2
+  (with four encounters inside) into encounter 3, and encounter 3 becomes 2, the moved one becomes
+  2.1, and its four become 2.1.1 to 2.1.4. "Leads to" links point by permanent ID, so "see 2" in
+  the booklet always shows the current number.
 - **Deleting an encounter never deletes what's inside it (Jeff, October 21, 2026).** The
   encounters inside move up one level into its place, in the same order, and are renumbered (delete
   2. The cave, and Room 1 to Room 5 become encounters 2 to 6). Same idea as deleting a parent
