@@ -417,6 +417,35 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   block incoming connections; the relay only matches a PIN to a session and passes messages, with
   no accounts. Running it has a small monthly cost, so remote play may be an optional extra.
 
+### The dice tray (designed with Jeff, October 21, 2026)
+
+A tool on the tabletop screen only. A dice button opens a small tray that slides out.
+
+- **Dice:** d4, d6, d8, d10, d12, d20, d100, and a coin for a coin flip. Click a die to add it
+  (click d4 four times for 4d4), then + and a number for a bonus (1d6 + 6), then Roll. Typing a
+  formula works too, for people who like typing.
+- **Advantage and disadvantage** are buttons (roll twice, keep the higher or lower).
+- **Colours:** six solid colours to start. Each player picks theirs, so their rolls show in their
+  colour in the chat.
+- **Saved rolls (templates):** name a roll and keep it, such as "Longsword attack": 1d8 + 4. One
+  click rolls it and adds the bonus. Better still, the table reads the system: a character's
+  attacks already know their dice and the Strength bonus, so their saved rolls make themselves
+  from the sheet, and the player can add their own.
+- **Who sees it:** Public (everyone), Private (just me), DM only, or Blind (only the DM sees the
+  result).
+- **The chat keeps the history:** "Rob rolled 14", with the breakdown (d20 showed 10, + 4) a click
+  away. Private and DM-only rolls show only to the people allowed to see them.
+- **Cards (if easy):** a standard deck with draw and shuffle is simple enough for version 2; custom
+  decks (tarot, a game's own cards) come later.
+
+### Mods (later, planned for from the start)
+
+Jeff can see the app getting mods, like Foundry. Start with **content packs** that add things
+without running code: dice skins and colours, card decks, sound packs, themes, starter systems.
+Mods that run their own code are a later step and need care, because code from a stranger can
+damage files (Promise 7). Building the tray, themes and sounds so their looks can be swapped
+keeps that door open.
+
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
