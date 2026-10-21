@@ -482,6 +482,17 @@ DM's table), so they are there next time.
   changing other people's permissions if the DM allows it. Only the title differs. The one thing
   that stays with the DM alone is the DM seat itself: only the DM can Hand over DM, and nobody can
   lower the DM's own access, so the one-DM rule always holds.
+- **The DM always has everything (rule, Jeff, October 21, 2026).** The DM's row in the grid is
+  locked fully on and can't be changed: no setting ever hides initiative, a journal page or
+  anything else from the DM. The DM can give anyone else the same powers.
+- **Presets are logical starting points; adjusted ones become templates.** The ready-made levels
+  are sensible, the DM adjusts them for their table, and saves the result as their own template so
+  the tinkering is done once.
+- **Adding from the Codex to your own character (Jeff, October 21, 2026).** A permission of its
+  own, because players dragging Potions of Healing and magic items onto their own sheets is a real
+  problem (seen in Foundry). New player: off. Player: off. Trusted player: on. Whatever the
+  setting, the DM is told quietly when a player adds something to their own sheet (a blue note in
+  the session log: "Joe added Potion of Healing"), never blocking anything.
 - **Table jobs (Jeff, October 21, 2026).** The DM can hand a tool to anyone at the table, assistant
   GM or player, so the DM can focus on monsters and maps: "Fred runs initiative" (he clicks Next
   turn, and now it's Johnny's turn), "Johnny keeps the journal", "Fred tracks the party's gold".
