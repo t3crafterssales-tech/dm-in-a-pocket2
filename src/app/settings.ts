@@ -6,7 +6,7 @@ import type { Id } from "../engine/index.ts";
 import { atomicWrite } from "../storage/index.ts";
 
 export interface Place {
-  type: "world" | "system";
+  type: "world" | "system" | "module";
   id: Id;
 }
 
@@ -57,7 +57,7 @@ export class SettingsFile {
       return {
         mainFolder: typeof raw.mainFolder === "string" ? raw.mainFolder : d.mainFolder,
         opened: raw.opened && typeof raw.opened === "object" ? raw.opened : d.opened,
-        place: raw.place && (raw.place.type === "world" || raw.place.type === "system") && typeof raw.place.id === "string" ? raw.place : null,
+        place: raw.place && (raw.place.type === "world" || raw.place.type === "system" || raw.place.type === "module") && typeof raw.place.id === "string" ? raw.place : null,
         author: typeof raw.author === "string" && raw.author.trim() ? raw.author.trim().slice(0, 120) : null,
         aiModel: raw.aiModel === "quick" || raw.aiModel === "careful" ? raw.aiModel : d.aiModel,
         aiThreshold: typeof raw.aiThreshold === "number" && raw.aiThreshold >= 0 ? raw.aiThreshold : d.aiThreshold,

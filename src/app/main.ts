@@ -98,12 +98,12 @@ void app.whenReady().then(() => {
       return r.canceled ? null : (r.filePaths[0] ?? null);
     },
     pickSave: async (defaultName, kind) => {
-      const ext = kind === "world" ? "dmworld" : "dmsys";
-      const r = await dialog.showSaveDialog(win!, { title: kind === "world" ? "Share this world" : "Share this system", defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: kind === "world" ? "DM in a Pocket world" : "DM in a Pocket system", extensions: [ext] }] });
+      const ext = kind === "world" ? "dmworld" : kind === "module" ? "dmmod" : "dmsys";
+      const r = await dialog.showSaveDialog(win!, { title: `Share this ${kind}`, defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: `DM in a Pocket ${kind}`, extensions: [ext] }] });
       return r.canceled ? null : (r.filePath ?? null);
     },
     pickImport: async () => {
-      const r = await dialog.showOpenDialog(win!, { title: "Import a world or system", properties: ["openFile"], filters: [{ name: "DM in a Pocket files", extensions: ["dmworld", "dmsys"] }] });
+      const r = await dialog.showOpenDialog(win!, { title: "Import a world, module or system", properties: ["openFile"], filters: [{ name: "DM in a Pocket files", extensions: ["dmworld", "dmmod", "dmsys"] }] });
       return r.canceled ? null : (r.filePaths[0] ?? null);
     },
     secrets: keyStore(),

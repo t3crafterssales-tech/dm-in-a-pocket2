@@ -118,3 +118,25 @@ test("one copy open at a time, backups and snapshots work for modules like world
   assert.match(other.readOnlyReason!, /home-pc/);
   s.lib.close(m);
 });
+
+test("sharing a module: it travels with its world and system, and arrives as its own copy", () => {
+  const s = setup();
+  const modId = s.lib.createModule("The Mill on Ash Creek", s.world);
+  const dest = join(s.root, "mill.dmmod");
+  s.lib.exportModule(modId, dest);
+  // Someone with nothing on their shelves.
+  const friend = new Library(mkdtempSync(join(tmpdir(), "dmip-friend-")), { machine: "friend", session: "s-friend" }, s.clock.now);
+  friend.init();
+  const r = friend.importFile(dest, "Dave");
+  assert.equal(r.type, "module");
+  assert.equal(friend.listModules()[0]!.name, "The Mill on Ash Creek");
+  assert.equal(friend.listWorlds()[0]!.name, "Greyhollow", "its world came along");
+  assert.equal(friend.listSystems().length, 1);
+  const m = friend.openModule(r.id);
+  assert.deepEqual(m.ws.chain(r.id).map((l) => l.type), ["system", "world", "module"]);
+  friend.close(m);
+  // Importing it again never overwrites: a copy.
+  const again = friend.importFile(dest, "Dave");
+  assert.match(again.name, /\(copy\)/);
+  assert.equal(friend.listWorlds().length, 1, "the world on the shelf is used, not duplicated");
+});

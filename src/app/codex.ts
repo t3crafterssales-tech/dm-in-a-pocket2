@@ -2,7 +2,7 @@
 // shown on the right of the world screen. Also the "quick" values the item and being sheets show
 // as pickers, and refiling something into another section. Plain functions on the engine.
 
-import { F, attachmentValues, challenge, levelKey, link, newId } from "../engine/index.ts";
+import { F, attachmentValues, challenge, isLink, levelKey, link, newId } from "../engine/index.ts";
 import type { Attachment, Id, NodeRecord, Value, Workspace } from "../engine/index.ts";
 import { brickNote } from "./library.ts";
 import { categoryTree, ensureCategories, fileBeing } from "./sheets.ts";
@@ -88,6 +88,8 @@ export function itemSection(ws: Workspace, layerId: Id, n: NodeRecord): CodexKey
 
 /** Which Codex section any node is in, or null if it isn't shown in the Codex. */
 export function sectionOfNode(ws: Workspace, layerId: Id, n: NodeRecord): CodexKey | null {
+  // Ready-made encounters (top level only; the ones inside them come along when placed).
+  if (n.kind === "encounter") return n.template && !isLink(ws.resolve(layerId, n.id)?.fields.inside) ? "encounters" : null;
   if (n.template && (n.kind === "item" || n.kind === "being")) return "templates";
   const f = ws.resolve(layerId, n.id)?.fields ?? {};
   if (n.kind === "item") return itemSection(ws, layerId, n);
@@ -123,6 +125,11 @@ export function codexSections(ws: Workspace, layerId: Id): CodexSection[] {
 }
 
 function subLine(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<string, Value>, key: CodexKey): string {
+  if (n.kind === "encounter") {
+    const count = Array.isArray(f.creatures) ? f.creatures.reduce<number>((t, c) => t + (c && typeof c === "object" && !Array.isArray(c) && typeof (c as Record<string, Value>).count === "number" ? ((c as Record<string, Value>).count as number) : 0), 0) : 0;
+    const words = typeof f.readAloud === "string" ? f.readAloud.split(/\s+/).slice(0, 8).join(" ") : "";
+    return [count ? `${count} creature${count === 1 ? "" : "s"}` : "", words ? `${words}…` : ""].filter(Boolean).join(" · ");
+  }
   const cost = typeof f[F.cost] === "string" ? (f[F.cost] as string) : "";
   if (n.kind === "item") {
     const r = ws.resolve(layerId, n.id)!;

@@ -22,6 +22,8 @@ import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { createLore, loreList, rollTable } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
 import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
+import { addToEncounter, createEncounter, deleteEncounter, encounterTree, moveEncounters, placeEncounter, saveEncounterToCodex } from "./encounters.ts";
+import type { EncounterNode } from "./encounters.ts";
 import { CODEX_SECTIONS, addChoice, addChoiceOptions, codexSections, makeOwnCopy, makeVariant, moveToSection as moveCodex, newInSection, quickView } from "./codex.ts";
 import type { CodexKey, CodexSection, QuickView } from "./codex.ts";
 import { attachAtLevel, isClass, levelTable, setFeatureLevel } from "./levels.ts";
@@ -763,6 +765,55 @@ export class Editing {
   addChoiceOptions(nodeId: Id, aid: Id, ids: Id[]) {
     const n = this.must(nodeId);
     this.run(() => this.ws.transact(`Added ${ids.length === 1 ? (this.ws.get(this.layer, ids[0]!)?.name ?? "an option") : `${ids.length} options`} to a choice on ${n.name}`, () => addChoiceOptions(this.ws, this.layer, nodeId, aid, ids)));
+  }
+
+  // ---------- Encounters (version 2) ----------
+
+  encounterTree(): EncounterNode[] {
+    return encounterTree(this.ws, this.layer);
+  }
+
+  addEncounter(name: string, inside: Id | null = null): Id {
+    const n = cleanName(name);
+    return this.run(() => this.ws.transact(`Added the encounter ${n}`, () => createEncounter(this.ws, this.layer, n, inside)));
+  }
+
+  /** Drag in the tree: into an encounter, or between two (before `before`), with everything inside. */
+  moveEncounters(ids: Id[], inside: Id | null, before: Id | null = null) {
+    const names = ids.map((id) => this.must(id).name);
+    this.run(() => this.ws.transact(names.length === 1 ? `Moved ${names[0]}` : `Moved ${names.length} encounters`, () => moveEncounters(this.ws, this.layer, ids, inside, before)));
+  }
+
+  /** Deletes an encounter; what was inside it moves up a level. */
+  deleteEncounter(id: Id): StepResult {
+    const n = this.must(id);
+    this.run(() => this.ws.transact(`Removed ${n.name}`, () => deleteEncounter(this.ws, this.layer, id)));
+    return { label: `Removed ${n.name}` };
+  }
+
+  /** Things dropped from the Codex onto an encounter. */
+  addToEncounter(id: Id, ids: Id[], count = 1): { label: string } {
+    const n = this.must(id);
+    let label = "";
+    this.run(() =>
+      this.ws.transact(`Added to ${n.name}`, () => {
+        const r = addToEncounter(this.ws, this.layer, id, ids, Math.max(1, Math.round(count) || 1));
+        const parts = [r.creatures && `${r.creatures === 1 ? "a creature" : `${r.creatures} creatures`}`, r.treasure && "treasure", r.handouts && (r.handouts === 1 ? "a handout" : `${r.handouts} handouts`), r.leadsTo && "a link to another encounter"].filter(Boolean);
+        label = parts.length ? `Added ${parts.join(", ")} to ${n.name}` : "Nothing there can go in an encounter";
+      }),
+    );
+    return { label };
+  }
+
+  /** A ready-made encounter from the Codex: the module gets its own copy, with what's inside it. */
+  placeEncounter(sourceId: Id, inside: Id | null = null): Id {
+    const src = this.must(sourceId);
+    return this.run(() => this.ws.transact(`Placed ${src.name}`, () => placeEncounter(this.ws, this.layer, sourceId, inside)));
+  }
+
+  saveEncounterToCodex(id: Id): Id {
+    const n = this.must(id);
+    return this.run(() => this.ws.transact(`Saved ${n.name} to the Codex`, () => saveEncounterToCodex(this.ws, this.layer, id)));
   }
 
   /** "Start blank" on the start screen. */

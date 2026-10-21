@@ -19,7 +19,7 @@ export type OpenResult =
   | { status: "in-use"; machine: string };
 
 export class Session {
-  readonly type: "world" | "system";
+  readonly type: "world" | "system" | "module";
   readonly id: Id;
   readonly ws: Workspace;
   readonly world: OpenWorld | null;
@@ -39,7 +39,7 @@ export class Session {
   /** The AI's chat and World Notes, saved with the world (see ai/assistant.ts). Plain JSON. */
   ai: unknown;
 
-  private constructor(lib: Library, type: "world" | "system", id: Id, ws: Workspace, world: OpenWorld | null, events: SessionEvents, timers: Timers) {
+  private constructor(lib: Library, type: "world" | "system" | "module", id: Id, ws: Workspace, world: OpenWorld | null, events: SessionEvents, timers: Timers) {
     this.lib = lib;
     this.type = type;
     this.id = id;
@@ -66,6 +66,12 @@ export class Session {
     return { status: "open", session: new Session(lib, "world", id, open.ws, open, events, timers) };
   }
 
+  static openModule(lib: Library, id: Id, opts: { readOnly?: boolean; takeOver?: boolean } = {}, events: SessionEvents = {}, timers: Timers = realTimers): OpenResult {
+    const open = lib.openModule(id, opts);
+    if (open.inUseBy && !opts.readOnly) return { status: "in-use", machine: open.inUseBy.machine };
+    return { status: "open", session: new Session(lib, "module", id, open.ws, open, events, timers) };
+  }
+
   static openSystem(lib: Library, id: Id, events: SessionEvents = {}, timers: Timers = realTimers): Session {
     const { ws } = lib.openSystem(id);
     return new Session(lib, "system", id, ws, null, events, timers);
@@ -75,10 +81,17 @@ export class Session {
     return this.ws.layer(this.id).name;
   }
 
-  /** The system's name as seen from this world (or null for a system). */
+  /** The system's name as seen from this world or module (or null for a system). */
   get systemName(): string | null {
-    const base = this.ws.layer(this.id).base;
-    return this.type === "world" && base ? this.ws.layer(base).name : null;
+    if (this.type === "system") return null;
+    const chain = this.ws.chain(this.id);
+    return [...chain].reverse().find((l) => l.type === "system")?.name ?? null;
+  }
+
+  /** For a module built on a world: the world's name. */
+  get worldName(): string | null {
+    if (this.type !== "module") return null;
+    return this.ws.chain(this.id).find((l) => l.type === "world")?.name ?? null;
   }
 
   get pendingSave(): boolean {
@@ -98,7 +111,7 @@ export class Session {
 
   /** Restores a backup from World settings. A snapshot is taken first, so it can be undone. */
   restoreBackup(file: string) {
-    if (!this.world || this.readOnly) throw new LibraryError(this.readOnlyReason ?? "Backups belong to worlds.");
+    if (!this.world || this.readOnly) throw new LibraryError(this.readOnlyReason ?? "Backups belong to worlds and modules.");
     this.lib.restoreBackup(this.world, file);
     this.events.saved?.();
   }

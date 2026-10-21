@@ -100,7 +100,7 @@ export interface OpenWorld {
 }
 
 export interface ImportResult {
-  type: "world" | "system";
+  type: "world" | "system" | "module";
   id: Id;
   name: string;
   /** Systems that were already on the shelf, identical, so they are shared. */
@@ -677,9 +677,10 @@ export class Library {
     } catch {
       throw new LibraryError("That file is damaged, or isn't a DM in a Pocket file.");
     }
-    const json = files.get("world.json") ?? files.get("system.json");
-    if (!json) throw new LibraryError("That isn't a DM in a Pocket world or system file.");
-    const isWorld = files.has("world.json");
+    const json = files.get("world.json") ?? files.get("module.json") ?? files.get("system.json");
+    if (!json) throw new LibraryError("That isn't a DM in a Pocket world, module or system file.");
+    const isModule = files.has("module.json");
+    const isWorld = files.has("world.json") || isModule;
     let data: FileWithMeta;
     try {
       data = JSON.parse(json.toString("utf8")) as FileWithMeta;
@@ -694,7 +695,7 @@ export class Library {
 
     // Systems, bottom first: shared if identical to the shelf's, else installed (as a copy if the id is taken).
     const ids = new Map<Id, Id>();
-    const result: ImportResult = { type: isWorld ? "world" : "system", id: "", name: "", sharedSystems: [], newSystems: [] };
+    const result: ImportResult = { type: isModule ? "module" : isWorld ? "world" : "system", id: "", name: "", sharedSystems: [], newSystems: [] };
     const systems = orderChain(data.layers.filter((l) => l.type === "system"));
     for (const s of systems) {
       const layer: Layer = { ...structuredClone(s), base: s.base ? (ids.get(s.base) ?? s.base) : null };
@@ -721,6 +722,8 @@ export class Library {
       if (!result.id) Object.assign(result, { id: main.id, name: main.name });
       return result;
     }
+
+    if (isModule) return this.importModule(data, main, ids, me, result);
 
     // The world: a copy if it is already on the shelf. Undo history only travels if nothing moved.
     const world: Layer = { ...structuredClone(main), base: main.base ? (ids.get(main.base) ?? main.base) : null };
@@ -752,6 +755,74 @@ export class Library {
     }
     Object.assign(result, { id: world.id, name: world.name });
     return result;
+  }
+
+  /**
+   * The module part of an import. Its world is used from the shelf when it is already there (the
+   * module was made for it); otherwise the copy inside the file is put on the Worlds shelf. The
+   * module itself arrives as a copy if one with its id is already on the shelf.
+   */
+  private importModule(data: FileWithMeta, main: Layer, ids: Map<Id, Id>, me: string | null, result: ImportResult): ImportResult {
+    let base = main.base ? (ids.get(main.base) ?? main.base) : null;
+    const embeddedWorld = data.layers.find((l) => l.type === "world" && l.id === main.base);
+    if (embeddedWorld && !existsSync(this.worldPath(embeddedWorld.id))) {
+      const world: Layer = { ...structuredClone(embeddedWorld), base: embeddedWorld.base ? (ids.get(embeddedWorld.base) ?? embeddedWorld.base) : null };
+      markFromOthers(world, me);
+      writeArchive(this.worldPath(world.id), "world.json", { format: FORMAT_VERSION, app: data.app, main: world.id, layers: [...this.loadSystemChain(world.base!), world], bin: [], history: [], redo: [], meta: { [world.id]: { changed: this.now() } } }, this);
+      base = world.id;
+    }
+    const mod: Layer = { ...structuredClone(main), base };
+    const copied = existsSync(this.modulePath(mod.id));
+    if (copied) {
+      mod.id = newId();
+      mod.name = `${main.name} (copy)`;
+    }
+    markFromOthers(mod, me);
+    const keepHistory = !copied && [...ids].every(([a, b]) => a === b);
+    const file: FileWithMeta = {
+      format: FORMAT_VERSION,
+      app: data.app,
+      main: mod.id,
+      layers: [...this.layersBelow(base!), mod],
+      bin: keepHistory ? data.bin : [],
+      history: keepHistory ? data.history : [],
+      redo: keepHistory ? data.redo : [],
+      meta: { [mod.id]: { picture: data.meta?.[main.id]?.picture ?? null, changed: this.now(), ai: data.meta?.[main.id]?.ai } },
+    };
+    writeArchive(this.modulePath(mod.id), "module.json", file, this);
+    Object.assign(result, { id: mod.id, name: mod.name });
+    return result;
+  }
+
+  /** Writes a copy of a module to send to someone: the module, its world and system chain, its pictures. */
+  exportModule(moduleId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean; chat?: boolean } = {}) {
+    const path = this.modulePath(moduleId);
+    if (!existsSync(path)) throw new LibraryError("That module isn't in the Modules folder.");
+    const { data } = readArchive(path, "module.json", this, false);
+    const mod = data.layers.find((l) => l.id === data.main);
+    if (!mod) throw new LibraryError("That module file is damaged.");
+    let below = data.layers.filter((l) => l.id !== mod.id);
+    try {
+      if (mod.base) below = this.layersBelow(mod.base); // the shelves' copies are the newest
+    } catch {
+      // Missing from the shelves: the copies inside the module file go along instead.
+    }
+    const file: FileWithMeta = {
+      format: FORMAT_VERSION,
+      app: data.app,
+      main: moduleId,
+      layers: [...below, mod].map((l) => structuredClone(l)),
+      bin: opts.history ? data.bin : [],
+      history: opts.history ? data.history : [],
+      redo: opts.history ? data.redo : [],
+      meta: { [moduleId]: { picture: data.meta?.[moduleId]?.picture ?? null, changed: data.meta?.[moduleId]?.changed, ai: sharedAi(data.meta?.[moduleId]?.ai, !!opts.chat) } },
+    };
+    const extra: { name: string; data: Buffer }[] = [];
+    if (opts.snapshots) {
+      const dir = this.snapshotDir(moduleId);
+      if (existsSync(dir)) for (const f of readdirSync(dir).filter((x) => x.endsWith(".json"))) extra.push({ name: `snapshots/${f}`, data: readFileSync(join(dir, f)) });
+    }
+    writeArchive(dest, "module.json", file, this, {}, extra);
   }
 
   /** Puts a picture from an imported file into the store under its own (content) name. */

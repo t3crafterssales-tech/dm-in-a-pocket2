@@ -85,6 +85,20 @@ export function buildD20Starter(ws: Workspace, sys: Id) {
   // ---------- Categories, then everything else ----------
   buildSrdContent({ ws, sys, make, sub, cats, abilities, conditions });
 
+  // ---------- Ready-made encounters (version 2; written for DM in a Pocket) ----------
+  const monster = (name: string) => ws.list(sys, "being").find((n) => n.name === name)?.id;
+  const encounter = (name: string, readAloud: string, text: string, creatures: [string, number][]) =>
+    ws.create(sys, "encounter", name, {
+      source: "template",
+      template: true,
+      text,
+      fields: { readAloud, inside: null, order: 0, leadsTo: [], treasure: [], handouts: [], creatures: creatures.flatMap(([m, count]) => (monster(m) ? [{ being: link(monster(m)!), count }] : [])) },
+    });
+  encounter("Bandit ambush", "The road narrows between two boulders. A rope snaps up out of the dust across your path, and voices call from the rocks above: \"Your purses, or your lives.\"", "Four bandits wait above the road with their captain. They want money, not a fight, and run if the captain falls.", [["Bandit", 4], ["Bandit Captain", 1]]);
+  encounter("Tavern brawl", "A chair flies past your head and shatters against the bar. Half the room is already swinging.", "Three toughs started it. Nobody draws steel unless the heroes do; the guard arrives after three rounds.", [["Tough", 3], ["Commoner", 4]]);
+  encounter("Wolves at dusk", "Grey shapes slip between the trees on both sides of the trail, keeping pace with you. Somewhere behind, one of them howls.", "A hungry pack. They test the weakest-looking hero and break off if two wolves fall.", [["Wolf", 4]]);
+  encounter("The rat cellar", "Something rustles in the dark beneath the floorboards, then everything rustles at once.", "Giant rats and a swarm nest among the spoiled grain. Fire scatters them.", [["Giant Rat", 3], ["Swarm of Rats", 1]]);
+
   // ---------- Enchantments ----------
   // A few ready-made enchantments to drop onto weapons and armour (written for DM in a Pocket,
   // not from the SRD, so they carry no SRD credit).

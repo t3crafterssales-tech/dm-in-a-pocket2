@@ -218,7 +218,7 @@ test("a system built on another goes into the bin with it", () => {
   const variant = s.backend.lib.createSystem("My d20", sys);
   s.backend.createWorld({ name: "Space", picture: null, systemId: variant });
   const dep = s.backend.systemDependents(sys);
-  assert.deepEqual(dep, { systems: ["My d20"], worlds: ["Space"] });
+  assert.deepEqual(dep, { systems: ["My d20"], worlds: ["Space"], modules: [] });
   assert.equal(s.backend.home().systems.find((x) => x.id === variant)!.variantOf, "d20 Basic");
   s.backend.deleteSystem(sys);
   assert.equal(s.backend.home().systems.length, 0);

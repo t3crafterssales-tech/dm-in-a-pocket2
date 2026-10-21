@@ -36,7 +36,7 @@ export interface JobRequest {
   /** The recent chat, oldest first. */
   history: { role: "user" | "ai"; text: string }[];
   placeName: string;
-  placeType: "world" | "system";
+  placeType: "world" | "system" | "module";
   model: ModelInfo;
   /** Extra instructions for special jobs (Check for errors, create from a document). */
   extra?: string;

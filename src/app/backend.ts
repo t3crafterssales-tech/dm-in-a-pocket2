@@ -7,7 +7,7 @@ import { newId } from "../engine/index.ts";
 import { panelView, readPanel } from "./flagpanel.ts";
 import type { Activation, CheckCategory, CheckSettings, Id, NodeKind, Sensitivity, Slot, Uses, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
-import { SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
+import { MODULE_EXT, SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
 import type { ImportResult, RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
 import { bookDocx } from "./docx.ts";
@@ -16,6 +16,7 @@ import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
 import type { CodexKey, CodexSection, QuickView } from "./codex.ts";
+import type { EncounterNode } from "./encounters.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
 import type { LoreSection } from "./lore.ts";
 import type { TableModeView } from "./tablemode.ts";
@@ -46,6 +47,7 @@ export type { BinView, BookData, BookRequest, Choices, FlagView, HistoryStep, Hi
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef, SourceFilter, TemplateEntry } from "./sheets.ts";
 export type { CodexEntry, CodexKey, CodexSection, QuickView } from "./codex.ts";
+export type { EncounterNode } from "./encounters.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
 export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 export type { FlagBlock, FlagPanelView, MissingDetail, BrokenSlot } from "./flagpanel.ts";
@@ -86,19 +88,33 @@ export const STARTING_POINTS: StartingPoint[] = [
   { id: "scratch", label: "From scratch", ready: true, note: null },
 ];
 
+/** A module (version 2) on the home screen's Modules shelf. */
+export interface ModuleCard {
+  id: Id;
+  name: string;
+  /** "Greyhollow · d20 Basic", or "Any world · d20 Basic" for a setting-free module. */
+  builtOn: string;
+  baseType: "world" | "system";
+  picture: Id | null;
+  lastUsed: number;
+}
+
 export interface HomeData {
   folder: string;
   systems: SystemCard[];
   worlds: WorldCard[];
+  modules: ModuleCard[];
   binCount: number;
   startingPoints: StartingPoint[];
 }
 
 export interface PlaceView {
-  type: "world" | "system";
+  type: "world" | "system" | "module";
   id: Id;
   name: string;
   systemName: string | null;
+  /** For a module on a world: the world's name. */
+  worldName: string | null;
   readOnly: boolean;
   readOnlyReason: string | null;
   /** Show the blue notice "Recovered after an unexpected close." */
@@ -161,7 +177,7 @@ export interface BackendOptions {
   /** Show the folder chooser; resolves to a folder path or null. */
   pickFolder: () => Promise<string | null>;
   /** Show a Save dialog for a file to share; resolves to a path or null. */
-  pickSave?: (defaultName: string, kind: "world" | "system") => Promise<string | null>;
+  pickSave?: (defaultName: string, kind: "world" | "system" | "module") => Promise<string | null>;
   /** Show an Open dialog for a world or system file to import; resolves to a path or null. */
   pickImport?: () => Promise<string | null>;
   /** Show a Save dialog for the rulebook as a Word file; resolves to a path or null. */
@@ -203,6 +219,9 @@ export const BACKEND_METHODS = [
   "createWorld",
   "systemDependents",
   "deleteWorld",
+  "createModule",
+  "deleteModule",
+  "worldModules",
   "deleteSystem",
   "recycleBin",
   "restore",
@@ -263,6 +282,13 @@ export const BACKEND_METHODS = [
   "printPreview",
   "newInSection",
   "addChoice",
+  "encounterTree",
+  "addEncounter",
+  "moveEncounters",
+  "deleteEncounter",
+  "addToEncounter",
+  "placeEncounter",
+  "saveEncounterToCodex",
   "addChoiceOptions",
   "setTemplate",
   "flagPanel",
@@ -385,7 +411,15 @@ export class Backend {
       lastUsed: opened[s.id] ?? s.changed,
     }));
     const byLastUsed = (a: { lastUsed: number; name: string }, b: { lastUsed: number; name: string }) => b.lastUsed - a.lastUsed || a.name.localeCompare(b.name);
-    return { folder: this.folder, systems: systemCards.sort(byLastUsed), worlds: worlds.sort(byLastUsed), binCount: this.lib.listRecycleBin().length, startingPoints: STARTING_POINTS };
+    const modules: ModuleCard[] = this.lib.listModules().map((m) => ({
+      id: m.id,
+      name: m.name,
+      builtOn: m.baseType === "world" ? `${m.baseName} · ${m.systemName}` : `Any world · ${m.systemName}`,
+      baseType: m.baseType,
+      picture: m.picture,
+      lastUsed: opened[m.id] ?? m.changed,
+    }));
+    return { folder: this.folder, systems: systemCards.sort(byLastUsed), worlds: worlds.sort(byLastUsed), modules: modules.sort(byLastUsed), binCount: this.lib.listRecycleBin().length, startingPoints: STARTING_POINTS };
   }
 
   private flagCounts(worldId: Id): { red: number; yellow: number } {
@@ -436,14 +470,33 @@ export class Backend {
     return id;
   }
 
+  /** A new module (version 2), on a world or straight on a system (setting-free). */
+  createModule(input: { name: string; picture: Id | null; baseId: Id }): Id {
+    const name = cleanName(input.name);
+    if (!input.baseId) throw new LibraryError("Choose what the module is built on: a world, or just a system.");
+    const id = this.lib.createModule(name, input.baseId, this.settingsFile.data.author);
+    if (input.picture) this.lib.setPicture("module", id, input.picture);
+    this.markOpened(id);
+    return id;
+  }
+
   /** For the warning before deleting a system: "3 worlds use this system". */
-  systemDependents(id: Id): { systems: string[]; worlds: string[] } {
+  systemDependents(id: Id): { systems: string[]; worlds: string[]; modules: string[] } {
     const d = this.lib.systemDependents(id);
-    return { systems: d.systems.map((s) => s.name), worlds: d.worlds.map((w) => w.name) };
+    return { systems: d.systems.map((s) => s.name), worlds: d.worlds.map((w) => w.name), modules: d.modules.map((m) => m.name) };
+  }
+
+  /** For the warning before deleting a world: the modules built on it go to the bin with it. */
+  worldModules(id: Id): string[] {
+    return this.lib.listModules().filter((m) => m.baseId === id).map((m) => m.name);
   }
 
   deleteWorld(id: Id): RecycledInfo {
     return this.binEntry(this.lib.deleteWorld(id));
+  }
+
+  deleteModule(id: Id): RecycledInfo {
+    return this.binEntry(this.lib.deleteModule(id));
   }
 
   /** Deletes a system and, with it, the worlds that use it (the user has already agreed). */
@@ -685,10 +738,11 @@ export class Backend {
     const s = this.session;
     if (!s) throw new LibraryError("Open the world or system to share first.");
     s.saveNow();
-    const name = `${s.name.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Shared"}${s.type === "world" ? WORLD_EXT : SYSTEM_EXT}`;
+    const name = `${s.name.replace(/[\\/:*?"<>|]+/g, " ").trim() || "Shared"}${s.type === "world" ? WORLD_EXT : s.type === "module" ? MODULE_EXT : SYSTEM_EXT}`;
     const path = dest ?? (this.opts.pickSave ? await this.opts.pickSave(name, s.type) : null);
     if (!path) return null;
     if (s.type === "world") this.lib.exportWorld(s.id, path, opts);
+    else if (s.type === "module") this.lib.exportModule(s.id, path, opts);
     else this.lib.exportSystem(s.id, path, opts);
     return path;
   }
@@ -734,7 +788,7 @@ export class Backend {
 
   private worldSession(): Session {
     const s = this.session;
-    if (!s || s.type !== "world" || !s.world) throw new LibraryError("Snapshots belong to worlds. Open a world first.");
+    if (!s || s.type === "system" || !s.world) throw new LibraryError("Snapshots belong to worlds and modules. Open one first.");
     return s;
   }
 
@@ -768,7 +822,7 @@ export class Backend {
   /** Where to reopen at start-up: set only if the app was closed unexpectedly last time. */
   startup(): { resume: Place | null } {
     const place = this.settingsFile.data.place;
-    const exists = place && (place.type === "world" ? this.lib.listWorlds() : this.lib.listSystems()).some((x) => x.id === place.id);
+    const exists = place && (place.type === "world" ? this.lib.listWorlds() : place.type === "module" ? this.lib.listModules() : this.lib.listSystems()).some((x) => x.id === place.id);
     if (!exists) {
       if (place) this.settingsFile.update((s) => (s.place = null));
       return { resume: null };
@@ -785,8 +839,9 @@ export class Backend {
       readOnly: (reason: string) => this.opts.emit({ type: "readOnly", reason }),
     };
     let session: Session;
-    if (place.type === "world") {
-      const res = Session.openWorld(this.lib, place.id, { readOnly: mode === "read-only", takeOver: mode === "take-over" }, events, this.timers);
+    if (place.type === "world" || place.type === "module") {
+      const opener = place.type === "world" ? Session.openWorld : Session.openModule;
+      const res = opener(this.lib, place.id, { readOnly: mode === "read-only", takeOver: mode === "take-over" }, events, this.timers);
       if (res.status === "in-use") return res;
       session = res.session;
     } else {
@@ -799,7 +854,7 @@ export class Backend {
     this.markOpened(place.id, place);
     return {
       status: "open",
-      view: { type: place.type, id: place.id, name: session.name, systemName: session.systemName, readOnly: session.readOnly, readOnlyReason: session.readOnlyReason, recovered: session.recovered || resumed },
+      view: { type: place.type, id: place.id, name: session.name, systemName: session.systemName, worldName: session.worldName, readOnly: session.readOnly, readOnlyReason: session.readOnlyReason, recovered: session.recovered || resumed },
     };
   }
 
@@ -816,14 +871,14 @@ export class Backend {
 
   backups(): BackupView[] {
     const s = this.session;
-    if (!s || s.type !== "world") return [];
+    if (!s || s.type === "system") return [];
     const now = this.now();
     return this.lib.listBackups(s.id).map((b) => ({ ...b, label: whenLabel(b.time, now) }));
   }
 
   restoreBackup(file: string): true {
     const s = this.session;
-    if (!s || s.type !== "world") throw new LibraryError("Open a world first.");
+    if (!s || s.type === "system") throw new LibraryError("Open a world or module first.");
     if (!this.lib.listBackups(s.id).some((b) => b.file === file)) throw new LibraryError("That backup is gone.");
     s.restoreBackup(file);
     return true;
@@ -914,6 +969,28 @@ export class Backend {
   }
   newInSection(key: CodexKey, name: string): Id {
     return this.editing.newInSection(key, name);
+  }
+  encounterTree(): EncounterNode[] {
+    return this.editing.encounterTree();
+  }
+  addEncounter(name: string, inside: Id | null = null): Id {
+    return this.editing.addEncounter(name, inside);
+  }
+  moveEncounters(ids: Id[], inside: Id | null, before: Id | null = null): true {
+    this.editing.moveEncounters(ids, inside, before);
+    return true;
+  }
+  deleteEncounter(id: Id): StepResult {
+    return this.editing.deleteEncounter(id);
+  }
+  addToEncounter(id: Id, ids: Id[], count = 1): { label: string } {
+    return this.editing.addToEncounter(id, ids, count);
+  }
+  placeEncounter(sourceId: Id, inside: Id | null = null): Id {
+    return this.editing.placeEncounter(sourceId, inside);
+  }
+  saveEncounterToCodex(id: Id): Id {
+    return this.editing.saveEncounterToCodex(id);
   }
   addChoice(nodeId: Id, input: { label: string; pick: number; options: Id[] }): Id {
     return this.editing.addChoice(nodeId, input);
