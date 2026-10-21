@@ -558,6 +558,31 @@ on the screens of everyone ticked (and goes into their journal to look at again)
 Show to all is one click. Example: the party finds a note, but one player found it alone, so it is
 shown to that player only; or everyone sees the map except the player whose character is blind.
 
+### The session: one game night (October 21, 2026)
+
+- **Prepare session:** tick who's coming tonight; the app opens at the encounter the group reached
+  last time; star the encounters you expect to reach; PINs and the QR code ready.
+- **Begin session:** players join with their PINs (a green dot by each name); "Last time…" shows
+  on every screen (written by the DM, by the AI from the journal, or skipped); the session journal
+  starts a fresh page ("Session 7, October 24").
+- **During:** the tools, encounters, chat, dice and handouts as designed above.
+- **Save and stop:** everything is kept exactly (hit points, initiative, timers, whose turn);
+  Resume next week puts the table back mid-fight.
+- **Wrap up:** experience (added up from the monsters defeated, changeable, with a milestone
+  "everyone levels up" button), loot dragged onto characters, level-ups walked through on each
+  player's screen, the session log saved with the module, and a "keep this?" prompt for anything
+  made up on the spot (it becomes a real NPC in the module, or in the world).
+
+**Suggested by Claude, waiting for Jeff's OK:**
+- **Characters live in the world.** Modules borrow the party while you play, so the same heroes
+  carry on into the next adventure, and a campaign is just the world's modules in the order played.
+- **Levelling: the system sets the default, each DM can switch.** d20 starts with experience; a
+  game like The Ashen Vigil can start with milestones; any table can change it.
+- **Absent players: a setting, on by default.** Absent characters get the night's experience and
+  loot so nobody falls behind; a DM who wants attendance to matter turns it off.
+- **Level-ups: the DM approves.** Players walk through it on their own screen and it waits for an
+  OK, which catches mistakes. A trusted player can be set to level up on their own.
+
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
