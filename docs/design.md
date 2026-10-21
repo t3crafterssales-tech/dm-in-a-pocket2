@@ -477,6 +477,14 @@ DM's table), so they are there next time.
   one DM: some tables make every player an assistant GM ("look it up yourself"), others keep
   everything with the DM. Both styles are fine; the app supports either with levels and table
   templates (for example a ready-made "Everyone trusted" table template).
+- **Table jobs (Jeff, October 21, 2026).** The DM can hand a tool to anyone at the table, assistant
+  GM or player, so the DM can focus on monsters and maps: "Fred runs initiative" (he clicks Next
+  turn, and now it's Johnny's turn), "Johnny keeps the journal", "Fred tracks the party's gold".
+  A job is simply "Can change" on that one tool for that person, shown as a small badge by their
+  name (Initiative keeper, Scribe, Treasurer). Jobs are given in the Party screen or by dragging a
+  tool onto a name, and go into templates like everything else. Whether the initiative keeper also
+  sees hidden monsters is the DM's choice (hidden by default: they see "a hidden creature's turn").
+  The party gets a shared **party gold** tracker for the treasurer.
 - **The assistant GM can share what they can see (Jeff, October 21, 2026).** An assistant GM can
   show or send anything they are allowed to see, to any player, also with no confirmation: if Ken
   can see the journal, he can send a journal page to anyone. What is hidden from him he can't
