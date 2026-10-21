@@ -621,6 +621,25 @@ new, so the same five characters start a different module. All of that must just
   made along the way, and hit points, gold and gear can be typed in. Later idea: the AI reads a
   photo or PDF of an old paper sheet and fills the builder in, for the player to check.
 
+### Maps (started October 21, 2026)
+
+A map is part of the world being designed, like a monster or a lore page. The virtual tabletop
+(tokens, fog of war, lighting) is not part of this; Jeff isn't ready for a VTT yet.
+
+**Jeff's answers:** all three kinds matter from the start (world and region, town and city,
+dungeon and battle maps); bring in pictures **and** draw, together, in the first version;
+printing at real size for miniatures is not needed (maps print in the booklet and on screen).
+
+**Building order (proposed):**
+1. A map is a picture (imported, or drawn in the app, or both: draw on top of a picture) with
+   **pins** that link to places, lore pages, NPCs and encounters.
+2. **Grid and scale:** square or hex, "1 square = 5 feet", "1 hex = 6 miles", and a ruler.
+3. **A first, small set of drawing tools** (to be decided next), on a few fixed layers: the
+   picture, the drawing, labels, and DM-only notes.
+4. **Maps and encounters connect:** room pins are encounters in the tree, both ways; the booklet
+   prints the map with its numbered rooms.
+5. More drawing tools over time. Fog, tokens and lighting only if a tabletop is ever built.
+
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
