@@ -507,20 +507,30 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
 - A module opens like a world (same Codex, same tabs) with one new tab first: **Adventure**.
 - **Front page:** title, cover picture, level range, party size, about how many sessions, and the
   hook (what's going on and why the heroes get involved).
-- **Chapters and scenes** as a drag-to-reorder outline. Each scene card holds: read-aloud boxed
-  text; "What's really going on" for the DM; encounters (monsters dragged from the Codex, with how
-  hard the fight is for the party); treasure; handouts; and "Where it leads" links to other scenes.
-- **Two views:** the outline (book order) and a map view of scenes as boxes with arrows, for
-  branching adventures and dungeons (numbered rooms, doors as arrows). Working default: one kind
-  of scene card with an optional room number; separate "location" and "event" cards only if Jeff
-  wants them.
-- **The booklet:** the module prints as an adventure book (cover, introduction, chapters with
+- **Everything is an encounter (Jeff, October 21, 2026).** A tavern full of role-playing, an
+  ambush outside the gates, an investigation, a dungeon: each is an encounter, one kind of card.
+  Each encounter holds read-aloud text, "What's really going on" notes, monsters dragged from the
+  Codex (with how hard the fight is), descriptions, pictures, maps, treasure and handouts.
+- **Encounters inside encounters, any depth.** The goblin ambush outside the gates holds the well
+  beside the road; going down the well is its own encounter, inside the ambush. The cave holds
+  Room 1, Room 2, Room 3... each a full encounter with its own notes, monsters and pictures.
+  ("Inside" here is like a brick nested in a brick: it belongs to and prints with its encounter.
+  It is not a variant, so nothing is inherited.)
+- **"Leads to" links** join encounters that are separate: tracks from the ambush lead to the cave,
+  which is its own encounter, not inside the ambush.
+- **Printing follows the nesting:** 1. Goblin ambush, 1.1 The well; 2. The cave, 2.1 Room 1, 2.2
+  Room 2... An encounter prints with everything inside it, and "Leads to" prints as "see 2. The
+  cave".
+- **Two views:** the outline (nesting, in book order, drag to reorder or to move one inside
+  another) and a map view of encounters as boxes, with "Leads to" as arrows.
+- **The booklet:** the module prints as an adventure book (cover, introduction, encounters with
   boxed read-aloud text, then automatic appendices of every monster's stat block and the
   handouts), built like the rulebook.
 - **A module booklet is a DM book** (decided by Jeff, October 21, 2026), so "What's really going
   on" belongs in it. At the table, the permissions keep secret parts off players' screens.
-- **Running it:** the tabletop shows the current scene, its read-aloud text and its encounters;
-  clicking an encounter drops its monsters into initiative, hidden until revealed.
+- **Running it:** the tabletop shows the current encounter, its read-aloud text and what's inside
+  it; clicking Start fight drops its monsters into initiative, hidden until revealed. "Session"
+  stays the word for a game night.
 
 ### Showing things to players (October 21, 2026)
 
