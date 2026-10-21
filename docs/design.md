@@ -399,6 +399,13 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   lock after a few wrong tries. Players join in a web browser (laptop, tablet or phone, nothing to
   install) or a QR code on the DM's screen. Each player sees their own desktop: their character,
   the initiative as the DM allows, the journal pages and handouts shared with them.
+- **Chat and whispers (October 21, 2026).** A typed chat for everyone in the session. A whisper
+  goes only to the people you pick: click one or two names (or a "to: Randy, Joe" chip) and the
+  message is marked as a whisper for them alone. Rolls post into the chat: open (everyone sees),
+  DM only, or blind (the player rolls but only the DM sees the result, for perception and
+  traps). Names in a message link to sheets and handouts, which open only if the reader has
+  permission. In-character and out-of-character lines look different. The chat is saved with
+  the session and its lines can be pinned into the journal.
 - **Hidden monsters.** Monsters join initiative hidden; the DM reveals each one when it appears
   (or all at once). Players see monster health as words ("unhurt", "bloodied", "nearly down")
   unless the DM shares numbers. Hidden rolls stay on the DM's screen.
@@ -413,6 +420,7 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   points)?
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
   extra), or start with same-network play only?
+- Whispers between players: does the DM see them (as in Foundry), and does the assistant DM?
 - The order of the themes, and which ones make version 2 rather than version 3.
 
 ## Idea parking lot
