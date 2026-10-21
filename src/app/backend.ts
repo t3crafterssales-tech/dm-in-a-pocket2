@@ -262,6 +262,8 @@ export const BACKEND_METHODS = [
   "makeVariant",
   "printPreview",
   "newInSection",
+  "addChoice",
+  "addChoiceOptions",
   "setTemplate",
   "flagPanel",
   "missingDetail",
@@ -912,6 +914,13 @@ export class Backend {
   }
   newInSection(key: CodexKey, name: string): Id {
     return this.editing.newInSection(key, name);
+  }
+  addChoice(nodeId: Id, input: { label: string; pick: number; options: Id[] }): Id {
+    return this.editing.addChoice(nodeId, input);
+  }
+  addChoiceOptions(nodeId: Id, aid: Id, ids: Id[]): true {
+    this.editing.addChoiceOptions(nodeId, aid, ids);
+    return true;
   }
   copyNode(sourceId: Id, name: string): Id {
     return this.editing.copyNode(sourceId, name);

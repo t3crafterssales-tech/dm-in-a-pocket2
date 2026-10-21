@@ -47,3 +47,18 @@ test("Quick start: a classic d20 game with hit points from Constitution", () => 
   assert.equal(backend.node(hp.id).summary, "Hit points (HP): maximum 10 + Constitution bonus; starts full; recovers each long rest; at 0 you are Unconscious.");
   assert.throws(() => backend.quickStart({ check: "rollOver", abilities: "classic", health: "hp", tone: "silly" as never, map: "grid", magic: "slots" }), /Heroic or gritty/);
 });
+
+test("Quick start on top of the d20 starter, or twice, never makes a second Strength (backlog 2)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "dmip-qs2-"));
+  const backend = new Backend({ settingsPath: join(dir, "s.json"), defaultFolder: join(dir, "D"), machine: "pc", pickPicture: async () => null, pickFolder: async () => null, emit: () => {}, timers: { set: () => 0, clear: () => {}, now: () => Date.now() } });
+  const sys = backend.createSystem({ name: "d20 Basic", picture: null, start: "d20" });
+  backend.open({ type: "system", id: sys });
+  const answers = { check: "rollOver", abilities: "classic", health: "hp", tone: "heroic", map: "grid", magic: "slots" } as const;
+  backend.quickStart(answers);
+  backend.quickStart(answers);
+  const tab = backend.rulesTab();
+  const names = (k: string) => tab.find((s) => s.key === k)!.nodes.map((n) => n.name);
+  assert.equal(names("abilities").filter((n) => n === "Strength").length, 1);
+  assert.equal(names("core").length, 1, "one core check");
+  assert.ok(!backend.flags().some((f) => /are called/.test(f.title)), "no duplicate-name flags");
+});

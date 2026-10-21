@@ -100,16 +100,7 @@ export async function itemSheet(view: NodeView, categories: CategoryOption[], _c
   const quickBox = rows.length ? h("div", { class: "quick" }, rows) : null;
 
   // ---------- How it prints ----------
-  const prints = preview
-    ? h(
-        "div",
-        { class: "prints" },
-        h("div", { class: "eyebrow" }, "How it prints in the rulebook"),
-        h("h3", null, preview.title),
-        preview.stats ? h("div", { class: "prints-stats" }, preview.stats) : null,
-        preview.paragraphs.map((p) => h("p", null, p)),
-      )
-    : null;
+  const prints = printsBox(preview ?? null);
 
   // ---------- More: everything else ----------
   const more = h("details", { class: "sheet-more", open: moreOpen.has(view.id) }, h("summary", null, "More: enchantments, properties, attacks, filing"), moreBody(view, categories, quick, locked, ed, ctx));
@@ -133,6 +124,16 @@ export async function itemSheet(view: NodeView, categories: CategoryOption[], _c
   const banner = starter && !view.readOnly ? h("div", { class: "starter-banner" }, h("span", null, `This is the starter's ${view.name}. Make your own copy to change it; the starter stays as it is.`), h("button", { class: "button primary small-button", onClick: () => void ownCopy(view, ctx) }, "Make my own copy")) : null;
 
   return sheetFrame(view, ctx, locked, [banner, head, quickBox, prints, more, actions]);
+}
+
+/** "How it prints in the rulebook": the rulebook's own entry, folded when it is long. */
+export function printsBox(preview: { title: string; stats: string | null; paragraphs: string[] } | null): HTMLElement | null {
+  if (!preview) return null;
+  const long = preview.paragraphs.join(" ").length > 700;
+  const body = h("div", { class: `prints-body${long ? " clamped" : ""}` }, preview.paragraphs.map((p) => h("p", null, p)));
+  const toggle = long ? h("button", { class: "link small" }, "Show all") : null;
+  toggle?.addEventListener("click", () => (toggle.textContent = body.classList.toggle("clamped") ? "Show all" : "Show less"));
+  return h("div", { class: "prints" }, h("div", { class: "eyebrow" }, "How it prints in the rulebook"), h("h3", null, preview.title), preview.stats ? h("div", { class: "prints-stats" }, preview.stats) : null, body, toggle);
 }
 
 /** The panel around a sheet: drops from the Codex land here, and Alt-click edits the parent. */
@@ -174,14 +175,14 @@ export function sheetFrame(view: NodeView, ctx: PlaceCtx, locked: boolean, child
 /** The description: the standard one with "Write my own", or your own with "Back to the standard". */
 export function description(view: NodeView, quick: QuickView, locked: boolean, ed: FieldMaker): HTMLElement {
   const standard = quick.standardText;
-  if (locked) return h("p", { class: "std-line" }, view.text || h("span", { class: "muted" }, "No description."));
+  if (locked) return view.text ? longText(view.text, "std-line") : h("p", { class: "std-line muted" }, "No description.");
   const usingStandard = !!standard && view.text === standard && (!view.parent || !view.own.includes("text"));
   if (usingStandard && !writing.has(view.id))
     return h(
       "div",
       { class: "std" },
       h("span", { class: "std-tag" }, "Standard description"),
-      h("p", null, standard),
+      longText(standard),
       h("div", { class: "row tight" }, h("button", { class: "link", onClick: () => (writing.add(view.id), void ed.save(async () => {})) }, "Write my own"), h("span", { class: "muted small" }, "or leave it. This is what prints.")),
     );
   const box = h("textarea", { class: "text-input desc-box", rows: 3, "data-key": "f-text", placeholder: "A few words about it: what it looks like, where it comes from…", "aria-label": "Description", "data-autofocus": writing.has(view.id) ? "" : null }, view.text);
@@ -197,6 +198,19 @@ export function description(view: NodeView, quick: QuickView, locked: boolean, e
   );
 }
 const writing = new Set<string>();
+
+/** Long text (a class's whole description) shows its first few lines, with Show all. */
+function longText(text: string, cls = ""): HTMLElement {
+  const lines = text.split(/\n+/).filter(Boolean);
+  const p = h("div", { class: `long-text ${cls}${text.length > 320 ? " clamped" : ""}` }, lines.map((l) => h("p", null, l)));
+  if (text.length <= 320) return p;
+  const more = h("button", { class: "link small" }, "Show all");
+  more.addEventListener("click", () => {
+    const open = p.classList.toggle("clamped");
+    more.textContent = open ? "Show all" : "Show less";
+  });
+  return h("div", null, p, more);
+}
 
 function inheritedNote(view: NodeView, from: string | null, ctx: PlaceCtx): HTMLElement {
   return h("span", { class: "muted small inherited-note" }, `Comes from ${from ?? "its parent"}. `, view.parent ? h("button", { class: "link small", onClick: () => void openEditParent(view, ctx) }, "Edit parent") : null);

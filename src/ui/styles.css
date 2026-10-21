@@ -765,3 +765,12 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .shortcuts td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .shortcuts td:first-child { white-space: nowrap; }
 kbd { font: 12px var(--sans); background: var(--paper); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+.quick-scores { display: grid; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.quick-scores .score-row { margin: 0; }
+.being-parts { margin-top: 18px; display: grid; gap: 16px; }
+.choices-hint { margin-bottom: 8px; }
+.choices-hint .button { display: inline-flex; align-items: center; gap: 4px; }
+.long-text p { margin: 4px 0; font-family: var(--serif); font-size: 15px; user-select: text; }
+.long-text.clamped { max-height: 6.2em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+.prints-body.clamped { max-height: 11em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.prints .link { font-family: var(--sans); }

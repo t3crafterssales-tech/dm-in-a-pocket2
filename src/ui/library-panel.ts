@@ -13,6 +13,8 @@ import { openEditSystem } from "./edit-system.ts";
 import { offerRestore } from "./flag-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 import { newNameBox } from "./rules-tab.ts";
+import { DAMAGE_TYPES, DICE_CHOICES } from "../app/codex-lists.ts";
+import { addSelect, chips, stepper } from "./pickers.ts";
 
 export const DRAG_TYPE = "application/x-dm-bricks";
 
@@ -235,52 +237,75 @@ function askWhenAndHowOften(): Promise<{ activation: { when: string[]; join: "an
 const BRICK_LABELS: Record<string, string> = { attack: "Attack", spell: "Spell", trait: "Trait", effect: "Effect", damage: "Damage", immunity: "Immunity", abilityBonus: "Ability bonus", armor: "Armour" };
 
 export function brickEditor(view: NodeView, choices: Choices, ctx: PlaceCtx, onRemove: () => void) {
-  const ro = view.readOnly;
+  const starter = view.source === "template";
+  const ro = view.readOnly || starter;
   const ed = new FieldMaker(view, ctx);
   const type = String(view.fields.type ?? "trait");
-  const nameInput = h("input", { class: "title-input", value: view.name, "data-key": "f-name", "aria-label": "Name", disabled: ro, maxlength: 200 });
-  nameInput.addEventListener("change", () => void ed.save(() => api.rename(view.id, nameInput.value)));
-  nameInput.addEventListener("keydown", (e) => e.key === "Enter" && nameInput.blur());
-  const fields: HTMLElement[] = [];
-  if (type === "attack" || type === "abilityBonus") fields.push(ed.row("Ability", "ability", ed.linkSelect("ability", choices.abilities, "No ability")));
-  if (type === "attack" || type === "damage" || type === "spell") {
-    fields.push(ed.row("Damage dice", "dice", ed.text("dice", "For example 1d6")));
-    fields.push(ed.row("Damage type", "damageType", ed.text("damageType", "For example slashing, or fire")));
+  const set = (k: string, v: unknown) => void ed.save(() => api.setField(view.id, k, v as never));
+  const name = h("input", { class: "sheet-name", value: view.name, "data-key": "f-name", "aria-label": "Name", disabled: ro, maxlength: 200 });
+  name.addEventListener("change", () => name.value.trim() && void ed.save(() => api.rename(view.id, name.value)));
+  name.addEventListener("keydown", (e) => e.key === "Enter" && name.blur());
+
+  // The few things you'd change, as pickers.
+  const rows: HTMLElement[] = [];
+  const row = (label: string, key: string, ...control: (HTMLElement | null)[]) => rows.push(h("div", { class: "quick-row" }, h("div", { class: "quick-label" }, label, ed.pencil(key)), h("div", { class: "quick-control" }, control)));
+  const str = (k: string) => (typeof view.fields[k] === "string" ? (view.fields[k] as string) : "");
+  if (type === "spell") {
+    const lvl = typeof view.fields.spellLevel === "number" ? (view.fields.spellLevel as number) : null;
+    row("Level", "spellLevel", chips(["Cantrip", "1", "2", "3", "4", "5", "6", "7", "8", "9"], lvl === null ? "" : lvl === 0 ? "Cantrip" : String(lvl), (v) => set("spellLevel", v === "Cantrip" ? 0 : Number(v)), { disabled: ro, label: "Spell level" }));
+    row("School", "school", chips(SCHOOLS, str("school"), (v) => set("school", v), { disabled: ro, other: "Another school of magic", label: "School" }));
   }
-  if (type === "effect" || type === "immunity") fields.push(ed.row("Condition", "condition", ed.linkSelect("condition", choices.conditions, "No condition")));
-  if (type === "abilityBonus") fields.push(ed.row("Amount", "amount", ed.number("amount")));
-  if (type === "armor") fields.push(ed.row("Armour bonus", "bonus", ed.number("bonus")));
-  if (type === "trait" || type === "spell" || type === "effect") fields.push(ed.row("What it does", "wording", ed.text("wording", type === "trait" ? "For example: advantage on attacks when an ally is nearby" : "In a few words, for the rulebook")));
-  const textBox = h("textarea", { class: "text-input rules-text", "data-key": "f-text", rows: 4, disabled: ro, placeholder: "Notes or the full description." }, view.text);
+  if (type === "attack" || type === "abilityBonus") rows.push(ed.row("Ability", "ability", ed.linkSelect("ability", choices.abilities, "No ability")));
+  if (type === "attack" || type === "damage" || type === "spell") {
+    row("Damage", "dice", chips(DICE_CHOICES.slice(1), str("dice"), (v) => set("dice", v), { disabled: ro, other: "Other dice, such as 3d6 or 8d6", label: "Damage dice" }), addSelect(DAMAGE_TYPES, str("damageType"), (v) => set("damageType", v.toLowerCase()), { add: "Add a damage type", label: "Damage type", key: "q-dtype", disabled: ro, none: type === "spell" ? "No damage" : "Choose…" }));
+  }
+  if (type === "effect" || type === "immunity") rows.push(ed.row("Condition", "condition", ed.linkSelect("condition", choices.conditions, "No condition")));
+  if (type === "abilityBonus") row("Amount", "amount", stepper(typeof view.fields.amount === "number" ? (view.fields.amount as number) : 1, (n) => set("amount", n), { label: "Amount", key: "q-amount", min: -10, disabled: ro }));
+  if (type === "armor") row("Armour bonus", "bonus", stepper(typeof view.fields.bonus === "number" ? (view.fields.bonus as number) : 1, (n) => set("bonus", n), { label: "Armour bonus", key: "q-bonus", disabled: ro }));
+  if (type === "trait" || type === "spell" || type === "effect") rows.push(ed.row("What it does, in a few words", "wording", ed.text("wording", type === "trait" ? "For example: advantage on attacks when an ally is nearby" : "In a few words, for the rulebook")));
+  for (const el of rows) el.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select").forEach((x) => ro && (x.disabled = true));
+
+  const textBox = h("textarea", { class: "text-input desc-box", "data-key": "f-text", rows: 4, disabled: ro, placeholder: "The full description, as the rulebook prints it." }, view.text);
   textBox.addEventListener("change", () => void ed.save(() => api.setText(view.id, textBox.value)));
+  const copy = async () => {
+    const id = await attempt(() => api.makeOwnCopy(view.id));
+    if (id) await ctx.open(id, { focusName: true });
+  };
   return h(
     "section",
     { class: "panel editor", "data-scroll": "editor" },
     h(
       "div",
-      { class: "editor-inner" },
+      { class: "sheet" },
+      starter && !view.readOnly ? h("div", { class: "starter-banner" }, h("span", null, `This is the starter's ${view.name}. Make your own copy to change it; the starter stays as it is.`), h("button", { class: "button primary small-button", onClick: () => void copy() }, "Make my own copy")) : null,
+      name,
       h(
         "div",
-        { class: "editor-head" },
-        h("div", { class: "title-row" }, nameInput, ed.pencil("name"), ro ? null : h("button", { class: "icon-button", title: "Delete (it goes to the recycle bin)", "aria-label": `Delete ${view.name}`, onClick: onRemove }, svg(ICONS.trash))),
-        h(
-          "div",
-          { class: "chips" },
-          h("span", { class: "chip" }, `Library brick · ${BRICK_LABELS[type] ?? "Brick"}`),
-          view.fromBelow ? h("span", { class: "chip muted" }, svg(ICONS.layers), "From the system") : null,
-          view.fromBelow && !ro && ctx.view.type === "world" ? h("button", { class: "link small", title: "Change the system's version, and choose which worlds get it", onClick: () => void openEditSystem(view.id, ctx) }, "Edit in the system") : null,
-        ),
+        { class: "sheet-tags" },
+        h("span", { class: "tag accent" }, BRICK_LABELS[type] ?? "Brick"),
+        starter ? h("span", { class: "tag" }, "From the starter") : h("span", { class: "tag" }, "Made by you"),
+        view.fromBelow && !view.readOnly && ctx.view.type === "world" && !starter ? h("button", { class: "link small", title: "Change the system's version, and choose which worlds get it", onClick: () => void openEditSystem(view.id, ctx) }, "Edit in the system") : null,
       ),
       h("p", { class: "summary" }, view.summary),
-      h("p", { class: "muted small" }, "This is the original. Changing it changes every sheet that uses it, except values a sheet changed for itself."),
-      h("div", { class: "fields" }, fields),
+      rows.length ? h("div", { class: "quick" }, rows) : null,
       h("div", { class: "field" }, h("div", { class: "field-label" }, "Description", ed.pencil("text")), textBox),
+      h("p", { class: "muted small" }, "This is the original. Changing it changes every sheet that uses it, except values a sheet changed for itself."),
       h(
         "div",
         { class: "used-by" },
         h("div", { class: "field-label" }, "Used by"),
-        view.usedBy.length ? h("ul", { class: "link-list" }, view.usedBy.map((u) => h("li", null, h("button", { class: "link", onClick: () => ctx.select(u.id) }, u.name)))) : h("p", { class: "muted small" }, "No sheet uses it yet. Drag it onto one."),
+        view.usedBy.length ? h("ul", { class: "link-list" }, view.usedBy.map((u) => h("li", null, h("button", { class: "link", onClick: () => ctx.select(u.id) }, u.name)))) : h("p", { class: "muted small" }, "No sheet uses it yet. Drag it onto one from the Codex."),
       ),
+      view.readOnly
+        ? null
+        : h(
+            "div",
+            { class: "sheet-actions" },
+            starter ? h("button", { class: "button primary", onClick: () => void copy() }, "Make my own copy") : h("button", { class: "button plain", onClick: () => void copy() }, "Make another like it"),
+            h("button", { class: "button plain danger-text", title: "It goes to the recycle bin", onClick: onRemove }, svg(ICONS.trash), "Delete"),
+          ),
     ),
   );
 }
+
+const SCHOOLS = ["Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"];

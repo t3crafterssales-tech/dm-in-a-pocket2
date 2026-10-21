@@ -1,3 +1,4 @@
+import { STANDARD_CORE_TEXT } from "../src/app/codex-lists.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
@@ -36,7 +37,21 @@ test("the rulebook prints what the Rules tab says, in the same words", () => {
   assert.equal(ch("abilities").entries[0]!.stats, "Short label STR");
   assert.deepEqual(ch("abilities").entries[0]!.paragraphs, ["Scores from 3 to 18; its bonus is (score - 10) / 2, rounded down."]);
   assert.deepEqual(ch("resources").entries[0]!.paragraphs, ["Maximum Strength score + 10; starts full; recovers each long rest."]);
-  assert.deepEqual(ch("core").entries[0]!.paragraphs, ["Roll d20 + bonus; meet or beat the difficulty to succeed."]);
+  // A new core check starts with the standard wording for its kind (backlog 1), then the summary.
+  assert.deepEqual(ch("core").entries[0]!.paragraphs, [STANDARD_CORE_TEXT.rollOver, "Roll d20 + bonus; meet or beat the difficulty to succeed."]);
+});
+
+test("a core check's standard wording follows its kind, until the user writes their own", () => {
+  const { backend } = setup();
+  const core = backend.addRule("core", "The core check");
+  assert.equal(backend.node(core).text, STANDARD_CORE_TEXT.rollOver);
+  backend.setField(core, "family", "rollUnder");
+  assert.equal(backend.node(core).text, STANDARD_CORE_TEXT.rollUnder, "the standard wording changes with the kind");
+  backend.undo();
+  assert.equal(backend.node(core).text, STANDARD_CORE_TEXT.rollOver, "one undo puts both back");
+  backend.setText(core, "Roll a d20 and pray.");
+  backend.setField(core, "family", "pool");
+  assert.equal(backend.node(core).text, "Roll a d20 and pray.", "your own words are never replaced");
 });
 
 test("a monster's effect names its brick, and points at the condition it causes", () => {

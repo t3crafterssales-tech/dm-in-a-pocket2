@@ -349,3 +349,25 @@ export function newInSection(ws: Workspace, layerId: Id, key: CodexKey, name: st
   if (key === "armour") ws.attach(layerId, id, ws.create(layerId, "brick", freeNodeName(ws, layerId, "brick", `${name} protection`), { fields: { [F.type]: "armor", bonus: 1 } }));
   return id;
 }
+
+// ---------- Choices ("choose one of these") ----------
+
+/**
+ * "+ Add a choice": a Choices box on a sheet, such as "Choose one fighting style: Archery,
+ * Defense, Dueling". The options are links to things in the Codex. Inside the caller's step.
+ */
+export function addChoice(ws: Workspace, layerId: Id, nodeId: Id, input: { label: string; pick: number; options: Id[] }): Id {
+  const label = input.label.trim();
+  if (!label) throw new Error("Say what is being chosen, for example: fighting style.");
+  const options = [...new Set(input.options)].filter((id) => ws.get(layerId, id));
+  return ws.attach(layerId, nodeId, null, { choice: { label, pick: Math.max(1, Math.round(input.pick) || 1), again: false, restrict: "", options: options.map((id) => link(id)) } });
+}
+
+/** Dropping things onto a Choices box adds them as options. Inside the caller's step. */
+export function addChoiceOptions(ws: Workspace, layerId: Id, nodeId: Id, aid: Id, ids: Id[]) {
+  ws.editAttachment(layerId, nodeId, aid, (a) => {
+    if (!a.choice) throw new Error("That isn't a Choices box.");
+    const have = new Set(a.choice.options.map((o) => o.link));
+    for (const id of ids) if (id !== nodeId && ws.get(layerId, id) && !have.has(id)) a.choice.options.push(link(id));
+  });
+}

@@ -131,6 +131,8 @@ function balance(ws: Workspace, layerId: Id, all: NodeRecord[], factor: number):
   const out: YellowFlag[] = [];
   for (const m of monsters) {
     if (!judged(ws, layerId, m.n)) continue;
+    // A copy that matches a starter monster (same challenge, hit points and damage) is as normal as it is.
+    if (monsters.some((o) => o.n.id !== m.n.id && !judged(ws, layerId, o.n) && o.cr === m.cr && o.hp === m.hp && o.dmg === m.dmg)) continue;
     const peers = monsters.filter((o) => o.n.id !== m.n.id && o.cr === m.cr);
     if (peers.length < MIN_PEERS) continue;
     for (const what of ["dmg", "hp"] as const) {

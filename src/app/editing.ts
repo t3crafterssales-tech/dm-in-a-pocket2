@@ -4,7 +4,7 @@
 
 import { F, levelKey, pointBuyOf, pointsSpent } from "../engine/index.ts";
 import type { Spent } from "../engine/index.ts";
-import { BOOK_CHAPTERS, CHAPTER_TITLES, bookEntry, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
+import { BOOK_CHAPTERS, CHAPTER_TITLES, bookEntry, isCoreCheck, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
 import type { Book, BookType, ChapterId, CheckCategory, CheckSettings, Sensitivity } from "../engine/index.ts";
 
 const BOOK_TYPES = Object.keys(BOOK_CHAPTERS) as BookType[];
@@ -21,7 +21,8 @@ import { attachInside, attachmentDetail, changeParent, editAttachment, familyChe
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { createLore, loreList, rollTable } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
-import { CODEX_SECTIONS, codexSections, makeOwnCopy, makeVariant, moveToSection as moveCodex, newInSection, quickView } from "./codex.ts";
+import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
+import { CODEX_SECTIONS, addChoice, addChoiceOptions, codexSections, makeOwnCopy, makeVariant, moveToSection as moveCodex, newInSection, quickView } from "./codex.ts";
 import type { CodexKey, CodexSection, QuickView } from "./codex.ts";
 import { attachAtLevel, isClass, levelTable, setFeatureLevel } from "./levels.ts";
 import type { LevelTable } from "./levels.ts";
@@ -661,7 +662,17 @@ export class Editing {
   setField(id: Id, key: string, value: Value) {
     const node = this.must(id);
     if (!/^[A-Za-z][A-Za-z0-9]*$/.test(key)) throw new LibraryError("That isn't a value this app knows.");
-    this.run(() => this.ws.transact(`Changed ${node.name}`, () => this.ws.setField(this.layer, id, key, value)));
+    this.run(() =>
+      this.ws.transact(`Changed ${node.name}`, () => {
+        // A core check's standard wording follows its kind, unless the user wrote their own (backlog 1).
+        const before = this.ws.resolve(this.layer, id)!;
+        this.ws.setField(this.layer, id, key, value);
+        if (key === F.family && typeof value === "string" && isCoreCheck(this.ws, this.layer, before.record)) {
+          const text = before.record.text.trim();
+          if (!text || Object.values(STANDARD_CORE_TEXT).includes(text)) this.ws.edit(this.layer, id, (r) => (r.text = STANDARD_CORE_TEXT[value] ?? ""));
+        }
+      }),
+    );
   }
 
   /** In a world: puts a value back to what the system says (removes the pencil mark). */
@@ -742,6 +753,16 @@ export class Editing {
   makeVariant(id: Id, name?: string): Id {
     const src = this.must(id);
     return this.run(() => this.ws.transact(`Made a variant of ${src.name}`, () => makeVariant(this.ws, this.layer, id, name)));
+  }
+
+  addChoice(nodeId: Id, input: { label: string; pick: number; options: Id[] }): Id {
+    const n = this.must(nodeId);
+    return this.run(() => this.ws.transact(`Added a choice of ${String(input.label).trim()} to ${n.name}`, () => addChoice(this.ws, this.layer, nodeId, input)));
+  }
+
+  addChoiceOptions(nodeId: Id, aid: Id, ids: Id[]) {
+    const n = this.must(nodeId);
+    this.run(() => this.ws.transact(`Added ${ids.length === 1 ? (this.ws.get(this.layer, ids[0]!)?.name ?? "an option") : `${ids.length} options`} to a choice on ${n.name}`, () => addChoiceOptions(this.ws, this.layer, nodeId, aid, ids)));
   }
 
   /** "Start blank" on the start screen. */

@@ -4,6 +4,7 @@
 import { F, link } from "../engine/index.ts";
 import type { Id, NodeKind, Value, Workspace } from "../engine/index.ts";
 import { ensureSections } from "./rules.ts";
+import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
 import type { SectionKey } from "./rules.ts";
 import { ensureCategories } from "./sheets.ts";
 
@@ -132,14 +133,23 @@ export function buildQuickStart(ws: Workspace, layerId: Id, a: QuickStartAnswers
   ws.transact("Quick start", () => {
     const sections = ensureSections(ws, layerId);
     ensureCategories(ws, layerId);
+    // Running Quick start on a system that already has these (the d20 starter, or Quick start a
+    // second time) reuses them instead of making a second Strength (backlog 2).
+    const existing = new Map(ws.list(layerId).map((n) => [`${n.kind}|${n.name.trim().toLowerCase()}`, n.id]));
     const add = (section: SectionKey, kind: NodeKind, name: string, fields: Record<string, Value>, text = "") => {
+      const have = existing.get(`${kind}|${name.toLowerCase()}`);
+      if (have) return have;
       made.push(name);
-      return ws.create(layerId, kind, name, { category: link(sections.get(section)!), fields, text });
+      const id = ws.create(layerId, kind, name, { category: link(sections.get(section)!), fields, text });
+      existing.set(`${kind}|${name.toLowerCase()}`, id);
+      return id;
     };
     const rule = (section: SectionKey, name: string, text: string) => add(section, "rule", name, {}, text);
 
     const [die, target] = CHECK_DIE[a.check];
-    add("core", "rule", "The core check", { [F.family]: a.check, [F.die]: die, [F.target]: target });
+    // One core check: a system that has one keeps it.
+    const hasCore = ws.list(layerId).some((n) => n.category?.link === sections.get("core"));
+    if (!hasCore) add("core", "rule", "The core check", { [F.family]: a.check, [F.die]: die, [F.target]: target }, STANDARD_CORE_TEXT[a.check] ?? "");
 
     const sc = SCORES[a.check];
     const abilities = (ABILITY_SETS[a.abilities] ?? []).map(([name, label, text]) => add("abilities", "ability", name, { [F.label]: label, [F.rangeMin]: sc.min, [F.rangeMax]: sc.max, [F.bonus]: sc.bonus }, text));

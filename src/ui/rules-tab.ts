@@ -1,6 +1,8 @@
 // The Rules tab: sections of small rule nodes on the left, the open rule in the middle.
 // Every value saves the moment it changes (when you leave the box or press Enter), as one undo step.
 
+import { STANDARD_CORE_TEXT } from "../app/codex-lists.ts";
+import { chips } from "./pickers.ts";
 import type { Choices, NodeView, Option, RulesSection } from "../app/backend.ts";
 import { api } from "./api.ts";
 import { attempt } from "./common.ts";
@@ -193,6 +195,15 @@ function editorPanel(view: NodeView | null, choices: Choices, moveTo: { key: str
   const { main, more } = kindFields(view, choices, ed, isCore);
   const textBox = h("textarea", { class: "text-input rules-text", "data-key": "f-text", rows: 6, disabled: ro, placeholder: "Write the rule out in your own words. This is what the rulebook prints." }, view.text);
   textBox.addEventListener("change", () => void ed.save(() => api.setText(view.id, textBox.value)));
+  // A core check's standard wording (backlog 1): leave it, write your own, or go back to it.
+  const standard = isCore ? (STANDARD_CORE_TEXT[String(view.fields.family ?? "rollOver")] ?? null) : null;
+  const standardNote = standard
+    ? view.text.trim() === standard
+      ? h("p", { class: "muted small" }, h("span", { class: "std-tag" }, "Standard description"), " Leave it, or write your own over it. Whatever is here is what prints.")
+      : ro || view.source !== "mine"
+        ? null
+        : h("button", { class: "link small", onClick: () => void ed.save(() => api.setText(view.id, standard)) }, "Back to the standard description")
+    : null;
 
   return h(
     "section",
@@ -204,7 +215,7 @@ function editorPanel(view: NodeView | null, choices: Choices, moveTo: { key: str
       summary,
       main.length ? h("div", { class: "fields" }, main) : null,
       more.length ? h("details", { class: "more", open: moreOpen.has(view.id), onToggle: (e: Event) => ((e.target as HTMLDetailsElement).open ? moreOpen.add(view.id) : moreOpen.delete(view.id)) }, h("summary", null, "More options"), h("div", { class: "fields" }, more)) : null,
-      h("div", { class: "field" }, h("div", { class: "field-label" }, view.kind === "rule" && !isCore ? "The rule" : "Description", ed.pencil("text")), textBox),
+      h("div", { class: "field" }, h("div", { class: "field-label" }, view.kind === "rule" && !isCore ? "The rule" : "Description", ed.pencil("text")), textBox, standardNote),
       usedBy(view, ctx),
     ),
   );
@@ -430,7 +441,9 @@ const FAMILIES = [
 function coreFields(view: NodeView, ed: FieldMaker): HTMLElement[] {
   const family = String(view.fields.family ?? "rollOver");
   const out = [ed.row("How a check works", "family", ed.select("family", FAMILIES))];
-  if (family === "rollOver" || family === "rollUnder" || family === "pool") out.push(ed.row(family === "pool" ? "Dice in the pool" : "Dice rolled", "die", ed.text("die", "For example d20, d100 or 3d6")));
+  // Dice as chips, not a typing box (backlog 3), with Other for anything unusual.
+  const dice = family === "pool" ? ["d6", "d10"] : family === "rollUnder" ? ["d20", "3d6", "d100", "2d6"] : ["d20", "d12", "d10", "d6", "2d6", "3d6", "d100"];
+  if (family === "rollOver" || family === "rollUnder" || family === "pool") out.push(ed.row(family === "pool" ? "Dice in the pool" : "Dice rolled", "die", chips(dice, String(view.fields.die ?? ""), (v) => void ed.save(() => api.setField(view.id, "die", v)), { disabled: view.readOnly, other: "Other dice, such as d30 or 4dF", label: "Dice rolled" })));
   if (family === "rollOver") out.push(ed.row("The number to beat is called", "target", ed.text("target", "For example Difficulty, or DC")));
   if (family === "pool") out.push(ed.row("A die succeeds on", "target", ed.text("target", "For example 5 (meaning 5 or more)")));
   if (family === "bands") out.push(ed.row("Full success at", "target", ed.text("target", "For example 10 (7 to 9 is a partial success)")));

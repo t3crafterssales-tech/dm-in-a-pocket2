@@ -137,6 +137,7 @@ test("refiling: drag between sections. An item changes where it is filed, a bein
   assert.ok(find(backend, "weapons", "My Lantern, Hooded"));
   assert.ok(backend.flags().some((f) => /filed as a weapon but has no attack/.test(f.title)), "allowed, but flagged");
   const goblin = backend.makeOwnCopy(find(backend, "monsters", "Goblin Warrior").id, "Snik");
+  assert.ok(!backend.flags().some((f) => f.title.startsWith("Snik")), "an unchanged copy of a starter monster is as balanced as the starter");
   backend.refile([goblin], "npcs");
   assert.equal(backend.node(goblin).fields.beingKind, "npc");
   backend.refile([goblin], "classes");

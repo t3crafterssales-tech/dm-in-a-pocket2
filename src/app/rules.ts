@@ -1,6 +1,7 @@
 // The Rules tab: its sections, and the small rule nodes inside them. Plain functions on the
 // engine, so they are tested without the window.
 
+import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
 import { F, formulaText, link } from "../engine/index.ts";
 import type { Id, NodeKind, NodeRecord, Value, Workspace } from "../engine/index.ts";
 
@@ -143,7 +144,10 @@ export function createRuleNode(ws: Workspace, layerId: Id, sectionKey: string, n
     const categoryId = def ? keys.get(def.key)! : sectionKey;
     if (!def && !ws.get(layerId, categoryId)) throw new Error("That section is gone.");
     const kind = def?.kind ?? "rule";
-    return ws.create(layerId, kind, name, { category: link(categoryId), fields: defaultsFor(kind, def?.key ?? null) });
+    const fields = defaultsFor(kind, def?.key ?? null);
+    // A new core check starts with the standard wording for its kind (backlog 1).
+    const text = def?.key === "core" ? (STANDARD_CORE_TEXT[String(fields[F.family] ?? "rollOver")] ?? "") : "";
+    return ws.create(layerId, kind, name, { category: link(categoryId), fields, text });
   });
 }
 
