@@ -483,9 +483,24 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
   changes it; another group can run it fresh.
 - **Sharing:** a shared module carries its world and system with it, as a shared world carries its
   system.
-
-Open: modules on their own home-screen shelf, or inside each world? Can a module be copied into a
-different world that uses the same system?
+- **Two kinds (locked in by Jeff, October 21, 2026):**
+  - **Setting-free module**, built straight on a system. It has everything in the system (the
+    starter's monsters, spells, items, classes and rules) but none of any world's own places,
+    NPCs or homebrew. Portable, like the 80s modules "suitable for any campaign".
+  - **World module**, built on a world, using that world's towns, villains and history too.
+  - **Place in a world:** a setting-free module can be copied into any world on the same system,
+    which then lets it use that world's things. The system never changes (still locked), and the
+    setting-free original stays as it was, so it can be placed in other worlds too. This is how a
+    module is reused.
+  - A world module can't simply drop its world: anything it used from the world would be missing,
+    so the app flags those links red to fix rather than refusing (Promise 4).
+- **A Modules shelf on the home screen**, beside Systems and Worlds. Clicking a module opens it with
+  its world and system behind it.
+- **Journals follow their layer (working idea, to settle later).** Notes written in a module stay
+  with the module; notes written in the world stay with the world. Inside a module, the world's
+  journal can be read (it flows down like everything else) but is changed in the world. A module
+  note can be copied up to the world journal on purpose ("Add to the world journal"), never
+  automatically, the same way Copy rule works.
 
 ### Open questions for version 2
 
