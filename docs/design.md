@@ -573,7 +573,7 @@ shown to that player only; or everyone sees the map except the player whose char
   player's screen, the session log saved with the module, and a "keep this?" prompt for anything
   made up on the spot (it becomes a real NPC in the module, or in the world).
 
-**Flexible groups (Jeff's example, October 21, 2026).** Four play a module and don't finish;
+**Flexible groups (locked in by Jeff, October 21, 2026).** The app never asks for the story to make sense: if the DM says a character is there, it's there; if not, it isn't. Many groups are drop-in (whoever can come brings their character). Four play a module and don't finish;
 experience so far is divided. Next week Randy can't come, so his character sits out. The week
 after, a new player joins with a brand new character. On the fifth night the DM wants something
 new, so the same five characters start a different module. All of that must just work:
