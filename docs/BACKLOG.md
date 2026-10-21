@@ -45,6 +45,13 @@ settled.
 - **Later: floating windows.** Pop-ups that can be dragged anywhere and kept open, for example a
   cleric sheet pinned in the top-left corner while writing lore.
 
+- **Mockup v1** (2026-10-21): `docs/mockups/feel-mockup-v1.html`, a clickable HTML mockup of the
+  battle-axe flow (also published as a claude.ai artifact for Jeff's phone). Not the real app.
+  Assumptions Jeff hasn't confirmed yet: both routes to make something (a "What do you want to
+  make?" start screen and copying from the Codex); the sheet shows picture, name and one line
+  first, then the main pickers, a live "How it prints" preview, and folds properties,
+  enchantments and notes under More. Once Jeff is happy with the feel, port it into `src/ui/`.
+
 ## Items
 
 | # | Date | Type | What Jeff said | Notes | Status |
