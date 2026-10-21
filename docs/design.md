@@ -615,6 +615,11 @@ new, so the same five characters start a different module. All of that must just
   it for this character in one click ("this time, point buy"). A world or module can also change
   its own default, like any other rule.
 - **Level-ups reuse the same screens**, showing what the class gains at the new level.
+- **Bringing in an existing character (Jeff, October 21, 2026).** The Method drop-down always has
+  **Enter my own**: click a box and type the score, no rolling. With it, the builder can start at
+  any level ("my 3rd level fighter"): it shows the class features up to that level and the choices
+  made along the way, and hit points, gold and gear can be typed in. Later idea: the AI reads a
+  photo or PDF of an old paper sheet and fills the builder in, for the player to check.
 
 ### Open questions for version 2
 
