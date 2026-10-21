@@ -382,6 +382,20 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   damage, used slots and timers live in the session. A session can be saved mid-fight and picked
   up next week.
 
+### Arranging the DM's screen, and bookmarks (Jeff, October 21, 2026)
+
+- **The DM arranges their own screen.** Tools are dragged by their title bar into place: a map in
+  the left corner, the initiative tracker on the right with a timer under it, bookmarks below
+  that. Tools snap into areas (left, right, top, bottom, middle, split as needed) rather than
+  floating loose, so nothing gets lost behind something else. The arrangement is remembered, and
+  can be saved under a name ("Combat", "Town", "Prep") to switch in one click.
+- **Bookmarks** are a tool of their own, like bookmarks in a Player's Handbook or the inside of a
+  DM screen. Drag anything into it: a rule (how movement works), a map, a tracker, a journal entry,
+  a monster, an encounter. Each is a link; click it to open it, or hover to read it at a glance.
+  Bookmarks can be grouped under headings and reordered by dragging.
+- **A Codex section or category can be bookmarked as a little table**, such as every potion with
+  its price, so a price list is always one glance away.
+
 ### The journal
 
 - Write as you play, with links: typing a name links to that sheet.
