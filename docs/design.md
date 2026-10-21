@@ -417,6 +417,18 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   block incoming connections; the relay only matches a PIN to a session and passes messages, with
   no accounts. Running it has a small monthly cost, so remote play may be an optional extra.
 
+### Tools (October 21, 2026)
+
+Everything on the tabletop screen is a **tool**: the dice tray, initiative, timers, roll tables,
+the journal, chat, handouts. Every tool works the same way, so it is learned once: it opens from
+the tabletop, and has its own small settings (a gear on the tool) that change only that tool.
+Settings can be the DM's for the whole table, or each player's own where it only affects their
+screen. A tool is also the natural unit for mods later: a mod adds a tool, or adds to one.
+
+Dice tray settings, for example: animation on or off, roll speed (fast to slow), sound on or
+off, the dice colour, and later 3D dice and other flourishes (trails, sparks on a natural 20).
+Turning animation off shows the result at once, for groups that want speed.
+
 ### The dice tray (designed with Jeff, October 21, 2026)
 
 A tool on the tabletop screen only. A dice button opens a small tray that slides out.
