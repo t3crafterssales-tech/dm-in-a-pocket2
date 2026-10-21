@@ -596,7 +596,7 @@ new, so the same five characters start a different module. All of that must just
 - **Level-ups: the DM approves** (players walk through it on their screen; it waits for an OK);
   trusted players can be set to level up on their own.
 
-### The character builder (October 21, 2026)
+### The character builder (locked in by Jeff, October 21, 2026)
 
 - **It builds itself from the system and world together** (locked in by Jeff). It only asks about
   what the game has: a d6 game with no feats never shows feats; a game without classes skips
