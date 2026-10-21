@@ -642,6 +642,16 @@ new, so the same five characters start a different module. All of that must just
 - **Appearance folds away (Jeff, October 21, 2026).** One line, "Appearance", that opens to more:
   height, weight, age, hair, eyes, skin, distinguishing marks, voice and mannerisms. A fast
   character skips it; a meticulous player fills in everything.
+- **Every section has + Add (Jeff, October 21, 2026).** The system's designer can add fields for
+  everyone ("Scars", "Cybernetics"), and a player can add their own on their own sheet (three
+  hair colours if they like). Added fields follow the same print rule below.
+- **Gear shows its picture (Jeff, October 21, 2026).** Dragging a weapon or item onto a character
+  can show the item's picture or icon beside it; a switch on the sheet turns pictures on or off
+  (on screen and in print), for players who like to see their gear.
+- **Trackers on the sheet (Jeff, October 21, 2026; details later).** The system's resources (spell
+  slots, ki, hit points) appear as trackers by themselves; a player can also add their own custom
+  tracker for anything (torches carried, arrows, rations, favours owed), choosing its name, its
+  maximum, how it looks (boxes to tick, a number, a bar) and whether a rest refills it.
 - **Empty means it doesn't print (rule, Jeff, October 21, 2026).** The character sheet is laid out
   as if everything is filled in, and anything left empty disappears: no "Hair:" with a blank after
   it, the line just isn't there, so the sheet is sparser but never shows empty labels. The only
