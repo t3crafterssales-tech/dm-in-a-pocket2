@@ -473,7 +473,10 @@ DM's table), so they are there next time.
   the absolute boss, never none and never two. The DM can't make themselves an assistant GM or a
   player. To change who runs the game (groups that take turns), **Hand over DM** moves the DM
   level to someone else in one step, and the old DM gets the level they pick, so there is never a
-  moment without exactly one. There can be several assistant GMs, all under the one DM.
+  moment without exactly one. There can be as many assistant GMs as the DM likes, all under the
+  one DM: some tables make every player an assistant GM ("look it up yourself"), others keep
+  everything with the DM. Both styles are fine; the app supports either with levels and table
+  templates (for example a ready-made "Everyone trusted" table template).
 - **The assistant GM can share what they can see (Jeff, October 21, 2026).** An assistant GM can
   show or send anything they are allowed to see, to any player, also with no confirmation: if Ken
   can see the journal, he can send a journal page to anyone. What is hidden from him he can't
