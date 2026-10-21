@@ -487,6 +487,11 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   Treasure, Plot threads, NPCs, Quests, Rumours, Places...), ending with **+ New category**, and
   pages are grouped by category in the journal's tree. Moving a page is just changing its category
   (or dragging it to another group). Same pattern as categories everywhere else in the app.
+- **A page can be just a picture (Jeff, October 21, 2026).** Drop a JPEG in and that's the page:
+  the town, the mayor, the tavern. A run of picture pages works like a slideshow the DM walks the
+  players through. Pages can be shared all at once on the honour system ("don't look ahead, you'll
+  spoil it for yourself"), or kept hidden and revealed one at a time with a **Reveal** button on
+  each page (the usual Show to players, everyone ticked), so nobody can peek.
 - **A session page has two parts:** the DM's notes on top, and the table's log underneath.
 - **The log keeps only what matters (Jeff):** fights started and ended, characters dropping,
   rewards, conditions, things shown and to whom, chat lines pinned. Not every dice roll. Each kind
