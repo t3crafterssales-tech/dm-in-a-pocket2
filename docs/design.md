@@ -573,15 +573,28 @@ shown to that player only; or everyone sees the map except the player whose char
   player's screen, the session log saved with the module, and a "keep this?" prompt for anything
   made up on the spot (it becomes a real NPC in the module, or in the world).
 
-**Suggested by Claude, waiting for Jeff's OK:**
-- **Characters live in the world.** Modules borrow the party while you play, so the same heroes
-  carry on into the next adventure, and a campaign is just the world's modules in the order played.
-- **Levelling: the system sets the default, each DM can switch.** d20 starts with experience; a
-  game like The Ashen Vigil can start with milestones; any table can change it.
-- **Absent players: a setting, on by default.** Absent characters get the night's experience and
-  loot so nobody falls behind; a DM who wants attendance to matter turns it off.
-- **Level-ups: the DM approves.** Players walk through it on their own screen and it waits for an
-  OK, which catches mistakes. A trusted player can be set to level up on their own.
+**Flexible groups (Jeff's example, October 21, 2026).** Four play a module and don't finish;
+experience so far is divided. Next week Randy can't come, so his character sits out. The week
+after, a new player joins with a brand new character. On the fifth night the DM wants something
+new, so the same five characters start a different module. All of that must just work:
+
+- **Characters live in the world, in the party roster** (everyone who has ever played there, like
+  a guild hall). A module never owns characters; it borrows whoever is at the table.
+- **Each session has its own table.** Prepare session ticks who is playing tonight. Anyone not
+  ticked sits out: their character stays as it was, and the session log says "Randy sat out".
+- **Experience and loot go to who was there** by default, divided among the characters at the
+  table that night. A table that wants absent characters to keep up turns on "Absent characters
+  share" in its settings.
+- **New players join any time.** Add a character to the roster (from the character builder) and
+  tick them for tonight. The DM can start them at the party's level, or at level 1.
+- **Modules keep a bookmark.** Leaving a module unfinished saves where the group was (the
+  encounter, and any fight in progress). The module shelf shows "Paused at 3.2 The Old Well";
+  coming back resumes there, with whoever is at the table then.
+- **Switching modules is just starting another one** with the same roster. A setting-free module
+  is placed in the world when a party from that world starts it.
+- **Levelling: the system sets the default (experience or milestones), each DM can switch.**
+- **Level-ups: the DM approves** (players walk through it on their screen; it waits for an OK);
+  trusted players can be set to level up on their own.
 
 ### Open questions for version 2
 
