@@ -337,7 +337,15 @@ be decided. Nothing here is built yet, and nothing here changes the hard rules w
 3. Maps (pictures, pins, maps inside maps, drawing tools, export).
 4. The DM's table on one screen (sessions, dice tray, initiative, timers, roll tables, journal).
 5. Players join on their own screens (PINs, permissions, chat and whispers, live maps and marks).
-6. Later: the print shop, the playtest simulator, the book and sheet designers, mods.
+6. The sheet designer and the book designer (one layout), and the print shop (paper pieces).
+
+**Version 2's design is complete (October 21, 2026).** Each step above can ship as its own update
+(2.1 modules, 2.2 the character builder...), so Jeff gets something new to use after each one.
+
+**Version 3 (later):** mods and content packs, app themes and atmosphere (dark mode, parchment,
+sci-fi; music and sounds at the table), the playtest simulator, more book layouts with fonts,
+graphics, borders and dividers, sticker stock, and the AI's part in all of version 2 (decided after
+Jeff has tried the version 1 AI). Version 2 keeps looks swappable so mods stay possible.
 
 ### The DM decides who sees what (rule, decided by Jeff, October 21, 2026)
 
