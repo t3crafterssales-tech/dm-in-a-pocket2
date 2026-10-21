@@ -405,7 +405,10 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   DM only, or blind (the player rolls but only the DM sees the result, for perception and
   traps). Names in a message link to sheets and handouts, which open only if the reader has
   permission. In-character and out-of-character lines look different. The chat is saved with
-  the session and its lines can be pinned into the journal.
+  the session and its lines can be pinned into the journal. **The DM sees everything,
+  including every whisper between players** (decided by Jeff, October 21, 2026). Players are told
+  so, the way Foundry does it. Whether an assistant DM sees them is a column in the permissions
+  grid, hidden by default.
 - **Hidden monsters.** Monsters join initiative hidden; the DM reveals each one when it appears
   (or all at once). Players see monster health as words ("unhurt", "bloodied", "nearly down")
   unless the DM shares numbers. Hidden rolls stay on the DM's screen.
@@ -420,7 +423,6 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   points)?
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
   extra), or start with same-network play only?
-- Whispers between players: does the DM see them (as in Foundry), and does the assistant DM?
 - The order of the themes, and which ones make version 2 rather than version 3.
 
 ## Idea parking lot
