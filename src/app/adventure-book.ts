@@ -7,6 +7,7 @@ import { F, SRD_CREDIT, SRD_LICENSE, bookEntry, isLink } from "../engine/index.t
 import type { Id, Value, Workspace } from "../engine/index.ts";
 import type { Book, Chapter, Entry } from "../engine/book.ts";
 import { encounterTree } from "./encounters.ts";
+import { mapView } from "./maps.ts";
 import type { EncounterNode } from "./encounters.ts";
 
 /** How encounter numbers print: all of them (2.1.3), only the top level (2), or none. */
@@ -102,6 +103,19 @@ export function buildAdventureBook(ws: Workspace, layerId: Id, opts: { numbering
       .map((n) => bookEntry(ws, layerId, n));
     if (entries.length) chapters.push({ id: `adv:${id}`, title, text: null, entries });
   };
+  // Maps: the module's own, and any map with a pin on one of its encounters, with numbered rooms.
+  const encounterIds = new Set(titles.keys());
+  const maps = ws
+    .list(layerId, "map")
+    .filter((m) => !m.template && (ws.owner(layerId, m.id) === layerId || mapView(ws, layerId, m.id).pins.some((p) => p.target && encounterIds.has(p.target.id))))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (maps.length)
+    chapters.push({
+      id: "adv:maps",
+      title: "Maps",
+      text: null,
+      entries: maps.map((m) => ({ node: m.id, title: m.name, stats: null, paragraphs: m.text.split(/\n+/).map((p) => p.trim()).filter(Boolean), mentions: [], variants: [], asParent: null, picture: null, map: mapView(ws, layerId, m.id), mapNumbers: numbering !== "off" })),
+    });
   appendix("creatures", "Appendix: Creatures", creatures);
   appendix("treasure", "Appendix: Treasure", treasure);
   appendix("handouts", "Appendix: Handouts", handouts);

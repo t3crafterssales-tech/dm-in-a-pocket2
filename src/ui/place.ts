@@ -16,6 +16,7 @@ import { showHistory } from "./history-dialog.ts";
 import { lorePanels } from "./lore-tab.ts";
 import { adventurePanels } from "./adventure-tab.ts";
 import { partyPanels } from "./party-tab.ts";
+import { mapsPanels } from "./maps-tab.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
@@ -23,7 +24,7 @@ import { sheetPanels } from "./sheets-tab.ts";
 import { drawTableMode, focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
 
-const TABS = ["Adventure", "Party", "Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
+const TABS = ["Adventure", "Party", "Maps", "Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
 type Tab = (typeof TABS)[number];
 
 /** The tabs a place shows: a module (version 2) starts with its Adventure tab. */
@@ -55,6 +56,7 @@ function tabFor(kind: string): Tab {
   if (kind === "being") return "Beings";
   if (kind === "brick") return tab === "Beings" || tab === "Items" ? tab : "Items";
   if (kind === "lore" || kind === "table") return "Lore";
+  if (kind === "map") return "Maps";
   if (kind === "encounter") return current?.type === "module" ? "Adventure" : "Beings";
   return "Rules";
 }
@@ -190,6 +192,7 @@ async function draw() {
   let editor: HTMLElement;
   if (tab === "Adventure") ({ list, editor } = await adventurePanels(ctx));
   else if (tab === "Party") ({ list, editor } = await partyPanels(ctx));
+  else if (tab === "Maps") ({ list, editor } = await mapsPanels(ctx));
   else if (tab === "Rules") ({ list, editor } = await rulesPanels(ctx));
   else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
   else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
@@ -228,6 +231,7 @@ function comingSoon(t: Tab, view: PlaceView) {
   const coming: Record<Tab, string> = {
     Adventure: "",
     Party: "",
+    Maps: "",
     Rules: "",
     Beings: "",
     Items: "",

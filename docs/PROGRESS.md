@@ -100,6 +100,26 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
   torches or arrows), Short rest and Long rest, features, choices, gear with pictures (drag from
   the Codex), Appearance, your own fields with + Add, and **Level up**.
 
+### Version 2.3: what Jeff can test
+- A new **Maps** tab. **+ Map** brings in a picture (or starts blank). The map tree on the right
+  works like File Explorer: a map pinned on another sits under it.
+- Tools across the top: Select, Pin, Room, Wall and line, Freehand brush, Fill (colours and
+  textures: grass, water, stone, wood, sand, lava), Stamps (door, stairs, tree, table, building,
+  mountain, chest, pillar), Text, Eraser and Ruler. Layers: Drawing, Labels and DM-only notes.
+  Wheel zooms; drag empty space to look around; everything undoes.
+- Drag anything from the Codex onto the map to pin it. Pins start black with a symbol for what
+  they link to; click one to open it (a map opens with a breadcrumb back up); double-click to
+  change its name, colour or symbol (pick several with Ctrl or Shift to change them together).
+  Ctrl+D copies a pin with its link, Ctrl+Shift+D just its look; dropping on a pin relinks it.
+- **Map settings**: size, background colour, square or hex grid with a scale ("5 feet").
+- **Export…**: PNG or PDF, with ticks for grid, pins, labels, drawings and DM-only notes (off).
+- The adventure booklet prints the module's maps with pins numbered like the encounters, and an
+  encounter shows "On the map".
+
+### 2026-10-21 (version 2.3: maps)
+- `src/app/maps.ts` (pins, drawings, the map tree, measuring), `src/ui/map-render.ts` (one SVG
+  drawing for the editor, export and booklet), `src/ui/maps-tab.ts`, `src/app/pdf-image.ts`.
+
 ### 2026-10-21 (version 2.2: the character builder)
 - `src/engine/dice.ts`: dice for all of version 2 ("2d6 + 3", "4d6 keep 3", advantage).
 - `src/app/characters.ts`: builder options read from the game, making characters, the sheet,
@@ -883,3 +903,9 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-21: Hit points: the class's hit die at its highest at level 1, then its average rounded
   up plus the Constitution bonus each level; without a hit die, the game's Hit points resource.
 - 2026-10-21: The game's award resources (recovery "award") appear on every sheet as trackers.
+- 2026-10-21: Maps are nodes of kind "map"; pins and drawings are lists in its fields, so every
+  change is one undo step and pins are ordinary links (Used by, red flags).
+- 2026-10-21: A map is drawn as SVG; export draws that SVG onto a canvas in the window and the
+  back end writes PNG, or a PDF with the picture as a JPEG (a small PDF writer, no installs).
+- 2026-10-21: Fill colours or textures a room or closed shape; on empty space it fills the whole
+  map (a texture) or sets its background colour (a colour). There is no flood fill of drawings.

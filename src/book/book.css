@@ -49,3 +49,7 @@ p { margin: 0 0 5pt; text-align: justify; hyphens: auto; }
 
 /* Preview inside the app */
 body.preview #pages { zoom: var(--zoom, 0.7); }
+
+/* A map in the adventure booklet, fitted to the page width. */
+.book-map { margin: 6pt 0 8pt; }
+.book-map svg { width: 100%; height: auto; max-height: 7in; display: block; border: 1px solid var(--rule); }

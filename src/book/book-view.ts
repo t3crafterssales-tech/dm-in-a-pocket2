@@ -1,7 +1,8 @@
 // Lays a rulebook out into real pages, then fills in the page numbers: the table of contents,
 // the index and "see Poisoned, page 42". The same page is the in-app preview and the PDF.
 
-import type { BookData } from "../app/backend.ts";
+import type { BookData, MapView } from "../app/backend.ts";
+import { mapSvg } from "../ui/map-render.ts";
 
 type Entry = BookData["book"]["chapters"][number]["entries"][number];
 
@@ -54,6 +55,11 @@ function entryBlock(e: Entry, data: BookData, depth: number): HTMLElement[] {
     img.src = `dmpic://pic/${encodeURIComponent(e.picture)}`;
     img.alt = "";
     b.appendChild(img);
+  }
+  if (e.map) {
+    const box = el("div", "book-map");
+    box.innerHTML = mapSvg(e.map as MapView, { pictureHref: (e.map as MapView).picture ? `dmpic://pic/${encodeURIComponent((e.map as MapView).picture!)}` : null, show: { grid: true, pins: true, labels: true, drawing: true, dm: false }, numbers: e.mapNumbers !== false });
+    b.appendChild(box);
   }
   if (e.readAloud) for (const [i, p] of e.readAloud.split(/\n+/).filter((x) => x.trim()).entries()) b.appendChild(el("p", `read-aloud${i ? " more" : ""}`, p.trim()));
   if (e.stats) b.appendChild(el("div", "stats", e.stats));

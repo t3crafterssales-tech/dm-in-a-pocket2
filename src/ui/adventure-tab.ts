@@ -245,6 +245,7 @@ async function encounterEditor(view: NodeView, all: EncounterNode[], ctx: PlaceC
   const ro = view.readOnly;
   const ed = new FieldMaker(view, ctx);
   const me = all.find((e) => e.id === view.id);
+  const onMaps = (await attempt(() => api.mapsShowing(view.id))) ?? [];
   const save = (fn: () => Promise<unknown>) => void ed.save(fn);
   const list = (k: string) => (Array.isArray(view.fields[k]) ? (view.fields[k] as unknown[]) : []);
   const linkId = (v: unknown) => (v && typeof v === "object" && typeof (v as { link?: unknown }).link === "string" ? (v as { link: string }).link : null);
@@ -365,7 +366,7 @@ async function encounterEditor(view: NodeView, all: EncounterNode[], ctx: PlaceC
           { class: "sheet-top-text" },
           h("div", { class: "eyebrow" }, `Encounter ${me?.number ?? ""}`),
           name,
-          h("div", { class: "sheet-tags" }, parent ? h("span", { class: "tag" }, "Inside ", h("button", { class: "link", onClick: () => ctx.select(parent.id) }, `${parent.number} ${parent.name}`)) : h("span", { class: "tag" }, "Top level"), me?.children.length ? h("span", { class: "tag" }, `${me.children.length} inside it`) : null),
+          h("div", { class: "sheet-tags" }, parent ? h("span", { class: "tag" }, "Inside ", h("button", { class: "link", onClick: () => ctx.select(parent.id) }, `${parent.number} ${parent.name}`)) : h("span", { class: "tag" }, "Top level"), me?.children.length ? h("span", { class: "tag" }, `${me.children.length} inside it`) : null, ...onMaps.map((m) => h("span", { class: "tag" }, svg(ICONS.map), "On the map ", h("button", { class: "link", onClick: () => void ctx.open(m.id) }, m.name)))),
         ),
       ),
       h("div", { class: "field" }, h("div", { class: "field-label" }, "Read aloud"), readAloud),

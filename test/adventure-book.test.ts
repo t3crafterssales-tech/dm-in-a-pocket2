@@ -81,3 +81,19 @@ test("a module with nothing in it prints only what it has", () => {
   const again = buildAdventureBook(ws, mod, {}).book;
   assert.equal(again.chapters[0]!.text, "An adventure for 4 characters, about 1 session of play.", "a setting-free module names no world");
 });
+
+test("the booklet prints the module's maps, with its rooms numbered like the encounters", async () => {
+  const { ws, mod, ids } = setup();
+  const { createMap, addPins } = await import("../src/app/maps.ts");
+  const map = ws.transact("x", () => {
+    const m = createMap(ws, mod, "The mill grounds");
+    addPins(ws, mod, m, [ids.road, ids.cellar], 100, 100);
+    return m;
+  });
+  const book = buildAdventureBook(ws, mod, {}).book;
+  const maps = book.chapters.find((c) => c.title === "Maps")!;
+  assert.equal(maps.entries[0]!.node, map);
+  const drawn = maps.entries[0]!.map as { pins: { target: { number: string } }[] };
+  assert.deepEqual(drawn.pins.map((p) => p.target.number), ["1", "2.1"]);
+  assert.equal(buildAdventureBook(ws, mod, { numbering: "off" }).book.chapters.find((c) => c.title === "Maps")!.entries[0]!.mapNumbers, false);
+});

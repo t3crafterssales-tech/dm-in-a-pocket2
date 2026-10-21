@@ -32,6 +32,10 @@ export type NodeKind =
   | "lore"
   | "table"
   | "encounter"
+  | "map"
+  | "journal"
+  | "macro"
+  | "layout"
   | "category";
 
 export type Source = "template" | "mine" | "others";

@@ -19,7 +19,7 @@ flow down" work.
 | Field | What it holds |
 | --- | --- |
 | `id` | Permanent ID. Never changes, never reused. |
-| `kind` | `ability`, `resource`, `skill`, `condition`, `rule`, `brick`, `being`, `item`, `lore`, `table`, `encounter` or `category` |
+| `kind` | `ability`, `resource`, `skill`, `condition`, `rule`, `brick`, `being`, `item`, `lore`, `table`, `encounter`, `map`, `journal`, `macro`, `layout` or `category` (the last four from version 2) |
 | `name` | Display name. Renaming never breaks anything, because links use the ID. |
 | `category` | Link to a `category` node, or null. Categories are nodes, so they have IDs too. |
 | `picture` | ID of a picture stored once in the file's picture store, or null. |
@@ -73,6 +73,23 @@ on" (the DM's notes, printed in the adventure booklet, which is a DM book). Its 
 | `template` | As on any node: a ready-made encounter in the Codex's Encounters section. |
 
 These are ordinary fields; older files without encounters still open.
+
+## Maps (version 2)
+
+A map is a node of kind `map`. Its `picture` is the picture it starts from (or none, for a map
+drawn from scratch). Positions are in map units, where the map is `width` × `height` units and the
+picture is stretched to fill it. Its fields:
+
+| Field | What it holds |
+| --- | --- |
+| `width`, `height` | The map's size in units (the picture's own size in pixels when it was brought in). |
+| `background` | A colour for a map with no picture, such as "#efe6d2". |
+| `grid` | `{ kind: "none", "square" or "hex", size (units per square), scale (words, "5 feet"), show }`. |
+| `pins` | A list of `{ id, x, y, link (or null), label, color, symbol }`. A pin's link can point at anything, including another map ("maps inside maps"). |
+| `shapes` | A list of `{ id, layer ("drawing", "labels" or "dm"), tool ("room", "line", "brush", "fill", "stamp", "text"), points [x, y, ...], color, width, fill, texture, stamp, text, size }`. |
+
+A map is "inside" another map when that map has a pin linking to it. Pins are links, so "Used by"
+on anything shows the maps it is pinned on, and deleting something flags its pins red.
 
 ## Characters (version 2)
 

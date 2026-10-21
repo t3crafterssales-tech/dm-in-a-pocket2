@@ -23,6 +23,8 @@ import { createLore, loreList, rollTable } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
 import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
 import { buildAdventureBook } from "./adventure-book.ts";
+import { addPins, addShape, copyPins, createMap, deletePins, deleteShapes, editPins, fillShape, mapTree, mapView, mapsShowing, movePins, setMapSettings } from "./maps.ts";
+import type { Grid, MapTreeNode, MapView, Shape } from "./maps.ts";
 import { addExtra, addTracker, award, builderOptions, characterView, createCharacter, levelUp, levelUpPreview, makeItForMe, rest, roster, setAppearance, setChoice, setExtra, setTracker } from "./characters.ts";
 import type { BuilderOptions, CharacterInput, CharacterView } from "./characters.ts";
 import type { EncounterNumbering } from "./adventure-book.ts";
@@ -892,6 +894,61 @@ export class Editing {
   }
   setChoice(id: Id, aid: Id, picked: Id[]): true {
     this.onCharacter(id, "Changed a choice on {name}", () => setChoice(this.ws, this.layer, id, aid, picked));
+    return true;
+  }
+
+  // ---------- Maps (version 2) ----------
+
+  mapTree(): MapTreeNode[] {
+    return mapTree(this.ws, this.layer);
+  }
+  mapView(id: Id): MapView {
+    return { ...mapView(this.ws, this.layer, id), readOnly: this.session.readOnly };
+  }
+  mapsShowing(id: Id): { id: Id; name: string }[] {
+    return mapsShowing(this.ws, this.layer, id);
+  }
+  createMap(name: string, picture: Id | null, size: { width: number; height: number } | null): Id {
+    const n = cleanName(name);
+    return this.run(() => this.ws.transact(`Added the map ${n}`, () => createMap(this.ws, this.layer, n, { picture, ...(size ?? {}) })));
+  }
+  private onMap<T>(id: Id, label: string, fn: () => T): T {
+    const n = this.must(id);
+    return this.run(() => this.ws.transact(label.replace("{map}", n.name), fn));
+  }
+  addPins(mapId: Id, targets: (Id | null)[], x: number, y: number, look: { color?: string; symbol?: string; label?: string } = {}): Id[] {
+    const names = targets.map((t) => (t ? (this.ws.get(this.layer, t)?.name ?? "something") : "a pin"));
+    return this.onMap(mapId, names.length === 1 ? `Pinned ${names[0]} on {map}` : `Pinned ${names.length} things on {map}`, () => addPins(this.ws, this.layer, mapId, targets, x, y, look));
+  }
+  movePins(mapId: Id, moves: { id: Id; x: number; y: number }[]): true {
+    this.onMap(mapId, moves.length === 1 ? "Moved a pin on {map}" : `Moved ${moves.length} pins on {map}`, () => movePins(this.ws, this.layer, mapId, moves));
+    return true;
+  }
+  editPins(mapId: Id, ids: Id[], change: { label?: string; color?: string; symbol?: string; link?: Id | null }): true {
+    this.onMap(mapId, ids.length === 1 ? "Changed a pin on {map}" : `Changed ${ids.length} pins on {map}`, () => editPins(this.ws, this.layer, mapId, ids, change));
+    return true;
+  }
+  deletePins(mapId: Id, ids: Id[]): true {
+    this.onMap(mapId, ids.length === 1 ? "Removed a pin from {map}" : `Removed ${ids.length} pins from {map}`, () => deletePins(this.ws, this.layer, mapId, ids));
+    return true;
+  }
+  copyPins(mapId: Id, ids: Id[], connected: boolean): Id[] {
+    return this.onMap(mapId, `Copied ${ids.length === 1 ? "a pin" : `${ids.length} pins`} on {map}`, () => copyPins(this.ws, this.layer, mapId, ids, connected));
+  }
+  addShape(mapId: Id, shape: Omit<Shape, "id">): Id {
+    const what: Record<string, string> = { room: "a room", line: "a line", brush: "with the brush", fill: "a fill", stamp: `a ${shape.stamp ?? "stamp"}`, text: "a label" };
+    return this.onMap(mapId, `Drew ${what[shape.tool] ?? "something"} on {map}`, () => addShape(this.ws, this.layer, mapId, shape));
+  }
+  deleteShapes(mapId: Id, ids: Id[]): true {
+    this.onMap(mapId, "Erased from {map}", () => deleteShapes(this.ws, this.layer, mapId, ids));
+    return true;
+  }
+  fillShape(mapId: Id, id: Id, fill: string | null, texture: string | null): true {
+    this.onMap(mapId, "Filled on {map}", () => fillShape(this.ws, this.layer, mapId, id, fill, texture));
+    return true;
+  }
+  setMapSettings(mapId: Id, change: { width?: number; height?: number; background?: string; grid?: Partial<Grid> }): true {
+    this.onMap(mapId, "Changed {map}'s settings", () => setMapSettings(this.ws, this.layer, mapId, change));
     return true;
   }
 

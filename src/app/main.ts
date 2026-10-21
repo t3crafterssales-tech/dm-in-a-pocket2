@@ -117,6 +117,11 @@ void app.whenReady().then(() => {
       const r = await dialog.showSaveDialog(win!, { title: "Save the rulebook as a Word file", defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: "Word document", extensions: ["docx"] }] });
       return r.canceled ? null : (r.filePath ?? null);
     },
+    pickFile: async (defaultName, ext) => {
+      const names: Record<string, string> = { png: "PNG picture", pdf: "PDF document", docx: "Word document", html: "Web page", txt: "Text" };
+      const r = await dialog.showSaveDialog(win!, { title: "Save", defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: names[ext] ?? ext.toUpperCase(), extensions: [ext] }] });
+      return r.canceled ? null : (r.filePath ?? null);
+    },
     pickFolder: async () => {
       const r = await dialog.showOpenDialog(win!, { title: "Choose the main folder", properties: ["openDirectory", "createDirectory"] });
       return r.canceled ? null : (r.filePaths[0] ?? null);

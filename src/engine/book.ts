@@ -74,6 +74,10 @@ export interface Entry {
   picture: Id | null;
   /** An adventure's read-aloud text, printed in a box before the rest. */
   readAloud?: string | null;
+  /** A map to draw (version 2), as the map tools see it; the book page draws it. */
+  map?: unknown;
+  /** Show encounter numbers on a map's pins. */
+  mapNumbers?: boolean;
 }
 
 export interface Chapter {

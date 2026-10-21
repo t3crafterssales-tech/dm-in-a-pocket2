@@ -29,6 +29,9 @@ import { QUICK_QUESTIONS } from "./quickstart.ts";
 import type { QuickStartAnswers } from "./quickstart.ts";
 import { changeInSystem, upwardView } from "./upward.ts";
 import { rollScores } from "./characters.ts";
+import { imagesPdf } from "./pdf-image.ts";
+import { pictureSize } from "./docx.ts";
+import type { Grid, MapTreeNode, MapView, Shape } from "./maps.ts";
 import type { BuilderOptions, CharacterInput, CharacterView } from "./characters.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
@@ -44,6 +47,7 @@ import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
+export type { Grid, MapTreeNode, MapView, PinView, Shape } from "./maps.ts";
 export type { BuilderOptions, CharacterInput, CharacterView, Method, OptionChoice, OptionClass, OptionRace, TrackerView } from "./characters.ts";
 export type RosterEntry = ReturnType<typeof import("./characters.ts").roster>[number];
 export type { ImportResult, RecycledInfo } from "../storage/index.ts";
@@ -186,6 +190,8 @@ export interface BackendOptions {
   pickImport?: () => Promise<string | null>;
   /** Show a Save dialog for the rulebook as a Word file; resolves to a path or null. */
   pickWord?: (defaultName: string) => Promise<string | null>;
+  /** Show a Save dialog for an exported file (png, pdf...); resolves to a path or null. */
+  pickFile?: (defaultName: string, ext: string) => Promise<string | null>;
   /** The Claude API key, kept in the operating system's protected storage (main.ts). */
   secrets?: { read: () => string | null; write: (key: string | null) => void };
   /** Makes the connection to Claude for a key. */
@@ -304,6 +310,21 @@ export const BACKEND_METHODS = [
   "levelUp",
   "setChoice",
   "rollScores",
+  "mapTree",
+  "mapView",
+  "mapsShowing",
+  "createMap",
+  "addPins",
+  "movePins",
+  "editPins",
+  "deletePins",
+  "copyPins",
+  "addShape",
+  "deleteShapes",
+  "fillShape",
+  "setMapSettings",
+  "pictureData",
+  "exportImage",
   "encounterTree",
   "modulePage",
   "addEncounter",
@@ -1029,6 +1050,70 @@ export class Backend {
   }
   encounterTree(): EncounterNode[] {
     return this.editing.encounterTree();
+  }
+  // ---------- Maps (version 2) ----------
+  mapTree(): MapTreeNode[] {
+    return this.editing.mapTree();
+  }
+  mapView(id: Id): MapView {
+    return this.editing.mapView(id);
+  }
+  mapsShowing(id: Id): { id: Id; name: string }[] {
+    return this.editing.mapsShowing(id);
+  }
+  /** A new map from a picture (sized to it) or blank. */
+  createMap(input: { name: string; picture: Id | null }): Id {
+    const bytes = input.picture ? this.picture(input.picture) : null;
+    const dim = bytes ? pictureSize(bytes) : null;
+    return this.editing.createMap(input.name, input.picture, dim && dim.w && dim.h ? { width: dim.w, height: dim.h } : null);
+  }
+  addPins(mapId: Id, targets: (Id | null)[], x: number, y: number, look: { color?: string; symbol?: string; label?: string } = {}): Id[] {
+    return this.editing.addPins(mapId, targets, x, y, look);
+  }
+  movePins(mapId: Id, moves: { id: Id; x: number; y: number }[]): true {
+    return this.editing.movePins(mapId, moves);
+  }
+  editPins(mapId: Id, ids: Id[], change: { label?: string; color?: string; symbol?: string; link?: Id | null }): true {
+    return this.editing.editPins(mapId, ids, change);
+  }
+  deletePins(mapId: Id, ids: Id[]): true {
+    return this.editing.deletePins(mapId, ids);
+  }
+  copyPins(mapId: Id, ids: Id[], connected: boolean): Id[] {
+    return this.editing.copyPins(mapId, ids, connected);
+  }
+  addShape(mapId: Id, shape: Omit<Shape, "id">): Id {
+    return this.editing.addShape(mapId, shape);
+  }
+  deleteShapes(mapId: Id, ids: Id[]): true {
+    return this.editing.deleteShapes(mapId, ids);
+  }
+  fillShape(mapId: Id, id: Id, fill: string | null, texture: string | null): true {
+    return this.editing.fillShape(mapId, id, fill, texture);
+  }
+  setMapSettings(mapId: Id, change: { width?: number; height?: number; background?: string; grid?: Partial<Grid> }): true {
+    return this.editing.setMapSettings(mapId, change);
+  }
+  /** A picture as a data address, so the window can draw it into an exported image. */
+  pictureData(id: Id): string | null {
+    const bytes = this.picture(id);
+    if (!bytes) return null;
+    const ext = extname(id).toLowerCase().replace(".", "");
+    const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/png";
+    return `data:${mime};base64,${bytes.toString("base64")}`;
+  }
+  /**
+   * Saves pictures the window drew (a map, print-shop sheets) as a PNG, or as a PDF with one
+   * picture per page (JPEGs). Resolves to where it went, or null if cancelled.
+   */
+  async exportImage(input: { name: string; kind: "png" | "pdf"; images: string[]; pageSize?: "Letter" | "A4" }, dest?: string): Promise<string | null> {
+    const file = `${input.name}.${input.kind}`.replace(/[\\/:*?"<>|]+/g, " ");
+    const path = dest ?? (this.opts.pickFile ? await this.opts.pickFile(file, input.kind) : null);
+    if (!path) return null;
+    const bytes = input.images.map((d) => Buffer.from(d.replace(/^data:[^,]*,/, ""), "base64"));
+    if (!bytes.length) throw new LibraryError("There's nothing to save.");
+    writeFileSync(path, input.kind === "pdf" ? imagesPdf(bytes, input.pageSize === "A4" ? "A4" : "Letter") : bytes[0]!);
+    return path;
   }
   // ---------- Characters (version 2) ----------
   builderOptions(): BuilderOptions {
