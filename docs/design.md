@@ -667,6 +667,11 @@ printing at real size for miniatures is not needed (maps print in the booklet an
     to a fat marker), an opacity slider (100% solid, 50%, barely there), and five or six colours,
     black included. The highlighter is the same pen set see-through.
   - Later versions: stamps for marks (stars, arrows, little pictures). Not now.
+- **Saving:** maps save themselves like everything else (no Save button, Part 2); a named snapshot
+  marks a save point ("the town before the fire").
+- **Export a map (Jeff, October 21, 2026):** to PDF (to keep or print, fitted to the page size
+  chosen) or a picture (PNG). Ticks for what goes on it: the grid, pins, labels, kept table marks,
+  and DM-only notes (off by default, so a player copy never gives away secrets).
 
 ### Open questions for version 2
 
