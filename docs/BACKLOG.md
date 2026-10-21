@@ -4,6 +4,24 @@ Bugs and change ideas Jeff finds while using the app. Newest at the bottom. Noth
 worked on until Jeff says to tackle the backlog; then each item is triaged (bug fix, version 1
 change, or later) and ticked off here when done.
 
+## The big one (read this first)
+
+**2026-10-21, Jeff, after using the app:** "Everything is there, and I'm sure everything works. But
+it feels like I'm filling out a tax form instead of being creative. The screen and buttons are more
+intimidating than anything. It doesn't seem natural. A lot of the time I think: what do I want to
+do? I don't know what to do. I want to create a new sword, but... yikes."
+
+This is the most important item on the board. The app works but doesn't yet feel like the design
+promised ("as flexible as a pad of paper, a pencil and an eraser"; "familiar"; "three choices up
+front, More options for the fine print"). Most of the smaller items below (9, 10, 14, 8, 1, 3, 6,
+11 to 13) are symptoms of it. Before fixing them one by one, do a "feel" design pass with Jeff:
+start from what the user wants to do ("make a sword") rather than from forms, show the creative
+parts first (picture, name, a few words) and fold the mechanics away until asked for, and make
+lists and libraries show only what fits. Pause new features (milestone 9, the AI) until this is
+settled.
+
+## Items
+
 | # | Date | Type | What Jeff said | Notes | Status |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 2026-10-20 | Change | Every type of roll should come with a default description. The user can change it, delete it and write their own, or leave it as is, and whatever is there is what gets printed. | Seen on the Rules tab, Core check: "Roll under your stat" has an empty Description box ("Write the rule out in your own words"). Each core-check family (and likely other rules) needs default wording that fills the box and the rulebook. Screenshot: `backlog-images/2026-10-20-core-check.png` | Open |
