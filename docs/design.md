@@ -459,6 +459,12 @@ DM's table), so they are there next time.
     applied in one click.
   Templates can be edited, renamed and deleted (to the recycle bin), and changing one asks whether
   to update the people already using it, like the checklist for changes flowing down.
+- **The permissions screen, like Foundry (Jeff, October 21, 2026).** Opening permissions in a
+  module lists every player attached to it, each with a **level** picked from a drop-down. The app
+  comes with these levels ready-made (they are the starting person templates, and can be changed):
+  **New player** (their own character and nothing else; no other permissions), **Player**,
+  **Trusted player**, **Assistant GM** and **DM**. A person's level carries over to the next
+  module unless the DM changes it there. The grid underneath is only for exceptions.
 - **Joining with a PIN, no account (Jeff's idea, October 21, 2026).** The DM's app hosts the
   session. Each player gets their own random 5-digit PIN from the Party section; the PIN is both
   the key and who you are, so Ken's PIN opens Ken's view with Ken's permissions. PINs end with
