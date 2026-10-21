@@ -317,6 +317,91 @@ Version 1 proves the core loop: load a system, change something, see what breaks
 - Virtual tabletop for playing sessions
 - Accounts, sharing worlds with friends, community marketplace (needs a server and a plan for copyrighted content)
 
+## Version 2 (designing, October 21, 2026)
+
+Version 1 builds a game. Version 2 takes it to the table: make a character, build a fight, test
+the fight, run it, and print the pieces. Jeff wants all of the themes below; the order is still to
+be decided. Nothing here is built yet, and nothing here changes the hard rules without Jeff's OK.
+
+### Themes
+
+- **Play it:** a character builder (race, class, background, point buy and Choices boxes walk a
+  player through it, printable sheet out), an encounter builder ("a hard fight for four level 3
+  heroes", using the same averages as the balance flags).
+- **Test it:** a playtest simulator that plays a fight out a thousand times ("the party wins 82%
+  of the time, usually with one hero down") and shows how a change moves that number.
+- **Make it look like a book:** a drag-and-drop page designer, sheets you lay out yourself, app
+  themes (dark, parchment, sci-fi), stock pictures and AI portraits on request.
+- **The print shop:** paper standees and tokens sized to each creature, initiative and spell cards,
+  and maybe 3D files (a mini's base with its name and armour on the rim). Could tie in with
+  T3 Crafters ("buy the minis for this world").
+- **Worlds that feel alive:** a map maker with pins that open places, factions and lore pages; an
+  adventure planner whose scenes link to the world's things; timelines and family trees; more
+  roll tables (rumours, loot, weather) that roll on each other.
+- **More starting points and connections:** old-school and d6 starters, Foundry VTT export,
+  importing a handbook you already wrote (PDF or Word).
+- **The far shelf:** the marketplace with accounts, and a full virtual tabletop.
+
+### The DM's table
+
+Table mode grows from a reading view into the screen the DM runs a game from. The key idea: **the
+table reads the system.** Nobody builds a tracker; the trackers come from the rules already made.
+
+- **Counters build themselves from resources.** Spell slots, ki, rage, sanity: each resource
+  already has its maximum and when it comes back, so the table makes a counter for each, and
+  Short rest and Long rest buttons refill the right ones.
+- **Conditions count themselves down** from their durations and drop off when they end.
+- **Hit points** show the way the system set them up: a number, a bar or wound boxes.
+- **The initiative tracker follows the core check.** A d20 game rolls d20 plus the Dexterity
+  bonus; a dice pool counts successes; a system that says "sides take turns" groups players and
+  monsters. Drag in the party and monsters from the Codex; each brings its hit points, armour and
+  attacks. Click an attack to roll it and put the damage on the target. (Jeff's idea from last
+  year's DM in a Pocket: an initiative tracker that is dynamic to the system the user built.)
+- **Timers and the clock:** round counters, torches burning down, "the ritual finishes in 3
+  turns", an in-world clock (light and time matter in The Ashen Vigil). A timer can roll on a roll
+  table when it runs out ("every 10 minutes underground, roll Wandering Monsters").
+- **Roll tables** roll live, roll on each other, and can drop monsters straight into initiative.
+- **Playing never changes the world.** A goblin dropping to 0 hit points must not change the Goblin
+  sheet. Each play session is its own layer on top of the world (like a world on its system), so
+  damage, used slots and timers live in the session. A session can be saved mid-fight and picked
+  up next week.
+
+### The journal
+
+- Write as you play, with links: typing a name links to that sheet.
+- The table writes entries too: "Round 3: Mira dropped to 0 hit points", "Rolled on Rumours: the
+  miller is lying", "Long rest, day 4". A session log with no typing.
+- After the session, turn a note into a lore page or an NPC (the improvised innkeeper becomes part
+  of the world).
+- Ask the AI for a recap ("last session in a paragraph") to read out next time.
+- **Private by default.** The journal is the DM's notebook, not a node's rulebook text, so the
+  "no secret GM notes" rule doesn't apply to it. It is shared only through permissions, and left
+  out of shared files unless ticked. (Decided by Jeff, October 21, 2026.)
+
+### The party and permissions
+
+- **A Party section in each world.** Each player is a person linked to the character they play,
+  with a role: "Randy plays the cleric, Joe the wizard, Ken the thief and is my assistant DM." A
+  player can change their own sheet and mark their own spell slots, not anyone else's.
+- **Roles set the defaults, like Foundry:** DM (everything), Assistant DM (most things, any part
+  can be switched off), Player (their own character plus what's shared), Watcher (sees the shared
+  screen only).
+- **One simple grid for exceptions.** People down the side; parts of the game across the top
+  (characters, initiative, journal and notes, roll tables, monsters...). Each square is Hidden,
+  Can see or Can change; clicking cycles it. Every column and every row has a Deny all button, so
+  nobody clicks into each character or player. Example: Ken (assistant DM) can change the notes
+  but initiative is hidden from him.
+- **Share with…** on any one page or handout shares just that, without touching the grid.
+
+### Open questions for version 2
+
+- Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
+  points)?
+- How players connect without accounts (Promise 1): an invite code on the same home network, or a
+  link the DM sends. Permissions only matter once players connect, and this is the first step
+  toward the virtual tabletop.
+- The order of the themes, and which ones make version 2 rather than version 3.
+
 ## Idea parking lot
 
 Good ideas that aren't for version 1 land here with a rough target version, so nothing gets lost and version 1 stays small.
