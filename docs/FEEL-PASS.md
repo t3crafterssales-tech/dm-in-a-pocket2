@@ -59,9 +59,12 @@ panel and this work don't conflict; Jeff tests both together.
 - Backlog 2: duplicated abilities, Hit points, Spell slots and Unconscious in Jeff's Test World 1.
   Find the cause (Quick start on top of the d20 starter, or the starter loading twice) and fix.
 
+### Part E: hotkeys (backlog 16)
+- Ctrl+D with the mouse over a brick or item: make a child copy (variant) of the whole thing.
+- Ctrl+C / Ctrl+V: normal text copy and paste, exactly like Word. Ctrl+Z / Ctrl+Y undo and redo.
+- Match Word and Windows shortcuts wherever possible; a "?" key shows the full list.
+
 ### Not in this milestone
-- Hotkeys (backlog 16): waiting for Jeff to choose how "make a copy" works, because Ctrl-click
-  already means select several.
 - Stock pictures (backlog 5) and floating, pinnable windows: later.
 
 ## Done means
