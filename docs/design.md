@@ -596,6 +596,26 @@ new, so the same five characters start a different module. All of that must just
 - **Level-ups: the DM approves** (players walk through it on their screen; it waits for an OK);
   trusted players can be set to level up on their own.
 
+### The character builder (October 21, 2026)
+
+- **It builds itself from the system and world together** (locked in by Jeff). It only asks about
+  what the game has: a d6 game with no feats never shows feats; a game without classes skips
+  classes. Races, classes, backgrounds and gear come from the Codex.
+- **A wizard, one step per screen:** name, picture and player; race (cards, subraces underneath);
+  class (with its Choices boxes); ability scores; gear (starting kit or gold to spend); finish
+  (the sheet, with How it prints, joining the roster).
+- **The player makes it** on their own screen and the DM approves it; or **the DM makes it** for a
+  drop-in or a pre-made character. **"Make it for me"** picks sensible choices in one click.
+- **How ability scores are made lives in the game's rules** (Jeff, October 21, 2026), as a rule in
+  the Abilities section of the Rules tab, the way point buy is today. Methods: point buy, a
+  standard set of numbers, roll 4d6 and keep the highest three (arrange as you like), roll 3d6 in
+  order (first roll Strength, second Dexterity, third Constitution...), or the system's own.
+  Rolls happen in the dice tray for everyone to see.
+- **At character creation, a Method drop-down defaults to the system's rule.** The DM can switch
+  it for this character in one click ("this time, point buy"). A world or module can also change
+  its own default, like any other rule.
+- **Level-ups reuse the same screens**, showing what the class gains at the new level.
+
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
