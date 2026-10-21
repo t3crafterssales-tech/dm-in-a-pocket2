@@ -653,6 +653,16 @@ printing at real size for miniatures is not needed (maps print in the booklet an
   (walls, rivers, roads, borders), Freehand brush (coastlines, forests), Fill (colour or texture:
   grass, water, stone, wood), Stamps (doors, stairs, trees, tables, buildings, mountains; more
   from content packs later), Text labels, and Eraser. Everything undoes.
+- **Showing a map live (Jeff, October 21, 2026).** "Show to players" (with the usual ticks) puts the
+  map on players' screens, and it updates live. On top of it the DM has **table marks**, drawn on
+  their own layer so they never touch the map itself:
+  - a **pointer** (a pulse where you click: "the goblins are right here"),
+  - a **highlighter** (a see-through marker, such as a green circle round the goblins),
+  - **notes** (a short label stuck on the map).
+  Marks are temporary by default and fade or clear with one button, or the DM ticks **Keep** and
+  they are saved for the next session (with the module's play, never changing the world's map).
+  Double-click any mark to select it and press Delete to erase it. Players can be allowed to use
+  the pointer too (a permission).
 
 ### Open questions for version 2
 
