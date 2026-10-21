@@ -19,7 +19,7 @@ flow down" work.
 | Field | What it holds |
 | --- | --- |
 | `id` | Permanent ID. Never changes, never reused. |
-| `kind` | `ability`, `resource`, `skill`, `condition`, `rule`, `brick`, `being`, `item`, `lore`, `table` or `category` |
+| `kind` | `ability`, `resource`, `skill`, `condition`, `rule`, `brick`, `being`, `item`, `lore`, `table`, `encounter` or `category` |
 | `name` | Display name. Renaming never breaks anything, because links use the ID. |
 | `category` | Link to a `category` node, or null. Categories are nodes, so they have IDs too. |
 | `picture` | ID of a picture stored once in the file's picture store, or null. |
@@ -56,6 +56,24 @@ A class (a being with `beingKind` "class") may have `maxLevel` (20 if not set) a
 "pointBuy" is point buy for ability scores, with `points`, `scoreStart`, `scoreMax`, `scoreMin`
 and `costs` ("flat" or "d20"). These are ordinary fields; older files without them still open.
 
+## Encounters (version 2)
+
+An encounter is a node of kind `encounter`, usually in a module. Its `text` is "What's really going
+on" (the DM's notes, printed in the adventure booklet, which is a DM book). Its fields:
+
+| Field | What it holds |
+| --- | --- |
+| `readAloud` | The boxed text read to the players. |
+| `inside` | Link to the encounter it sits inside, or null for the top level. Belonging, not inheritance. |
+| `order` | A number that sorts it among the encounters at its level. |
+| `leadsTo` | A list of links to other encounters ("the tracks lead to the cave"). |
+| `creatures` | A list of `{ being: link, count }`: the monsters and NPCs in it. |
+| `treasure` | A list of links to items. |
+| `handouts` | A list of links to lore pages (handouts are journal pages later). |
+| `template` | As on any node: a ready-made encounter in the Codex's Encounters section. |
+
+These are ordinary fields; older files without encounters still open.
+
 ## Attachments (a brick on a sheet)
 
 | Field | What it holds |
@@ -75,8 +93,8 @@ and `costs` ("flat" or "d20"). These are ordinary fields; older files without th
 
 | Field | What it holds |
 | --- | --- |
-| `id`, `name`, `type` | `type` is `system` or `world`. |
-| `base` | The layer underneath: a world's system, or a system variant's parent system. Null for a starter system. |
+| `id`, `name`, `type` | `type` is `system`, `world` or `module` (version 2). |
+| `base` | The layer underneath: a world's system, a system variant's parent system, or a module's world (or its system, for a setting-free module). Null for a starter system. Nothing is built on a module. |
 | `nodes` | Nodes that are new in this layer, stored in full. |
 | `changes` | Changes to nodes from layers below, stored as only the changed parts. A change can also list `removedFields`: fields this layer took away so they follow the layer below again. |
 | `hidden` | IDs of nodes from below that this layer has deleted (they are in the recycle bin). |
@@ -106,6 +124,7 @@ and `costs` ("flat" or "d20"). These are ordinary fields; older files without th
 | --- | --- |
 | `Systems/<id>.dmsys` | One system: a ZIP holding `system.json` (that system's layer, its history and bin) and `pictures/`. |
 | `Worlds/<id>.dmworld` | One world: a ZIP holding `world.json` (the world's layer **plus a copy of its whole system chain**, its history and bin) and `pictures/`. The copy lets a world travel on its own; when the system's own file is present, that file wins, so system changes made elsewhere flow in. |
+| `Modules/<id>.dmmod` | One module (version 2): a ZIP holding `module.json` (the module's layer **plus a copy of its world and system chain**, its history and bin) and `pictures/`. When the world's and systems' own files are present, they win, as for worlds. |
 | `Worlds/<id>.dmworld.lock` | Present while the world is open: which computer, which session, and a heartbeat time. |
 | `Backups/<worldId>/<YYYY-MM-DD>.json` | Automatic backups: the world JSON only, pictures are not copied. |
 | `Snapshots/<worldId>/<id>.json` | Named snapshots: name, time, and the world with its system chain. Pictures are not copied. |

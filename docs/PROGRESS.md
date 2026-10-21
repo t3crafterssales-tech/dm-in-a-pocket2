@@ -805,3 +805,8 @@ One plain line each. Jeff can overrule any of these at a milestone.
   so nothing from the back end is bundled into the window.
 - 2026-10-21: Jeff chose Blender-style copy keys for the whole app: Ctrl+D a connected copy (a
   variant), Ctrl+Shift+D a separate copy (your own copy). Ctrl+Shift+D is in the feel-pass build.
+- 2026-10-21: Jeff approved modules and encounters in the data format (a new layer type `module`
+  and a new node kind `encounter`). CLAUDE.md Part 3 and 4 and docs/data-format.md updated first.
+  Version 2 is built on branch `claude/v2-modules`, made from `claude/feel-pass`.
+- 2026-10-21: An encounter's monsters, treasure and handouts are ordinary link fields, not
+  attachments, because attachments are bricks on a sheet; links still give red flags and Used by.
