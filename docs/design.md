@@ -323,6 +323,13 @@ Version 1 builds a game. Version 2 takes it to the table: make a character, buil
 the fight, run it, and print the pieces. Jeff wants all of the themes below; the order is still to
 be decided. Nothing here is built yet, and nothing here changes the hard rules without Jeff's OK.
 
+### The DM decides who sees what (rule, decided by Jeff, October 21, 2026)
+
+Any question of the kind "should the assistant DM (or a player, or a watcher) see this?" is never
+decided in the design. It becomes a choice for each DM: a column in the permissions grid, or a
+setting, with a sensible default. Example: whether Ken, as assistant DM, sees initiative is the
+Initiative column in the grid, not a design decision.
+
 ### Themes
 
 - **Play it:** a character builder (race, class, background, point buy and Choices boxes walk a
@@ -686,8 +693,6 @@ printing at real size for miniatures is not needed (maps print in the booklet an
 
 ### Open questions for version 2
 
-- Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
-  points)?
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
   extra), or start with same-network play only?
 - The order of the themes, and which ones make version 2 rather than version 3.
