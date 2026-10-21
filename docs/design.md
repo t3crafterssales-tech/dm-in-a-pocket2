@@ -524,6 +524,11 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   Session 7". Ctrl+F searches every page.
 - **Players keep their own private journal (Jeff).** The DM can see it (the DM always has
   everything); a player can share a page with others.
+- **Handouts are made as journal pages (Jeff, October 21, 2026).** One place to make them: a page
+  built from blocks (pictures and text). Showing a handout to players is showing that page.
+- **Printing handouts with style (Jeff):** when a page is exported or printed, add a border, an
+  old-paper look (aged parchment, stains, torn edges), a wax seal, a handwritten-style font. It
+  uses more ink, so an **Ink saver** switch prints it plain.
 - **Export as a campaign diary (Jeff):** PDF or Word through the same export screen as the
   rulebook, the story so far, session by session (DM-only pages left out unless ticked).
 
