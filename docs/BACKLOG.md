@@ -37,6 +37,13 @@ settled.
   pre-made, or everything). Drag from the Codex onto the open sheet. Drag something from one Codex
   section into another to refile it (drop a weapon into Monsters, and now it's filed under
   Monsters).
+- **Two columns, not three** (Jeff chose this): a big sheet in the middle, the Codex on the right.
+  The separate left-hand list goes away.
+- **Notifications tucked away.** A small strip at the bottom of a column shows the last two or
+  three flags; clicking it opens a pop-up with all of them. (Jeff found fewer flags than expected
+  while testing on purpose, and the odd-category flag worked straight away.)
+- **Later: floating windows.** Pop-ups that can be dragged anywhere and kept open, for example a
+  cleric sheet pinned in the top-left corner while writing lore.
 
 ## Items
 
