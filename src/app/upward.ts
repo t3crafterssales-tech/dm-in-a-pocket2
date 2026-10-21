@@ -31,8 +31,12 @@ export interface UpwardWorld {
 }
 
 export interface UpwardView {
+  /** The parent layer the change is made in: the system (from a world), or a module's world or system. */
   systemId: Id;
   systemName: string;
+  /** What the parent is, and what the open place is, for the window's words. */
+  parentKind: "system" | "world";
+  placeKind: "world" | "module";
   nodeId: Id;
   nodeName: string;
   rows: UpwardRow[];
@@ -79,10 +83,25 @@ export const FIELD_LABELS: Record<string, string> = {
 const HIDDEN = new Set(["type", "beingKind", "section", "role", "under", "forbid", "exceptions", "license", "thresholds", "save", "books", "before", "bookPage"]);
 
 function systemOf(session: Session): Id {
-  if (session.type !== "world") throw new LibraryError("This is the system itself. Its changes already reach its worlds.");
+  if (session.type === "system") throw new LibraryError("This is the system itself. Its changes already reach its worlds.");
   const base = session.ws.layer(session.id).base;
-  if (!base) throw new LibraryError("This world has no system.");
+  if (!base) throw new LibraryError(`This ${session.type} has nothing under it.`);
   return base;
+}
+
+/** A world or module built directly on a layer: the ones a change there reaches first. */
+interface Child {
+  id: Id;
+  name: string;
+  kind: "world" | "module";
+  path: string;
+}
+
+function childrenOf(lib: Library, parent: Id): Child[] {
+  return [
+    ...lib.listWorlds().filter((w) => w.systemId === parent).map((w) => ({ id: w.id, name: w.name, kind: "world" as const, path: w.path })),
+    ...lib.listModules().filter((m) => m.baseId === parent).map((m) => ({ id: m.id, name: m.name, kind: "module" as const, path: m.path })),
+  ];
 }
 
 export function upwardView(lib: Library, session: Session, nodeId: Id): UpwardView {
@@ -90,7 +109,7 @@ export function upwardView(lib: Library, session: Session, nodeId: Id): UpwardVi
   const sys = systemOf(session);
   const inSystem = ws.get(sys, nodeId);
   const inWorld = ws.get(session.id, nodeId);
-  if (!inSystem || !inWorld) throw new LibraryError("That doesn't come from the system, so there is nothing to edit there.");
+  if (!inSystem || !inWorld) throw new LibraryError(`That doesn't come from the ${ws.layer(sys).type}, so there is nothing to edit there.`);
   const words = (v: Value | undefined, key: string): string => {
     if (v === undefined || v === null || v === "") return "";
     if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
@@ -112,17 +131,16 @@ export function upwardView(lib: Library, session: Session, nodeId: Id): UpwardVi
     return { key: k, label: label(k), system: words(s ?? undefined, k), world: words(w ?? undefined, k), systemValue: s, worldValue: w, editable: simple(s) && simple(w) && !k.startsWith("score_"), differs: JSON.stringify(s) !== JSON.stringify(w) };
   });
   const systemName = ws.layer(sys).name;
-  const worlds = lib
-    .listWorlds()
-    .filter((w) => w.systemId === sys)
+  const worlds = childrenOf(lib, sys)
     .map((w) => {
       const current = w.id === session.id;
       const held = current ? null : new WorldLock(w.path, lib.me, lib.now).read();
       const busy = !!held && held.session !== lib.me.session && held.machine !== lib.me.machine && lib.now() - held.heartbeat < LOCK_STALE_MS;
-      return { id: w.id, name: w.name, current, available: !busy, note: busy ? `Open on ${held!.machine} right now, so it will get the change` : null };
+      return { id: w.id, name: w.kind === "module" ? `${w.name} (module)` : w.name, current, available: !busy, note: busy ? `Open on ${held!.machine} right now, so it will get the change` : null };
     })
     .sort((a, b) => Number(b.current) - Number(a.current) || a.name.localeCompare(b.name));
-  return { systemId: sys, systemName, nodeId, nodeName: inWorld.name, rows, worlds };
+  const parentKind = ws.layer(sys).type === "world" ? "world" : "system";
+  return { systemId: sys, systemName, parentKind, placeKind: session.type === "module" ? "module" : "world", nodeId, nodeName: inWorld.name, rows, worlds };
 }
 
 /**
@@ -170,13 +188,14 @@ export function changeInSystem(lib: Library, session: Session, nodeId: Id, chang
 
   const kept: string[] = [];
   const couldNot: string[] = [];
+  const kinds = new Map(childrenOf(lib, sys).map((c) => [c.id, c.kind]));
   for (const w of view.worlds) {
     if (w.current || tickedSet.has(w.id)) continue;
     if (!w.available) {
       couldNot.push(w.name);
       continue;
     }
-    const open = lib.openWorld(w.id);
+    const open = kinds.get(w.id) === "module" ? lib.openModule(w.id) : lib.openWorld(w.id);
     try {
       if (open.readOnly) {
         couldNot.push(w.name);

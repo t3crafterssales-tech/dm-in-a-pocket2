@@ -15,15 +15,17 @@ export async function openEditSystem(nodeId: string, ctx: PlaceCtx) {
   if (!view) return;
   const d = openDialog(`Edit in ${view.systemName}: ${view.nodeName}`, { wide: true, onClose: () => void ctx.refresh() });
   const staged: Record<string, Value> = {};
+  const here = `this ${view.placeKind}`;
+  const kids = view.parentKind === "world" ? "modules" : "worlds and modules";
 
   const drawEdit = () => {
     const shown = view.rows.filter((r) => r.differs || r.editable || r.key in staged);
     d.body.replaceChildren(
-      h("p", { class: "muted" }, `You're changing ${view.systemName} itself, so its worlds can get the change. Next you choose which worlds do; this one is ticked already.`),
+      h("p", { class: "muted" }, `You're changing ${view.systemName} itself, so its ${kids} can get the change. Next you choose which do; ${here} is ticked already.`),
       h(
         "table",
         { class: "compare" },
-        h("thead", null, h("tr", null, h("th", null, ""), h("th", null, view.systemName), h("th", null, "This world"), h("th", null, ""))),
+        h("thead", null, h("tr", null, h("th", null, ""), h("th", null, view.systemName), h("th", null, view.placeKind === "module" ? "This module" : "This world"), h("th", null, ""))),
         h(
           "tbody",
           null,
@@ -55,7 +57,7 @@ export async function openEditSystem(nodeId: string, ctx: PlaceCtx) {
                       "button",
                       {
                         class: "link small",
-                        title: `Copy this world's ${r.label} up to ${view.systemName}`,
+                        title: `Copy ${here}'s ${r.label} up to ${view.systemName}`,
                         onClick: () => {
                           staged[r.key] = r.worldValue;
                           drawEdit();
@@ -82,7 +84,7 @@ export async function openEditSystem(nodeId: string, ctx: PlaceCtx) {
     const ticked = new Set(view.worlds.map((w) => w.id));
     const draw = () => {
       d.body.replaceChildren(
-        h("p", null, `Which of ${view.systemName}'s worlds get the change? Unticked ones keep their old value as their own, marked with a pencil. Values a world already set for itself are never touched.`),
+        h("p", null, `Which of ${view.systemName}'s ${kids} get the change? Unticked ones keep their old value as their own, marked with a pencil. Values one already set for itself are never touched.`),
         h(
           "div",
           { class: "inline" },

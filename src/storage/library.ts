@@ -340,6 +340,37 @@ export class Library {
     return this.openPlace("module", id, path, opts);
   }
 
+  /**
+   * "Place in a world": copies a setting-free module into a world on the same system. The copy is a
+   * new world module that can use the world's things; the original stays as it was, so it can be
+   * placed in other worlds too. Returns the new module's id.
+   */
+  placeModuleInWorld(moduleId: Id, worldId: Id): Id {
+    const path = this.modulePath(moduleId);
+    if (!existsSync(path)) throw new LibraryError("That module isn't in the Modules folder.");
+    const { data } = readArchive(path, "module.json", this, false);
+    const mod = data.layers.find((l) => l.id === data.main);
+    if (!mod) throw new LibraryError("That module file is damaged.");
+    const base = data.layers.find((l) => l.id === mod.base);
+    if (base?.type !== "system") throw new LibraryError("Only a setting-free module can be placed in a world; this one already has its world.");
+    if (!existsSync(this.worldPath(worldId))) throw new LibraryError("That world isn't in the Worlds folder.");
+    const below = this.layersBelow(worldId);
+    if (!below.some((l) => l.id === mod.base)) throw new LibraryError("That world uses a different system. A module can only go into a world on its own system.");
+    const copy: Layer = { ...structuredClone(mod), id: newId(), base: worldId };
+    const file: FileWithMeta = {
+      format: FORMAT_VERSION,
+      app: data.app,
+      main: copy.id,
+      layers: [...below, copy],
+      bin: [],
+      history: [],
+      redo: [],
+      meta: { [copy.id]: { picture: data.meta?.[mod.id]?.picture ?? null, changed: this.now() } },
+    };
+    writeArchive(this.modulePath(copy.id), "module.json", file, this);
+    return copy.id;
+  }
+
   /** Moves a module to the recycle bin. */
   deleteModule(id: Id): Id {
     const m = this.listModules().find((x) => x.id === id);

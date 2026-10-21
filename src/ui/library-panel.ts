@@ -284,7 +284,7 @@ export function brickEditor(view: NodeView, choices: Choices, ctx: PlaceCtx, onR
         { class: "sheet-tags" },
         h("span", { class: "tag accent" }, BRICK_LABELS[type] ?? "Brick"),
         starter ? h("span", { class: "tag" }, "From the starter") : h("span", { class: "tag" }, "Made by you"),
-        view.fromBelow && !view.readOnly && ctx.view.type === "world" && !starter ? h("button", { class: "link small", title: "Change the system's version, and choose which worlds get it", onClick: () => void openEditSystem(view.id, ctx) }, "Edit in the system") : null,
+        view.fromBelow && !view.readOnly && ctx.view.type !== "system" && !starter ? h("button", { class: "link small", title: "Change the version underneath, and choose which places get it", onClick: () => void openEditSystem(view.id, ctx) }, ctx.view.type === "module" && ctx.view.worldName ? "Edit in the world" : "Edit in the system") : null,
       ),
       h("p", { class: "summary" }, view.summary),
       rows.length ? h("div", { class: "quick" }, rows) : null,

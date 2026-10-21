@@ -7,6 +7,7 @@ import { CODEX_SECTIONS, DICE_CHOICES, HANDLING } from "../app/codex-lists.ts";
 import { api, pictureUrl } from "./api.ts";
 import { attempt } from "./common.ts";
 import { notice } from "./dialogs.ts";
+import { openEditSystem } from "./edit-system.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
@@ -50,7 +51,8 @@ export async function itemSheet(view: NodeView, categories: CategoryOption[], _c
     section ? h("span", { class: "tag accent" }, `${section.icon} ${section.one[0]!.toUpperCase()}${section.one.slice(1)}`) : null,
     view.parent ? h("span", { class: "tag" }, "Variant of ", h("button", { class: "link", onClick: () => ctx.select(view.parent!.id) }, view.parent.name)) : null,
     starter ? h("span", { class: "tag" }, "From the starter") : view.source === "others" ? h("span", { class: "tag" }, view.author ? `By ${view.author}` : "From others") : h("span", { class: "tag" }, "Made by you"),
-    view.fromBelow ? h("span", { class: "tag", title: "From the system. Changes you make here stay in this world." }, svg(ICONS.layers), "From the system") : null,
+    view.fromBelow ? h("span", { class: "tag", title: `From underneath. Changes you make here stay in this ${ctx.view.type}.` }, svg(ICONS.layers), ctx.view.type === "module" && ctx.view.worldName ? "From the world" : "From the system") : null,
+    view.fromBelow && !locked && ctx.view.type !== "system" ? h("button", { class: "link small", title: "Change the version underneath, and choose which places get it", onClick: () => void openEditSystem(view.id, ctx) }, ctx.view.type === "module" && ctx.view.worldName ? "Edit in the world" : "Edit in the system") : null,
     view.template ? h("span", { class: "tag", title: "A parent that holds shared parts. It stays out of the lists and the rulebook." }, "Template") : null,
   );
 

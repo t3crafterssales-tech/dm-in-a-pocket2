@@ -222,6 +222,8 @@ export const BACKEND_METHODS = [
   "createModule",
   "deleteModule",
   "worldModules",
+  "placeChoices",
+  "placeModule",
   "deleteSystem",
   "recycleBin",
   "restore",
@@ -508,6 +510,30 @@ export class Backend {
 
   deleteModule(id: Id): RecycledInfo {
     return this.binEntry(this.lib.deleteModule(id));
+  }
+
+  /** The worlds a setting-free module can be placed in: those on its own system. */
+  placeChoices(moduleId: Id): { id: Id; name: string }[] {
+    const m = this.lib.listModules().find((x) => x.id === moduleId);
+    if (!m || m.baseType !== "system") return [];
+    return this.lib
+      .listWorlds()
+      .filter((w) => {
+        try {
+          return this.lib.layersBelow(w.id).some((l) => l.id === m.baseId);
+        } catch {
+          return false;
+        }
+      })
+      .map((w) => ({ id: w.id, name: w.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** "Place in a world": a copy of a setting-free module, now built on that world. */
+  placeModule(moduleId: Id, worldId: Id): Id {
+    const id = this.lib.placeModuleInWorld(moduleId, worldId);
+    this.markOpened(id);
+    return id;
   }
 
   /** Deletes a system and, with it, the worlds that use it (the user has already agreed). */

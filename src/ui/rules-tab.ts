@@ -187,7 +187,7 @@ function editorPanel(view: NodeView | null, choices: Choices, moveTo: { key: str
           ? h("span", { class: "chip muted" }, view.sectionTitle)
           : null,
       view.fromBelow ? h("span", { class: "chip muted", title: "This comes from the system. Changes you make here stay in this world, marked with a pencil." }, svg(ICONS.layers), "From the system") : null,
-      view.fromBelow && !ro && ctx.view.type === "world" ? h("button", { class: "link small", title: "Change the system's version, and choose which worlds get it", onClick: () => void openEditSystem(view.id, ctx) }, "Edit in the system") : null,
+      view.fromBelow && !ro && ctx.view.type !== "system" ? h("button", { class: "link small", title: "Change the version underneath, and choose which places get it", onClick: () => void openEditSystem(view.id, ctx) }, ctx.view.type === "module" && ctx.view.worldName ? "Edit in the world" : "Edit in the system") : null,
     ),
   );
 

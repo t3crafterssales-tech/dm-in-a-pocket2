@@ -89,3 +89,45 @@ test("worlds and systems don't offer the adventure booklet", () => {
   assert.ok(!backend.bookChoices().types.some((t) => t.id === "adventure"));
   assert.equal(backend.book({ type: "adventure" }).book.subtitle, "Complete Rulebook", "asking anyway gives the full rulebook");
 });
+
+test("Place in a world: a setting-free module is copied into a world on its system; the original stays", () => {
+  const { backend, sys, world } = setup();
+  const other = backend.createSystem({ name: "Other game", picture: null, start: "scratch" });
+  backend.createWorld({ name: "Elsewhere", picture: null, systemId: other });
+  const free = backend.createModule({ name: "Bandits on the Road", picture: null, baseId: sys });
+  backend.open({ type: "module", id: free });
+  backend.addEncounter("The ambush");
+  backend.goHome();
+  assert.deepEqual(backend.placeChoices(free).map((w) => w.name), ["Greyhollow"], "only worlds on the same system");
+  const placed = backend.placeModule(free, world);
+  const shelf = backend.home().modules;
+  assert.deepEqual(shelf.map((m) => m.builtOn).sort(), ["Any world · d20 Basic", "Greyhollow · d20 Basic"]);
+  backend.open({ type: "module", id: placed });
+  assert.deepEqual(backend.encounterTree().map((e) => e.name), ["The ambush"], "its encounters came along");
+  assert.equal(backend.undo(), null, "placing isn't an undo step inside the copy");
+  backend.goHome();
+  assert.deepEqual(backend.placeChoices(placed), [], "a world module can't be placed again");
+  assert.throws(() => backend.placeModule(placed, world), /setting-free/);
+});
+
+test("Edit in the world from inside a module: the change is made in the world, sibling modules choose", () => {
+  const { backend, world } = setup();
+  const a = backend.createModule({ name: "Module A", picture: null, baseId: world });
+  const b = backend.createModule({ name: "Module B", picture: null, baseId: world });
+  backend.open({ type: "module", id: a });
+  const wolf = backend.codex().find((s) => s.key === "monsters")!.entries.find((e) => e.name === "Wolf")!.id;
+  const view = backend.upwardView(wolf);
+  assert.equal(view.parentKind, "world");
+  assert.equal(view.placeKind, "module");
+  assert.deepEqual(view.worlds.map((w) => w.name), ["Module A (module)", "Module B (module)"]);
+  const r = backend.changeInSystem(wolf, { speed: "50 ft." }, [a]);
+  assert.match(r.label, /in Greyhollow/);
+  assert.deepEqual(r.kept, ["Module B (module)"]);
+  assert.equal(backend.node(wolf).fields.speed, "50 ft.");
+  backend.goHome();
+  backend.open({ type: "world", id: world });
+  assert.equal(backend.node(wolf).fields.speed, "50 ft.", "the world itself has the change");
+  backend.goHome();
+  backend.open({ type: "module", id: b });
+  assert.notEqual(backend.node(wolf).fields.speed, "50 ft.", "the unticked module kept its old value");
+});

@@ -152,7 +152,16 @@ function worldCard(w: WorldCard, highlight: boolean) {
 function moduleCard(m: ModuleCard, highlight: boolean) {
   const pic = picture(m.picture, m.name, "module");
   pic.appendChild(h("span", { class: "system-chip" }, m.builtOn));
-  return card({ id: m.id, name: m.name, kind: "module", picture: pic, meta: [h("span", { class: "muted" }, m.baseType === "world" ? "World module" : "Setting-free module")], highlight, onOpen: () => void openPlace({ type: "module", id: m.id }, "normal", m.name), onDelete: () => void deleteModule(m) });
+  const meta: HTMLElement[] = [h("span", { class: "muted" }, m.baseType === "world" ? "World module" : "Setting-free module")];
+  if (m.baseType === "system")
+    meta.push(
+      h(
+        "button",
+        { class: "link small", title: "Copy this adventure into one of your worlds on the same system, so it can use that world's towns and characters", onClick: (e: MouseEvent) => (e.stopPropagation(), void placeInWorld(m)), onDblclick: (e: MouseEvent) => e.stopPropagation() },
+        "Place in a world…",
+      ),
+    );
+  return card({ id: m.id, name: m.name, kind: "module", picture: pic, meta, highlight, onOpen: () => void openPlace({ type: "module", id: m.id }, "normal", m.name), onDelete: () => void deleteModule(m) });
 }
 
 // ---------- New system and New world (short, strictly linear pop-ups) ----------
@@ -363,6 +372,30 @@ async function newModule(home: HomeData) {
       return true;
     },
   );
+}
+
+/** A setting-free module copied into a world; the original stays, to be placed again. */
+async function placeInWorld(m: ModuleCard) {
+  const worlds = (await attempt(() => api.placeChoices(m.id))) ?? [];
+  if (!worlds.length) return notice(`There are no worlds on that system yet. Make one with New world, then place ${m.name} in it.`, "blue", undefined, 8000);
+  const d = openDialog(`Place ${m.name} in a world`);
+  const pick = h("select", { class: "text-input", "aria-label": "World" }, worlds.map((w) => h("option", { value: w.id }, w.name)));
+  const go = h("button", { class: "button primary" }, "Place it");
+  go.addEventListener("click", async () => {
+    go.disabled = true;
+    const id = await attempt(() => api.placeModule(m.id, pick.value));
+    d.close();
+    if (id) {
+      notice(`${m.name} is now in ${worlds.find((w) => w.id === pick.value)?.name}. The setting-free original is still on the shelf.`, "green", undefined, 7000);
+      await nav.home(id);
+    }
+  });
+  d.body.replaceChildren(
+    h("p", { class: "muted" }, `A copy of ${m.name} is made inside the world you pick, so it can use that world's towns, characters and lore. The original stays setting-free and can be placed in other worlds too. The game system stays the same.`),
+    h("label", { class: "field-label" }, "World"),
+    pick,
+  );
+  d.footer.replaceChildren(h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"), go);
 }
 
 async function deleteModule(m: ModuleCard) {

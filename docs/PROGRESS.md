@@ -82,8 +82,10 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
   Saves as PDF or Word like the rulebook.
 - Deleting a world warns which modules go with it; the recycle bin brings them back together.
   Share a module and import it on another computer: its world and system come with it.
-- Not in this build yet: "Place in a world" for setting-free modules, and Edit parent from inside
-  a module.
+- **Place in a world…** on a setting-free module's card copies it into one of your worlds on the
+  same system; the original stays on the shelf.
+- Inside a module, things from the world show **Edit in the world** (or Edit in the system for a
+  setting-free module): the change is made underneath, and a checklist picks which modules get it.
 
 ### 2026-10-21 (version 2.1: modules and encounters)
 - Engine: the `module` layer and the `encounter` kind, with the rules for what can sit on what.
@@ -850,3 +852,7 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-21: In the booklet, creatures are written "Wolf ×3" so no name needs a plural.
 - 2026-10-21: The booklet's appendices print each creature, treasure and handout once, by name;
   the SRD credit is added when any of them is SRD content.
+- 2026-10-21: Place in a world makes a new module file built on the world (a new id); the module's
+  own nodes and changes are copied as they are, and its undo history starts fresh.
+- 2026-10-21: Edit parent from a module goes to the layer directly underneath (its world, or its
+  system if setting-free); the checklist lists the worlds and modules built directly on that layer.
