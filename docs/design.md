@@ -458,6 +458,35 @@ Mods that run their own code are a later step and need care, because code from a
 damage files (Promise 7). Building the tray, themes and sounds so their looks can be swapped
 keeps that door open.
 
+### Modules: the adventures (proposed, October 21, 2026)
+
+**Status: proposal. It adds a new kind of layer, which changes the hard rules (Part 4) and the
+data format, so it needs Jeff's OK and a CLAUDE.md update before any code.**
+
+Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
+**system → world → module.** "The Mill on Ash Creek" uses Greyhollow, which uses d20 Basic.
+
+- **Locked to its world and system.** Once made, a module's world (and through it, its system) can
+  never be swapped, as in Foundry: an adventure written for d20 can't be switched to an OSR or
+  Pathfinder system. (Jeff, October 21, 2026.)
+- **Changes inside stay inside.** Anything can be changed within the module (remove Strength for
+  this adventure only) without touching the world or the system above it.
+- **Changes flow down, never up**, as everywhere: a fix to the world's Goblin reaches every module
+  in that world, unless the module set its own (pencil mark). Edit parent works from inside a
+  module.
+- **Only order matters, nothing blocks.** A module needs a world, as a world needs a system. The
+  app never judges whether the world is "built enough" (Promise 4).
+- **What a module adds:** chapters and scenes in story order, read-aloud boxed text, encounters
+  placed in scenes, handouts and maps tied to scenes, NPCs and monsters of its own, and its own
+  printed adventure booklet.
+- **Sessions run in a module.** A play session is a layer on top of the module, so playing never
+  changes it; another group can run it fresh.
+- **Sharing:** a shared module carries its world and system with it, as a shared world carries its
+  system.
+
+Open: modules on their own home-screen shelf, or inside each world? Can a module be copied into a
+different world that uses the same system?
+
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
