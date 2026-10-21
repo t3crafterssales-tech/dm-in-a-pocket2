@@ -465,6 +465,10 @@ DM's table), so they are there next time.
   **New player** (their own character and nothing else; no other permissions), **Player**,
   **Trusted player**, **Assistant GM** and **DM**. A person's level carries over to the next
   module unless the DM changes it there. The grid underneath is only for exceptions.
+- **The DM can always override, with no "are you sure?" (Jeff, October 21, 2026).** Showing or
+  sending anything to anyone just happens, whatever their level: a New player can be sent a
+  journal page they normally couldn't see. Sending it shares that one thing; their level and the
+  grid are unchanged. (Like everything else, it shows in the session log.)
 - **Joining with a PIN, no account (Jeff's idea, October 21, 2026).** The DM's app hosts the
   session. Each player gets their own random 5-digit PIN from the Party section; the PIN is both
   the key and who you are, so Ken's PIN opens Ken's view with Ken's permissions. PINs end with
