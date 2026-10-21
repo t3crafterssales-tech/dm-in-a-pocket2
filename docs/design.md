@@ -477,6 +477,11 @@ DM's table), so they are there next time.
   one DM: some tables make every player an assistant GM ("look it up yourself"), others keep
   everything with the DM. Both styles are fine; the app supports either with levels and table
   templates (for example a ready-made "Everyone trusted" table template).
+- **An assistant GM can be given everything (Jeff, October 21, 2026).** With a few clicks (or an
+  "All permissions" button on their row), an assistant GM can do everything the DM does, including
+  changing other people's permissions if the DM allows it. Only the title differs. The one thing
+  that stays with the DM alone is the DM seat itself: only the DM can Hand over DM, and nobody can
+  lower the DM's own access, so the one-DM rule always holds.
 - **Table jobs (Jeff, October 21, 2026).** The DM can hand a tool to anyone at the table, assistant
   GM or player, so the DM can focus on monsters and maps: "Fred runs initiative" (he clicks Next
   turn, and now it's Johnny's turn), "Johnny keeps the journal", "Fred tracks the party's gold".
