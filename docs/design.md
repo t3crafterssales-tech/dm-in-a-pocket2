@@ -1117,6 +1117,9 @@ Kept deliberately simple: groups you drag around, not a full page designer.
 - **The same layout on screen (Jeff, October 21, 2026).** A player looking at their character sees
   this layout: the default one until they rearrange it, then their own. Screen and paper always
   match. (The print ticks only affect paper; on screen every value still shows.)
+- **Sheet layouts live in the Codex (Jeff, October 21, 2026)**, in a Sheet layouts section, so a
+  saved layout is shared, copied, starred and pinned like anything else, and can be used by other
+  characters, worlds and systems.
 - **Suggested by Claude:** the system's designer saves the default layout for everyone; a player can
   adjust the layout of their own sheet, which stays theirs (the usual pencil mark and "Use the
   system's" to go back).
