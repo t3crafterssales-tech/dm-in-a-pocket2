@@ -640,6 +640,20 @@ printing at real size for miniatures is not needed (maps print in the booklet an
    prints the map with its numbered rooms.
 5. More drawing tools over time. Fog, tokens and lighting only if a tabletop is ever built.
 
+**Decided with Jeff (October 21, 2026):**
+- A map starts from a picture (JPEG, PNG and the like) brought in, which can be resized, with zoom
+  in and out and dragging to move around.
+- **Drag from the Codex onto the map** to place things, exactly as on a sheet: locations, lore
+  pages, NPCs, monsters (a lair, a patrol), items (the buried treasure) and encounters. Each
+  becomes a pin; clicking it opens that thing, and its page shows "On the map: Greyhollow town".
+- **Maps inside maps:** a pin can open another map (world → region → town → building → room
+  encounter), shown in the same File Explorer style tree, with a breadcrumb at the top to go back
+  up ("Greyhollow region > Greyhollow town > The Mill").
+- **The first drawing tools:** Room (drag a rectangle on the grid: floor and walls), Wall and line
+  (walls, rivers, roads, borders), Freehand brush (coastlines, forests), Fill (colour or texture:
+  grass, water, stone, wood), Stamps (doors, stairs, trees, tables, buildings, mountains; more
+  from content packs later), Text labels, and Eraser. Everything undoes.
+
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
