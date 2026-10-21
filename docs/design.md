@@ -393,6 +393,13 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   DM screen. Drag anything into it: a rule (how movement works), a map, a tracker, a journal entry,
   a monster, an encounter. Each is a link; click it to open it, or hover to read it at a glance.
   Bookmarks can be grouped under headings and reordered by dragging.
+- **Showing a rule to players (Jeff, October 21, 2026).** When there's an argument at the table, the
+  DM shows the rule to players: the usual "Show to players" list, everyone ticked by default,
+  untick anyone to leave out. It pops up on their screens as a small card they can drag around,
+  minimize, and close with an X when they're done; it stays until they close it. Works for any
+  block: a rule, a condition, a spell, a price list. (How the DM triggers it is to be settled:
+  Jeff suggested Shift-click, which elsewhere selects a run of things in a list, so a "Show"
+  button that appears on hover may be clearer.)
 - **A Codex section or category can be bookmarked as a little table**, such as every potion with
   its price, so a price list is always one glance away.
 
