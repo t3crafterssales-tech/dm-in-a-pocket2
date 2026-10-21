@@ -469,6 +469,11 @@ DM's table), so they are there next time.
   sending anything to anyone just happens, whatever their level: a New player can be sent a
   journal page they normally couldn't see. Sending it shares that one thing; their level and the
   grid are unchanged. (Like everything else, it shows in the session log.)
+- **The assistant GM can share what they can see (Jeff, October 21, 2026).** An assistant GM can
+  show or send anything they are allowed to see, to any player, also with no confirmation: if Ken
+  can see the journal, he can send a journal page to anyone. What is hidden from him he can't
+  share: with initiative hidden, he can't show initiative to anyone. Players share nothing beyond
+  their own things, unless a DM chooses to allow it (a column in the grid).
 - **Joining with a PIN, no account (Jeff's idea, October 21, 2026).** The DM's app hosts the
   session. Each player gets their own random 5-digit PIN from the Party section; the PIN is both
   the key and who you are, so Ken's PIN opens Ken's view with Ken's permissions. PINs end with
