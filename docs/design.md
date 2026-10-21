@@ -454,6 +454,14 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   glance ("what's its armour class again? 15"). What players see of monsters still follows
   permissions.
 - **Show character names or player names** (a setting).
+- **Each tool is its own little program inside the app (Jeff, October 21, 2026)**, so a tool can grow
+  as deep as needed over time. Down the road the tracker gets **themes**: a drop-down of ready-made
+  looks and layouts (Jeff will go through Foundry's initiative tracker mods for ideas to include),
+  each with its own permissions and settings.
+- **Glance info changes with the moment.** The DM can switch what shows mid-session: running a
+  gauntlet where every trap is a Dexterity saving throw, show everyone's Dexterity save. Combos can
+  be saved and named ("Gauntlet: Dex saves") to switch back in one click. Players can choose what
+  shows on their own screen, within what the DM allows.
 
 ### The journal
 
