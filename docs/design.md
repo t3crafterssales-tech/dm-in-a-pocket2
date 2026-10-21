@@ -646,6 +646,10 @@ printing at real size for miniatures is not needed (maps print in the booklet an
 - **Drag from the Codex onto the map** to place things, exactly as on a sheet: locations, lore
   pages, NPCs, monsters (a lair, a patrol), items (the buried treasure) and encounters. Each
   becomes a pin; clicking it opens that thing, and its page shows "On the map: Greyhollow town".
+- **Pins can link to anything (Jeff, October 21, 2026)**, like wiki links: a lore note, another map,
+  a character, a greatsword, an encounter, a rule. Click a pin to open what it links to;
+  double-click it to change its name and its colour (six colours). A pin is drawn as a coloured
+  marker with a small symbol for what it links to (a house, a dragon, a sword, a scroll, a map).
 - **Maps inside maps:** a pin can open another map (world → region → town → building → room
   encounter), shown in the same File Explorer style tree, with a breadcrumb at the top to go back
   up ("Greyhollow region > Greyhollow town > The Mill").
