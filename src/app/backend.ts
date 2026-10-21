@@ -28,6 +28,8 @@ import { buildD20Starter } from "./starters/d20.ts";
 import { QUICK_QUESTIONS } from "./quickstart.ts";
 import type { QuickStartAnswers } from "./quickstart.ts";
 import { changeInSystem, upwardView } from "./upward.ts";
+import { rollScores } from "./characters.ts";
+import type { BuilderOptions, CharacterInput, CharacterView } from "./characters.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
 import * as assistant from "./ai/assistant.ts";
@@ -42,6 +44,8 @@ import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
+export type { BuilderOptions, CharacterInput, CharacterView, Method, OptionChoice, OptionClass, OptionRace, TrackerView } from "./characters.ts";
+export type RosterEntry = ReturnType<typeof import("./characters.ts").roster>[number];
 export type { ImportResult, RecycledInfo } from "../storage/index.ts";
 export type { BinView, BookData, BookRequest, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
@@ -284,6 +288,22 @@ export const BACKEND_METHODS = [
   "printPreview",
   "newInSection",
   "addChoice",
+  "builderOptions",
+  "makeItForMe",
+  "roster",
+  "characterView",
+  "createCharacter",
+  "setAppearance",
+  "addExtra",
+  "setExtra",
+  "addTracker",
+  "setTracker",
+  "award",
+  "rest",
+  "levelUpPreview",
+  "levelUp",
+  "setChoice",
+  "rollScores",
   "encounterTree",
   "modulePage",
   "addEncounter",
@@ -1009,6 +1029,56 @@ export class Backend {
   }
   encounterTree(): EncounterNode[] {
     return this.editing.encounterTree();
+  }
+  // ---------- Characters (version 2) ----------
+  builderOptions(): BuilderOptions {
+    return this.editing.builderOptions();
+  }
+  makeItForMe(): CharacterInput {
+    return this.editing.makeItForMe();
+  }
+  roster(): RosterEntry[] {
+    return this.editing.roster();
+  }
+  characterView(id: Id): CharacterView {
+    return this.editing.characterView(id);
+  }
+  createCharacter(input: CharacterInput): Id {
+    return this.editing.createCharacter(input);
+  }
+  setAppearance(id: Id, key: string, value: string): true {
+    return this.editing.setAppearance(id, key, value);
+  }
+  addExtra(id: Id, section: string, label: string): true {
+    return this.editing.addExtra(id, section, label);
+  }
+  setExtra(id: Id, index: number, change: { label?: string; value?: string } | null): true {
+    return this.editing.setExtra(id, index, change);
+  }
+  addTracker(id: Id, t: { name: string; max: number; look: string; refill: string }): Id {
+    return this.editing.addTracker(id, t);
+  }
+  setTracker(id: Id, trackerId: Id, change: { value?: number; max?: number; name?: string } | null): true {
+    return this.editing.setTracker(id, trackerId, change);
+  }
+  award(id: Id, trackerId: Id): boolean {
+    return this.editing.award(id, trackerId);
+  }
+  rest(id: Id, kind: "short rest" | "long rest"): true {
+    return this.editing.rest(id, kind);
+  }
+  levelUpPreview(id: Id): ReturnType<Editing["levelUpPreview"]> {
+    return this.editing.levelUpPreview(id);
+  }
+  levelUp(id: Id, hpGain: number | null, picks: Record<Id, Id[]> = {}): true {
+    return this.editing.levelUp(id, hpGain, picks);
+  }
+  setChoice(id: Id, aid: Id, picked: Id[]): true {
+    return this.editing.setChoice(id, aid, picked);
+  }
+  /** Rolled ability scores, shown die by die in the builder. */
+  rollScores(method: "roll4d6" | "roll3d6", count: number): { score: number; breakdown: string }[] {
+    return rollScores(method, Math.max(1, Math.min(20, Math.round(count) || 6)));
   }
   modulePage(): Id | null {
     return this.editing.modulePage();

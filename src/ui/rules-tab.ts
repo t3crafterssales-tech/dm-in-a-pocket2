@@ -290,6 +290,7 @@ function kindFields(view: NodeView, c: Choices, ed: FieldMaker, isCore: boolean)
               { value: "long rest", label: "Each long rest" },
               { value: "day", label: "Each day" },
               { value: "spend", label: "By spending something" },
+              { value: "award", label: "When the DM awards it (like Inspiration)" },
               { value: "never", label: "Never" },
             ]),
           ),
@@ -353,14 +354,28 @@ function kindFields(view: NodeView, c: Choices, ed: FieldMaker, isCore: boolean)
  * points back).
  */
 function methodFields(view: NodeView, ed: FieldMaker): HTMLElement[] {
-  const method = view.fields.method === "pointBuy" ? "pointBuy" : "words";
+  const kinds = ["pointBuy", "standard", "roll4d6", "roll3d6"];
+  const method = kinds.includes(String(view.fields.method)) ? String(view.fields.method) : "words";
   const out = [
     ed.row(
       "This rule is",
       "method",
-      ed.plainSelect(method, [{ value: "words", label: "Written out in words" }, { value: "pointBuy", label: "Point buy for ability scores" }], (v) => api.setField(view.id, "method", v === "pointBuy" ? "pointBuy" : null), "f-method"),
+      ed.plainSelect(
+        method,
+        [
+          { value: "words", label: "Written out in words" },
+          { value: "pointBuy", label: "Point buy for ability scores" },
+          { value: "standard", label: "A standard set of numbers for ability scores" },
+          { value: "roll4d6", label: "Roll 4d6, keep the highest three (arrange as you like)" },
+          { value: "roll3d6", label: "Roll 3d6 in order" },
+        ],
+        (v) => api.setField(view.id, "method", v === "words" ? null : v),
+        "f-method",
+      ),
     ),
   ];
+  if (method !== "words") out.push(h("p", { class: "muted small" }, "The character builder's Method drop-down starts with this. The DM can switch it for one character."));
+  if (method === "standard") out.push(ed.row("The numbers", "standardSet", h("div", { class: "inline" }, ed.text("standardSet", "15, 14, 13, 12, 10, 8"), h("span", { class: "muted small" }, "One for each ability"))));
   if (method !== "pointBuy") return out;
   const start = typeof view.fields.scoreStart === "number" ? view.fields.scoreStart : 8;
   out.push(

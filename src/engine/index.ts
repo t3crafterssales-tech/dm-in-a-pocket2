@@ -16,3 +16,5 @@ export type { Book, BookType, BookOptions, Chapter, ChapterId, Entry } from "./b
 export { ruleText, isCoreCheck, CORE_FAMILIES, WORLD_RULE_VALUES } from "./rulestext.ts";
 export { pointBuyFrom, pointBuyOf, pointsSpent, pointBuyText, scoreCost } from "./pointbuy.ts";
 export type { PointBuy, Spent } from "./pointbuy.ts";
+export { parseDice, diceText, roll, averageOf, maximumOf } from "./dice.ts";
+export type { DiceTerm, DieRoll, RollResult } from "./dice.ts";

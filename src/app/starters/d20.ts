@@ -55,6 +55,10 @@ export function buildD20Starter(ws: Workspace, sys: Id) {
   // ---------- Resources ----------
   rule("resources", "Hit points", { [F.label]: "HP", [F.maximum]: { formula: [{ op: "+", number: 8 }, { op: "+", ability: ab("CON"), use: "bonus" }] }, [F.start]: "full", [F.recovery]: "long rest", [F.display]: "number", [F.thresholds]: [{ at: 0, condition: cond("Unconscious") }] }, "At 1st level a character has 8 plus their Constitution bonus (more for tough classes); each level adds the class's hit die. At 0 hit points a creature falls unconscious.");
 
+  rule("resources", "Heroic Inspiration", { [F.label]: "Insp", [F.maximum]: 1, [F.start]: "empty", [F.recovery]: "award", [F.display]: "boxes" }, "The DM awards Heroic Inspiration for great play, such as acting in character or a clever idea. You can have only one at a time. Spend it to reroll any one die you just rolled, and use the new roll.");
+  // How ability scores are made (version 2): the builder's Method drop-down starts here.
+  make("rule", "Making ability scores", { [F.method]: "standard", standardSet: "15, 14, 13, 12, 10, 8" }, { category: sections.get("abilities")!, text: "Use the standard set of numbers, 15, 14, 13, 12, 10 and 8, and put one in each ability. Your DM may let you use point buy or roll instead (4d6, keeping the highest three, six times)." });
+
   // ---------- Skills ----------
   for (const [name, l] of [
     ["Acrobatics", "DEX"], ["Animal Handling", "WIS"], ["Arcana", "INT"], ["Athletics", "STR"], ["Deception", "CHA"], ["History", "INT"],

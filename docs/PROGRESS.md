@@ -87,6 +87,24 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 - Inside a module, things from the world show **Edit in the world** (or Edit in the system for a
   setting-free module): the change is made underneath, and a checklist picks which modules get it.
 
+### Version 2.2: what Jeff can test
+- A new **Party** tab in every world (and module). **+ Character** opens the character builder:
+  name and player, race (subraces underneath), class (subclasses, Choices boxes, starting level),
+  background, ability scores, gear and money, then Finish with Appearance folded away.
+- The **Method** drop-down starts with the game's own rule (the d20 starter now has "Making ability
+  scores": the standard set). Point buy counts points left; 4d6 and 3d6 roll with the dice shown;
+  Enter my own takes typed scores.
+- **✨ Make it for me** fills every step with sensible choices in one click.
+- The character sheet: hit points now and most, armour, speed, experience, money, scores with
+  bonuses, trackers (Heroic Inspiration appears by itself with an Award button; add your own
+  torches or arrows), Short rest and Long rest, features, choices, gear with pictures (drag from
+  the Codex), Appearance, your own fields with + Add, and **Level up**.
+
+### 2026-10-21 (version 2.2: the character builder)
+- `src/engine/dice.ts`: dice for all of version 2 ("2d6 + 3", "4d6 keep 3", advantage).
+- `src/app/characters.ts`: builder options read from the game, making characters, the sheet,
+  trackers, rests, awards and level-ups. `src/ui/character-builder.ts` and `src/ui/party-tab.ts`.
+
 ### 2026-10-21 (version 2.1: modules and encounters)
 - Engine: the `module` layer and the `encounter` kind, with the rules for what can sit on what.
 - Storage: the Modules folder and `.dmmod` files, which carry their world and system.
@@ -856,3 +874,12 @@ One plain line each. Jeff can overrule any of these at a milestone.
   own nodes and changes are copied as they are, and its undo history starts fresh.
 - 2026-10-21: Edit parent from a module goes to the layer directly underneath (its world, or its
   system if setting-free); the checklist lists the worlds and modules built directly on that layer.
+- 2026-10-21: Jeff approved every version 2 data change that follows the locked design in one go;
+  each is still written into CLAUDE.md and docs/data-format.md first.
+- 2026-10-21: Player characters are beings of kind "character" with the builder's fields; their
+  gear is attachments linking items, so Used by and red flags work as for monsters.
+- 2026-10-21: Backgrounds are read from rules named "Background: ..." (how the d20 starter files
+  them); a game without them skips that step.
+- 2026-10-21: Hit points: the class's hit die at its highest at level 1, then its average rounded
+  up plus the Constitution bonus each level; without a hit die, the game's Hit points resource.
+- 2026-10-21: The game's award resources (recovery "award") appear on every sheet as trackers.

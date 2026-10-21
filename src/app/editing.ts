@@ -23,6 +23,8 @@ import { createLore, loreList, rollTable } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
 import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
 import { buildAdventureBook } from "./adventure-book.ts";
+import { addExtra, addTracker, award, builderOptions, characterView, createCharacter, levelUp, levelUpPreview, makeItForMe, rest, roster, setAppearance, setChoice, setExtra, setTracker } from "./characters.ts";
+import type { BuilderOptions, CharacterInput, CharacterView } from "./characters.ts";
 import type { EncounterNumbering } from "./adventure-book.ts";
 import { addToEncounter, createEncounter, deleteEncounter, encounterTree, moveEncounters, placeEncounter, saveEncounterToCodex } from "./encounters.ts";
 import type { EncounterNode } from "./encounters.ts";
@@ -829,6 +831,68 @@ export class Editing {
   saveEncounterToCodex(id: Id): Id {
     const n = this.must(id);
     return this.run(() => this.ws.transact(`Saved ${n.name} to the Codex`, () => saveEncounterToCodex(this.ws, this.layer, id)));
+  }
+
+  // ---------- Characters (version 2) ----------
+
+  builderOptions(): BuilderOptions {
+    return builderOptions(this.ws, this.layer);
+  }
+  makeItForMe(): CharacterInput {
+    return makeItForMe(builderOptions(this.ws, this.layer));
+  }
+  roster() {
+    return roster(this.ws, this.layer);
+  }
+  characterView(id: Id): CharacterView {
+    return characterView(this.ws, this.layer, id);
+  }
+  createCharacter(input: CharacterInput): Id {
+    return this.run(() => createCharacter(this.ws, this.layer, input));
+  }
+  /** One step on a character, labelled in plain words. */
+  private onCharacter<T>(id: Id, label: string, fn: () => T): T {
+    const n = this.must(id);
+    return this.run(() => this.ws.transact(label.replace("{name}", n.name), fn));
+  }
+  setAppearance(id: Id, key: string, value: string): true {
+    this.onCharacter(id, "Changed {name}'s appearance", () => setAppearance(this.ws, this.layer, id, key, value));
+    return true;
+  }
+  addExtra(id: Id, section: string, label: string): true {
+    this.onCharacter(id, `Added ${label.trim() || "a field"} to {name}`, () => addExtra(this.ws, this.layer, id, section, label));
+    return true;
+  }
+  setExtra(id: Id, index: number, change: { label?: string; value?: string } | null): true {
+    this.onCharacter(id, change === null ? "Removed a field from {name}" : "Changed {name}", () => setExtra(this.ws, this.layer, id, index, change));
+    return true;
+  }
+  addTracker(id: Id, t: { name: string; max: number; look: string; refill: string }): Id {
+    return this.onCharacter(id, `Added the ${t.name.trim() || "new"} tracker to {name}`, () => addTracker(this.ws, this.layer, id, t));
+  }
+  setTracker(id: Id, trackerId: Id, change: { value?: number; max?: number; name?: string } | null): true {
+    this.onCharacter(id, change === null ? "Removed a tracker from {name}" : "Changed a tracker on {name}", () => setTracker(this.ws, this.layer, id, trackerId, change));
+    return true;
+  }
+  award(id: Id, trackerId: Id): boolean {
+    const t = characterView(this.ws, this.layer, id).trackers.find((x) => x.id === trackerId);
+    return this.onCharacter(id, `Awarded {name} ${t?.name ?? "a point"}`, () => award(this.ws, this.layer, id, trackerId));
+  }
+  rest(id: Id, kind: "short rest" | "long rest"): true {
+    this.onCharacter(id, `{name} took a ${kind}`, () => rest(this.ws, this.layer, id, kind));
+    return true;
+  }
+  levelUpPreview(id: Id) {
+    return levelUpPreview(this.ws, this.layer, id);
+  }
+  levelUp(id: Id, hpGain: number | null, picks: Record<Id, Id[]> = {}): true {
+    const next = characterView(this.ws, this.layer, id).level + 1;
+    this.onCharacter(id, `{name} went up to level ${next}`, () => levelUp(this.ws, this.layer, id, hpGain, picks));
+    return true;
+  }
+  setChoice(id: Id, aid: Id, picked: Id[]): true {
+    this.onCharacter(id, "Changed a choice on {name}", () => setChoice(this.ws, this.layer, id, aid, picked));
+    return true;
   }
 
   /** "Start blank" on the start screen. */

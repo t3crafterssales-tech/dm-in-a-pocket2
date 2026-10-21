@@ -27,7 +27,8 @@ test("Generic d20 starts with the core rules and the full SRD 5.2, and nothing t
   const tab = backend.rulesTab();
   const count = (k: string) => tab.find((s) => s.key === k)!.nodes.length;
   assert.equal(count("core"), 1);
-  assert.deepEqual(tab.find((s) => s.key === "abilities")!.nodes.map((n) => n.label), ["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
+  assert.deepEqual(tab.find((s) => s.key === "abilities")!.nodes.filter((n) => n.label).map((n) => n.label), ["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
+  assert.ok(tab.find((s) => s.key === "abilities")!.nodes.some((n) => n.name === "Making ability scores"), "the character builder's Method starts from this rule");
   assert.equal(count("skills"), 18);
   assert.equal(count("conditions"), 15);
   assert.ok(count("combat") >= 3);

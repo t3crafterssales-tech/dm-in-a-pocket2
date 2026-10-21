@@ -74,6 +74,33 @@ on" (the DM's notes, printed in the adventure booklet, which is a DM book). Its 
 
 These are ordinary fields; older files without encounters still open.
 
+## Characters (version 2)
+
+A player character is a node of kind `being` with `beingKind` "character". Characters live in a
+world (the party roster); modules borrow them. Their gear is attachments whose `brick` links an
+item. Besides `hp`, `ac`, `speed`, `level` and the `score_<ability id>` values every being can have:
+
+| Field | What it holds |
+| --- | --- |
+| `player` | The player's name, in words. Always prints, with a blank line if empty. |
+| `race`, `class`, `background` | Links to the race (or subrace), class (or subclass) and background chosen. |
+| `method` | How the scores were made: "pointBuy", "standard", "roll4d6", "roll3d6" or "own". |
+| `hpNow` | Current hit points (the sheet's `hp` is the maximum). |
+| `xp` | Experience points. |
+| `gold` | Money, in words ("15 gp"). |
+| `appearance` | `{ height, weight, age, hair, eyes, skin, marks, voice }`, each words; empty ones never print. |
+| `extras` | A list of `{ section, label, value }`: fields added with + Add (by the system or the player). |
+| `trackers` | A list of `{ id, name, max, value, look ("boxes", "number" or "bar"), refill ("short rest", "long rest", "award" or "never") }`. |
+| `choices` | `{ <attachment id>: [links] }`: what was picked in each Choices box of the class or race. |
+| `gearPictures` | True to show gear pictures on the sheet and in print. |
+| `approved` | False while a character a player made waits for the DM's OK. |
+
+A rule's `method` can also be "standard" (with `standardSet`, such as "15, 14, 13, 12, 10, 8"),
+"roll4d6" (roll 4d6, keep the highest three, arrange as you like) or "roll3d6" (3d6 in order). A
+resource's `recovery` can also be "award": it comes back only when the DM awards it (Inspiration).
+A system can list extra character fields for everyone in a rule with `characterFields`: a list of
+`{ section, label }`. These are ordinary fields; older files without them still open.
+
 ## Attachments (a brick on a sheet)
 
 | Field | What it holds |

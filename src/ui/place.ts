@@ -15,6 +15,7 @@ import { separateCopy, variantOf } from "./item-sheet.ts";
 import { showHistory } from "./history-dialog.ts";
 import { lorePanels } from "./lore-tab.ts";
 import { adventurePanels } from "./adventure-tab.ts";
+import { partyPanels } from "./party-tab.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
@@ -22,7 +23,7 @@ import { sheetPanels } from "./sheets-tab.ts";
 import { drawTableMode, focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
 
-const TABS = ["Adventure", "Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
+const TABS = ["Adventure", "Party", "Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
 type Tab = (typeof TABS)[number];
 
 /** The tabs a place shows: a module (version 2) starts with its Adventure tab. */
@@ -64,7 +65,7 @@ let focusName = false;
 async function openNode(id: string, opts: { focusName?: boolean } = {}) {
   const n = await attempt(() => api.node(id));
   if (!n || !current) return;
-  tab = tabFor(n.kind);
+  tab = n.kind === "being" && n.fields.beingKind === "character" && !n.template ? "Party" : tabFor(n.kind);
   selected[tab] = id;
   focusName = !!opts.focusName;
   await renderPlace();
@@ -188,6 +189,7 @@ async function draw() {
   let list: HTMLElement;
   let editor: HTMLElement;
   if (tab === "Adventure") ({ list, editor } = await adventurePanels(ctx));
+  else if (tab === "Party") ({ list, editor } = await partyPanels(ctx));
   else if (tab === "Rules") ({ list, editor } = await rulesPanels(ctx));
   else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
   else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
@@ -225,6 +227,7 @@ async function draw() {
 function comingSoon(t: Tab, view: PlaceView) {
   const coming: Record<Tab, string> = {
     Adventure: "",
+    Party: "",
     Rules: "",
     Beings: "",
     Items: "",

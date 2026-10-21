@@ -65,7 +65,7 @@ export function ruleText(ws: Workspace, layerId: Id, nodeId: Id): string {
       return `${named}: scores from ${str(f[F.rangeMin], "?")} to ${str(f[F.rangeMax], "?")}; ${BONUS_TEXT[str(f[F.bonus], "d20")] ?? BONUS_TEXT.d20}.`;
     case "resource": {
       const start = f[F.start] === "empty" ? "starts empty" : f[F.start] === "set" ? `starts at ${str(f[F.startValue], "?")}` : "starts full";
-      const rec = f[F.recovery] === "never" ? "never recovers" : f[F.recovery] === "spend" ? "recovers by spending something" : `recovers each ${str(f[F.recovery], "long rest")}`;
+      const rec = f[F.recovery] === "never" ? "never recovers" : f[F.recovery] === "spend" ? "recovers by spending something" : f[F.recovery] === "award" ? "comes back only when the DM awards it" : `recovers each ${str(f[F.recovery], "long rest")}`;
       const thresholds = Array.isArray(f[F.thresholds]) ? (f[F.thresholds] as Value[]) : [];
       const th = thresholds
         .map((t) => (t && typeof t === "object" && !Array.isArray(t) ? `at ${str((t as Record<string, Value>).at, "?")} you are ${linkName(ws, layerId, (t as Record<string, Value>).condition) ?? "?"}` : ""))
@@ -90,6 +90,9 @@ export function ruleText(ws: Workspace, layerId: Id, nodeId: Id): string {
     default:
       if (isCoreCheck(ws, layerId, n)) return coreSummary(f);
       if (f[F.method] === "pointBuy") return pointBuyText(pointBuyFrom(n.id, f));
+      if (f[F.method] === "standard") return `Ability scores: the standard set ${str(f.standardSet, "15, 14, 13, 12, 10, 8")}, one in each ability.`;
+      if (f[F.method] === "roll4d6") return "Ability scores: roll 4d6 and keep the highest three, once for each ability, then arrange them as you like.";
+      if (f[F.method] === "roll3d6") return "Ability scores: roll 3d6 for each ability, in order.";
       if (f[F.forbid] && typeof f[F.forbid] === "object" && !Array.isArray(f[F.forbid])) {
         const fb = f[F.forbid] as Record<string, Value>;
         const what = WORLD_RULE_VALUES.find((v) => v.key === fb.field)?.label.toLowerCase() ?? String(fb.field ?? "?");

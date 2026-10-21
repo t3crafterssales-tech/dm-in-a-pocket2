@@ -4,7 +4,7 @@
 import { F } from "../engine/index.ts";
 import type { Id, NodeKind, Value, Workspace } from "../engine/index.ts";
 
-export type SearchTab = "Rules" | "Beings" | "Items" | "Lore";
+export type SearchTab = "Rules" | "Beings" | "Items" | "Lore" | "Party" | "Adventure";
 
 export interface SearchHit {
   id: Id;
@@ -17,7 +17,7 @@ export interface SearchHit {
 }
 
 const TAB: Partial<Record<NodeKind, SearchTab>> = { ability: "Rules", resource: "Rules", skill: "Rules", condition: "Rules", rule: "Rules", being: "Beings", brick: "Beings", item: "Items", lore: "Lore", table: "Lore" };
-const WHAT: Partial<Record<NodeKind, string>> = { ability: "Ability", resource: "Resource", skill: "Skill", condition: "Condition", rule: "Rule", item: "Item", lore: "Lore", table: "Roll table" };
+const WHAT: Partial<Record<NodeKind, string>> = { ability: "Ability", resource: "Resource", skill: "Skill", condition: "Condition", rule: "Rule", item: "Item", lore: "Lore", table: "Roll table", encounter: "Encounter" };
 const BEING: Record<string, string> = { monster: "Monster", npc: "NPC", character: "Character", race: "Race", class: "Class" };
 
 function words(v: Value | undefined): string {
@@ -34,7 +34,9 @@ export function search(ws: Workspace, layerId: Id, query: string, limit = 40): {
   const byName: SearchHit[] = [];
   const byText: SearchHit[] = [];
   for (const n of ws.list(layerId)) {
-    const tab = TAB[n.kind];
+    const fk = n.kind === "being" ? ws.resolve(layerId, n.id)!.fields[F.beingKind] : null;
+    // Player characters live in the Party tab, a module's encounters in its Adventure tab.
+    const tab = fk === "character" && !n.template ? "Party" : n.kind === "encounter" && !n.template && ws.layer(layerId).type === "module" ? "Adventure" : TAB[n.kind];
     if (!tab || (n.template && n.kind !== "being" && n.kind !== "item")) continue;
     const f = ws.resolve(layerId, n.id)!.fields;
     const what = n.kind === "being" ? (BEING[String(f[F.beingKind] ?? "monster")] ?? "Being") : n.kind === "brick" ? (f[F.type] === "spell" ? "Spell" : "Library brick") : (WHAT[n.kind] ?? n.kind);
