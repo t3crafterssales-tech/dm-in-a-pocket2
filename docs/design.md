@@ -424,7 +424,7 @@ DM's table), so they are there next time.
 - **Pins and bookmarks are different:** bookmarks are a tidy list in one tool; pins float on top of
   whatever you're doing. This is the "floating, pinnable windows" idea parked in the feel pass.
 
-### The initiative tracker (Jeff, October 21, 2026; in progress)
+### The initiative tracker (Jeff, October 21, 2026)
 
 Foundry has dozens of mods that change how initiative works, so there is no one right way. Out of
 the box the tracker has **many settings** (its gear), and the DM sets it up for their table.
@@ -462,6 +462,19 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   gauntlet where every trap is a Dexterity saving throw, show everyone's Dexterity save. Combos can
   be saved and named ("Gauntlet: Dex saves") to switch back in one click. Players can choose what
   shows on their own screen, within what the DM allows.
+- **During a fight (decided by Jeff, October 21, 2026):**
+  - **Groups:** the DM picks per fight: one card for "4 goblins" (one roll, they act together) or a
+    card each.
+  - **Delay and ready:** drag a card to where it acts (anyone with permission); a Delay button
+    sets a card aside until the player jumps back in.
+  - **At 0 hit points:** follows the system's rule (unconscious, dying or dead); defeated monsters
+    grey out and can be removed with one click.
+  - **Event cards:** lair actions and timed events ("on 20, the ceiling drips acid") are cards
+    with no creature, sitting at a set spot in the order, showing their reminder when reached.
+  - Conditions show as icons and count down by themselves ("Poisoned ends"); damage and healing by
+    clicking a card; reinforcements dragged in from the Codex mid-fight roll and slot in; a round
+    counter at the top also ticks the timers; End fight logs the result in the journal and counts
+    the defeated monsters toward the night's experience. All of it adjustable in the settings.
 
 ### The journal
 
