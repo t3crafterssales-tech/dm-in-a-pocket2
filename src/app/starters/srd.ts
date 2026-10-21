@@ -7,6 +7,7 @@
 import { F, SRD_LICENSE, link } from "../../engine/index.ts";
 import type { Id, NodeKind, Value, Workspace } from "../../engine/index.ts";
 import data from "./srd52.json" with { type: "json" };
+import { STANDARD_DESCRIPTIONS, STANDARD_MATERIALS, handlingOf } from "./descriptions.ts";
 
 export const SRD_DATA = data;
 
@@ -73,16 +74,21 @@ export function buildSrdContent(c: SrdContext) {
     if (!extra.template) items.set(name, id);
     return id;
   };
+  // Each piece of equipment has a standard description, and weapons and armour a material, so a
+  // copy starts complete. How a weapon is held is its own value (the Held picker), so it is left
+  // out of the attack's words.
+  const desc = (name: string, text: string) => text || STANDARD_DESCRIPTIONS[name] || "";
   for (const w of data.weapons) {
-    const words = [w.notes, w.properties, w.mastery ? `mastery ${w.mastery}` : ""].filter(Boolean).join("; ");
+    const props = w.properties.split(",").map((x) => x.trim()).filter((x) => x && !/^(versatile|two-handed)$/i.test(x)).join(", ");
+    const words = [w.notes, props, w.mastery ? `mastery ${w.mastery}` : ""].filter(Boolean).join("; ");
     const attack = make("brick", freeName(`${w.name} attack`, "weapon"), { [F.type]: "attack", [F.ability]: ab(w.ability), [F.dice]: w.dice, [F.damageType]: w.damageType, [F.wording]: words ? `(${words.toLowerCase()})` : "" });
-    item(w.name, weaponCat(w.group, w.light), { [F.cost]: w.cost, [F.weight]: w.weight }, w.text, [attack]);
+    item(w.name, weaponCat(w.group, w.light), { [F.cost]: w.cost, [F.weight]: w.weight, material: STANDARD_MATERIALS[w.name] ?? "Steel", handling: handlingOf(w.properties) }, desc(w.name, w.text), [attack]);
   }
   const armourCats = new Map<string, Id>();
   for (const a of data.armour) {
     if (!armourCats.has(a.group)) armourCats.set(a.group, sub(a.group, cats.get("armour")!));
     const brick = make("brick", freeName(`${a.name} protection`, "armour"), { [F.type]: "armor", bonus: a.bonus });
-    item(a.name, armourCats.get(a.group)!, { [F.cost]: a.cost, [F.weight]: a.weight }, a.text, [brick]);
+    item(a.name, armourCats.get(a.group)!, { [F.cost]: a.cost, [F.weight]: a.weight, material: STANDARD_MATERIALS[a.name] ?? "Steel" }, [STANDARD_DESCRIPTIONS[a.name], a.text].filter(Boolean).join("\n"), [brick]);
   }
   const gearCats = new Map<string, Id>();
   const gearCat = (group: string, under = cats.get("item")!) => {
@@ -90,7 +96,8 @@ export function buildSrdContent(c: SrdContext) {
     if (!gearCats.has(key)) gearCats.set(key, sub(group, under));
     return gearCats.get(key)!;
   };
-  for (const g of data.gear) item(g.name, gearCat(g.group), { [F.cost]: g.cost, [F.weight]: g.weight }, g.text);
+  const GEAR_MATERIALS: Record<string, string> = { "Lantern, Hooded": "Iron", "Lantern, Bullseye": "Iron", Rope: "Hemp", Torch: "Wood", Backpack: "Leather", Crowbar: "Iron", Chain: "Iron", Pole: "Wood", Ladder: "Wood", Tent: "Cloth" };
+  for (const g of data.gear) item(g.name, gearCat(g.group), { [F.cost]: g.cost, [F.weight]: g.weight, ...(GEAR_MATERIALS[g.name] ? { material: GEAR_MATERIALS[g.name]! } : {}) }, desc(g.name, g.text));
 
   // Magic items. One that only lists its variants (Armor +1, +2, +3) becomes their template.
   const magic = sub("Magic items", cats.get("item")!);
@@ -144,12 +151,12 @@ export function buildSrdContent(c: SrdContext) {
 
   // ---------- Species and classes ----------
   for (const s of data.species) {
-    const id = make("being", s.name, { [F.beingKind]: "race", size: s.size, [F.speed]: s.speed }, { category: creature, text: s.text });
-    for (const v of s.subspecies) make("being", v.name, {}, { category: creature, text: v.text, parent: id });
+    const id = make("being", s.name, { [F.beingKind]: "race", size: s.size, [F.speed]: s.speed }, { category: cats.get("race") ?? creature, text: s.text });
+    for (const v of s.subspecies) make("being", v.name, {}, { category: cats.get("race") ?? creature, text: v.text, parent: id });
   }
   for (const k of data.classes) {
-    const id = make("being", k.name, { [F.beingKind]: "class", hitDie: k.hitDie }, { category: creature, text: k.text });
-    for (const v of k.subclasses) make("being", v.name, {}, { category: creature, text: v.text, parent: id });
+    const id = make("being", k.name, { [F.beingKind]: "class", hitDie: k.hitDie }, { category: cats.get("class") ?? creature, text: k.text });
+    for (const v of k.subclasses) make("being", v.name, {}, { category: cats.get("class") ?? creature, text: v.text, parent: id });
   }
   return { spells, items };
 }

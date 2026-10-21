@@ -113,8 +113,9 @@ export function createBrick(ws: Workspace, layerId: Id, type: BrickType, name: s
 /** Which section of a sheet a brick lands in, so the user can drop anywhere on the sheet. */
 const SECTION_PREFS: Record<string, string[]> = {
   attack: ["Attacks and actions", "Attacks"],
-  damage: ["Attacks and actions", "Attacks"],
-  effect: ["Attacks and actions", "Attacks", "Enchantments", "Traits and features"],
+  // On an item, extra damage and effects are enchantments (Flaming), not attacks of their own.
+  damage: ["Attacks and actions", "Enchantments", "Attacks"],
+  effect: ["Attacks and actions", "Enchantments", "Attacks", "Traits and features"],
   spell: ["Spells", "Enchantments"],
   trait: ["Traits and features", "Traits", "Features", "Properties"],
   immunity: ["Traits and features", "Traits", "Features", "Properties"],

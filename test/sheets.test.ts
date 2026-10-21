@@ -129,7 +129,7 @@ test("items: filed by category, with + New category up to three levels deep", ()
   const { backend } = setup();
   const sword = backend.addItem({ name: "Longsword", categoryId: null, variantOf: null });
   const roots = backend.categories();
-  assert.deepEqual(roots.map((c) => c.name), ["Armour", "Creature", "Item", "Spell", "Weapon"], "the small starting set from the design");
+  assert.deepEqual(roots.map((c) => c.name), ["Armour", "Class", "Creature", "Item", "Race", "Spell", "Weapon"], "the small starting set from the design, with Race and Class so they never land among the creatures");
   const weapon = roots.find((c) => c.name === "Weapon")!.id;
   const melee = backend.addCategory("Melee", weapon);
   const metal = backend.addCategory("Metal", melee);

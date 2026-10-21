@@ -4,7 +4,7 @@
 
 import { F, levelKey, pointBuyOf, pointsSpent } from "../engine/index.ts";
 import type { Spent } from "../engine/index.ts";
-import { BOOK_CHAPTERS, CHAPTER_TITLES, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
+import { BOOK_CHAPTERS, CHAPTER_TITLES, bookEntry, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
 import type { Book, BookType, ChapterId, CheckCategory, CheckSettings, Sensitivity } from "../engine/index.ts";
 
 const BOOK_TYPES = Object.keys(BOOK_CHAPTERS) as BookType[];
@@ -21,6 +21,8 @@ import { attachInside, attachmentDetail, changeParent, editAttachment, familyChe
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { createLore, loreList, rollTable } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
+import { CODEX_SECTIONS, codexSections, makeOwnCopy, makeVariant, moveToSection as moveCodex, newInSection, quickView } from "./codex.ts";
+import type { CodexKey, CodexSection, QuickView } from "./codex.ts";
 import { attachAtLevel, isClass, levelTable, setFeatureLevel } from "./levels.ts";
 import type { LevelTable } from "./levels.ts";
 import type { TableModeView } from "./tablemode.ts";
@@ -710,6 +712,48 @@ export class Editing {
   copyNode(sourceId: Id, name: string): Id {
     const n = cleanName(name);
     return this.run(() => copyNode(this.ws, this.layer, sourceId, n));
+  }
+
+  // ---------- The Codex and the quick sheet (milestone 11) ----------
+
+  codex(): CodexSection[] {
+    return codexSections(this.ws, this.layer);
+  }
+
+  /** Moves things into another Codex section, as one step. */
+  refile(ids: Id[], to: CodexKey) {
+    const nodes = ids.map((id) => this.must(id));
+    const title = CODEX_SECTIONS.find((s) => s.key === to)?.title ?? to;
+    this.run(() => this.ws.transact(nodes.length === 1 ? `Moved ${nodes[0]!.name} to ${title}` : `Moved ${nodes.length} things to ${title}`, () => {
+      for (const n of nodes) moveCodex(this.ws, this.layer, n.id, to);
+    }));
+  }
+
+  quick(id: Id): QuickView {
+    this.must(id);
+    return quickView(this.ws, this.layer, id);
+  }
+
+  makeOwnCopy(id: Id, name?: string): Id {
+    const src = this.must(id);
+    return this.run(() => this.ws.transact(`Made my own copy of ${src.name}`, () => makeOwnCopy(this.ws, this.layer, id, name)));
+  }
+
+  makeVariant(id: Id, name?: string): Id {
+    const src = this.must(id);
+    return this.run(() => this.ws.transact(`Made a variant of ${src.name}`, () => makeVariant(this.ws, this.layer, id, name)));
+  }
+
+  /** "Start blank" on the start screen. */
+  newInSection(key: CodexKey, name: string): Id {
+    const n = cleanName(name);
+    return this.run(() => this.ws.transact(`Added ${n}`, () => newInSection(this.ws, this.layer, key, n)));
+  }
+
+  /** The thing exactly as the rulebook prints it. */
+  printPreview(id: Id): { title: string; stats: string | null; paragraphs: string[] } {
+    const e = bookEntry(this.ws, this.layer, this.must(id));
+    return { title: e.title, stats: e.stats, paragraphs: e.paragraphs };
   }
 
   setTemplate(id: Id, on: boolean) {

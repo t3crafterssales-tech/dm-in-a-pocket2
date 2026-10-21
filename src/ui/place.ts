@@ -9,7 +9,9 @@ import { app, attempt, brand, iconButton, nav, typingIn } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
-import { flagPanel, showNodeBin } from "./flag-panel.ts";
+import { flagStrip, showNodeBin } from "./flag-panel.ts";
+import { startOver } from "./start-screen.ts";
+import { variantOf } from "./item-sheet.ts";
 import { showHistory } from "./history-dialog.ts";
 import { lorePanels } from "./lore-tab.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
@@ -36,6 +38,38 @@ export interface PlaceCtx {
   select: (id: string | null) => void;
   /** Redraws after a change. */
   refresh: () => Promise<void>;
+  /** Opens anything by its id, switching to the tab it lives in. */
+  open: (id: string, opts?: { focusName?: boolean }) => Promise<void>;
+}
+
+/** Which tab a kind of node lives in. Bricks open where you are if that's Beings or Items. */
+function tabFor(kind: string): Tab {
+  if (kind === "item") return "Items";
+  if (kind === "being") return "Beings";
+  if (kind === "brick") return tab === "Beings" || tab === "Items" ? tab : "Items";
+  if (kind === "lore" || kind === "table") return "Lore";
+  return "Rules";
+}
+
+/** After making a copy, its name box takes the cursor with the name selected, ready to type over. */
+let focusName = false;
+
+async function openNode(id: string, opts: { focusName?: boolean } = {}) {
+  const n = await attempt(() => api.node(id));
+  if (!n || !current) return;
+  tab = tabFor(n.kind);
+  selected[tab] = id;
+  focusName = !!opts.focusName;
+  await renderPlace();
+}
+
+/** "+ New": the start screen, "What do you want to make?". */
+function newThing() {
+  if (!current) return;
+  if (tab !== "Beings" && tab !== "Items") tab = "Items";
+  selected[tab] = null;
+  startOver();
+  void renderPlace();
 }
 
 export async function openPlace(place: Place, mode: "normal" | "read-only" | "take-over" = "normal", name?: string, then?: "quickstart") {
@@ -114,6 +148,7 @@ async function draw() {
       void renderPlace();
     },
     refresh: () => renderPlace(),
+    open: (id, opts) => openNode(id, opts),
   };
   const isWorld = view.type === "world";
   const tabs = h(
@@ -131,6 +166,7 @@ async function draw() {
     h(
       "nav",
       { class: "top-actions" },
+      view.readOnly ? null : h("button", { class: "button primary new-button", title: "Make something new: a weapon, a monster, a spell…", onClick: () => newThing() }, svg(ICONS.plus), "New"),
       iconButton(ICONS.dice, "Table mode", () => ((tableMode = true), void renderPlace()), { title: "Table mode: read and roll while you run a game, with nothing to change by accident" }),
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
@@ -150,12 +186,15 @@ async function draw() {
   else if (tab === "Rulebook") ({ list, editor } = await rulebookPanels(ctx));
   else if (tab === "Lore") ({ list, editor } = await lorePanels(ctx));
   else ({ list, editor } = comingSoon(tab, view));
-  const flags = await flagPanel(ctx);
+  const flags = await flagStrip(ctx);
   const selectedName = ctx.selected ? ((await api.node(ctx.selected).catch(() => null))?.name ?? null) : null;
   const ai = await aiPanel(ctx, selectedName);
   if (current !== view) return; // went home while loading
 
-  const workspace = h("div", { class: "workspace" }, list, editor, flags);
+  // Two columns: what you're making in the middle, the Codex (or the tab's list) on the right with
+  // the flag strip at its foot.
+  list.classList.add("side-list");
+  const workspace = h("div", { class: "workspace two" }, editor, h("aside", { class: "side" }, list, flags));
   app.replaceChildren(top, ...(banner ? [banner] : []), workspace, ai);
 
   for (const [key, top] of scroll) {
@@ -164,7 +203,10 @@ async function draw() {
   }
   // A box that just opened (such as a new rule's name) takes the cursor.
   const auto = document.querySelector<HTMLElement>("[data-autofocus]");
-  if (auto) auto.focus();
+  const nameBox = focusName ? document.querySelector<HTMLInputElement>(".sheet-name:not([disabled]), .title-input:not([disabled])") : null;
+  focusName = false;
+  if (nameBox) (nameBox.focus(), nameBox.select());
+  else if (auto) auto.focus();
   else if (focusKey) {
     const el = document.querySelector<HTMLElement>(`[data-key="${CSS.escape(focusKey)}"]`);
     el?.focus();
@@ -279,8 +321,19 @@ async function redo() {
   await renderPlace();
 }
 
+/** What the mouse is over, for Ctrl+D. */
+let hovered: string | null = null;
+document.addEventListener("mouseover", (e) => {
+  hovered = (e.target as HTMLElement).closest?.<HTMLElement>("[data-node]")?.dataset.node ?? null;
+});
+
 document.addEventListener("keydown", (e) => {
   if (!current || document.querySelector(".overlay")) return;
+  if (e.key === "?" && !typingIn(e) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    showShortcuts();
+    return;
+  }
   if (!(e.ctrlKey || e.metaKey)) return;
   const k = e.key.toLowerCase();
   if (tableMode) {
@@ -292,7 +345,20 @@ document.addEventListener("keydown", (e) => {
     if (search) (e.preventDefault(), search.input.focus(), search.input.select());
     return;
   }
+  if (k === "n" && !e.shiftKey && !current.readOnly) {
+    e.preventDefault();
+    newThing();
+    return;
+  }
   if (typingIn(e)) return;
+  if (k === "d" && !current.readOnly) {
+    // Ctrl+D: a child copy (variant) of what the mouse is over, or else of the open sheet.
+    e.preventDefault();
+    const id = hovered ?? (tab === "Beings" || tab === "Items" ? (selected[tab] ?? null) : null);
+    if (id) void variantOf(id, { view: current, selected: selected[tab] ?? null, select: (x) => ((selected[tab] = x), void renderPlace()), refresh: () => renderPlace(), open: (x, o) => openNode(x, o) });
+    else notice("Point at something in the Codex, or open a sheet, then press Ctrl+D to make a variant of it.", "blue", undefined, 5000);
+    return;
+  }
   if (k === "z" && !e.shiftKey) {
     e.preventDefault();
     void undo();
@@ -301,6 +367,26 @@ document.addEventListener("keydown", (e) => {
     void redo();
   }
 });
+
+/** "?": every shortcut, in plain words. They follow Word and Windows wherever they can. */
+function showShortcuts() {
+  const d = openDialog("Keyboard shortcuts");
+  const rows: [string, string][] = [
+    ["Ctrl+N", "Make something new"],
+    ["Ctrl+D", "Make a variant of what the mouse is over (or the open sheet)"],
+    ["Ctrl+Z", "Undo"],
+    ["Ctrl+Y", "Redo (Ctrl+Shift+Z works too)"],
+    ["Ctrl+F", "Search everything"],
+    ["Ctrl+C, Ctrl+V", "Copy and paste text, as in Word"],
+    ["Ctrl-click, Shift-click", "Pick several things in the Codex to drag together"],
+    ["Alt-click", "Edit the parent of the sheet you are on"],
+    ["Delete", "Delete what is picked in a list (it goes to the recycle bin)"],
+    ["Escape", "Close a pop-up"],
+    ["?", "This list"],
+  ];
+  d.body.append(h("table", { class: "shortcuts" }, rows.map(([k, v]) => h("tr", null, h("td", null, h("kbd", null, k)), h("td", null, v)))));
+  d.footer.append(h("button", { class: "button primary", onClick: () => d.close() }, "Close"));
+}
 
 // ---------- Home and settings ----------
 

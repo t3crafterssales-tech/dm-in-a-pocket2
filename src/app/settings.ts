@@ -32,10 +32,12 @@ export interface Settings {
   aiLive: boolean;
   /** The one-time tip about live checking, shown when a key is first added. */
   aiTipShown: boolean;
+  /** How the weight pickers count: pounds or kilograms (backlog 12). */
+  units: "lb" | "kg";
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb" };
 }
 
 export class SettingsFile {
@@ -62,6 +64,7 @@ export class SettingsFile {
         aiSpend: raw.aiSpend && typeof raw.aiSpend.month === "string" && typeof raw.aiSpend.usd === "number" ? raw.aiSpend : d.aiSpend,
         aiLive: raw.aiLive === true,
         aiTipShown: raw.aiTipShown === true,
+        units: raw.units === "kg" ? "kg" : "lb",
       };
     } catch {
       return defaultSettings();

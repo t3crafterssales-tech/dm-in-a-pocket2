@@ -363,3 +363,61 @@ export async function offerRestore(name: string, kind: string | null, ctx: Place
   }
   return choice === "new";
 }
+
+// ---------- The flag strip at the foot of the Codex ----------
+
+/**
+ * A small strip showing the last two or three flags, like the newest emails in an inbox.
+ * Clicking it opens every flag in a pop-up, with the same filters and fixes as the old panel.
+ */
+export async function flagStrip(ctx: PlaceCtx): Promise<HTMLElement> {
+  const view: FlagPanelView = (await attempt(() => api.flagPanel())) ?? { blocks: [], ignored: [], counts: { red: 0, yellow: 0, blue: 0, green: 0, new: 0 } };
+  const c = view.counts;
+  const open = c.red + c.yellow;
+  // Red first, then yellow, then the newest blue and green notes.
+  const rank = (b: FlagBlock) => (b.color === "red" ? 0 : b.color === "yellow" ? 1 : 2);
+  const last = [...view.blocks].sort((a, b) => rank(a) - rank(b) || (b.time ?? 0) - (a.time ?? 0)).slice(0, 3);
+  return h(
+    "button",
+    { class: "flag-strip", title: "Open every flag", "aria-label": `Flags: ${open ? `${open} to look at` : "all clear"}. Open every flag.`, onClick: () => void openFlagPopup(ctx) },
+    h(
+      "span",
+      { class: "flag-strip-head" },
+      h("b", null, "Flags"),
+      h("span", { class: "flag-strip-count" }, open ? `${open} to look at` : "All clear"),
+      c.new ? h("span", { class: "new-count" }, `${c.new} new`) : null,
+    ),
+    last.length
+      ? last.map((b) => h("span", { class: "flag-strip-line" }, h("span", { class: `dot-only ${b.color}`, "aria-hidden": "true" }), h("span", { class: "flag-strip-text" }, b.title)))
+      : h("span", { class: "flag-strip-line muted" }, "Problems appear here quietly as you build."),
+  );
+}
+
+/** Every flag in a floating pop-up. Going to a flag closes it; fixing one keeps it open and up to date. */
+export async function openFlagPopup(ctx: PlaceCtx) {
+  let closed = false;
+  const d = openDialog("Flags", { wide: true, onClose: () => ((closed = true), void ctx.refresh()) });
+  d.el.classList.add("flag-dialog");
+  const inner: PlaceCtx = {
+    ...ctx,
+    select: (id) => {
+      d.close();
+      ctx.select(id);
+    },
+    open: async (id) => {
+      d.close();
+      await ctx.open(id);
+    },
+    refresh: async () => {
+      await ctx.refresh();
+      await draw();
+    },
+  };
+  const draw = async () => {
+    if (closed) return;
+    const panel = await flagPanel(inner);
+    d.body.replaceChildren(panel);
+  };
+  d.footer.append(h("button", { class: "button plain", onClick: () => d.close() }, "Close"));
+  await draw();
+}

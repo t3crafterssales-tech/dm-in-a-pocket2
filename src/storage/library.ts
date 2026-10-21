@@ -646,7 +646,8 @@ export class Library {
     if (!existsSync(dir)) return [];
     return readdirSync(dir)
       .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
-      .map((f) => ({ file: join(dir, f), time: Date.parse(f.slice(0, 10) + "T00:00:00Z") }))
+      .map((f) => ({ file: join(dir, f), // Noon of that (UTC) day, so the day reads the same in every time zone ("Today", not "Yesterday").
+      time: Date.parse(f.slice(0, 10) + "T12:00:00Z") }))
       .sort((a, b) => b.time - a.time);
   }
 

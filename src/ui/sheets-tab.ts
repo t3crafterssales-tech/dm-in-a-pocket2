@@ -1,7 +1,7 @@
 // The Beings and Items tabs: a list on the left (variants indented under their parents) and the
 // open sheet in the middle, with its header numbers, ability scores and sections.
 
-import type { AttachmentView, BeingKind, CategoryOption, Choices, ListEntry, NodeView } from "../app/backend.ts";
+import type { AttachmentView, BeingKind, CategoryOption, Choices, NodeView } from "../app/backend.ts";
 import { api, pictureUrl } from "./api.ts";
 import { attempt } from "./common.ts";
 import { notice, openDialog } from "./dialogs.ts";
@@ -11,8 +11,10 @@ import { ICONS } from "./icons.ts";
 import { openDrill } from "./drill-dialog.ts";
 import { openEditParent } from "./edit-parent.ts";
 import { openEditSystem } from "./edit-system.ts";
-import { DRAG_TYPE, brickEditor, drop, libraryPanel } from "./library-panel.ts";
-import { offerRestore } from "./flag-panel.ts";
+import { DRAG_TYPE, brickEditor, drop } from "./library-panel.ts";
+import { codexPanel } from "./codex-panel.ts";
+import { itemSheet } from "./item-sheet.ts";
+import { startScreen } from "./start-screen.ts";
 import type { PlaceCtx } from "./place.ts";
 
 export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
@@ -23,292 +25,35 @@ export const BEING_TABS: { id: BeingKind; label: string; plural: string }[] = [
   { id: "npc", label: "NPC", plural: "NPCs" },
 ];
 
-let beingTab: BeingKind = "monster";
-const filters: Record<string, { text: string; favourites: boolean; source: "all" | "mine" | "template" | "others" }> = {};
-/** The left panel shows the tab's list or the library. */
-const leftMode: Record<string, "list" | "library"> = {};
-/** Sheets selected in each list with Ctrl-click and Shift-click; dropping adds to all of them. */
-const listSelection = new Map<string, Set<string>>();
-const listAnchor = new Map<string, string>();
-
-let sortBy: "name" | "challenge" = "name";
-
-const listKey = (which: "beings" | "items") => (which === "beings" ? `beings-${beingTab}` : "items");
-
+/**
+ * The Beings and Items tabs: the open sheet in the middle and the Codex on the right (the left-hand
+ * list is gone, milestone 11). With nothing open, the middle shows "What do you want to make?".
+ */
 export async function sheetPanels(ctx: PlaceCtx, which: "beings" | "items"): Promise<{ list: HTMLElement; editor: HTMLElement }> {
-  const [entries, categories, choices] = await Promise.all([
-    attempt(() => {
-      const source = filters[listKey(which)]?.source ?? "all";
-      return which === "beings" ? api.beingsList(beingTab, beingTab === "monster" || beingTab === "npc" ? sortBy : "name", source) : api.itemsList(source);
-    }),
-    attempt(() => api.categories()),
-    attempt(() => api.choices()),
-  ]);
+  const [categories, choices] = await Promise.all([attempt(() => api.categories()), attempt(() => api.choices())]);
   let view: NodeView | null = null;
   if (ctx.selected) {
     try {
       view = await api.node(ctx.selected);
-      if (view.kind !== (which === "beings" ? "being" : "item") && view.kind !== "brick") view = null;
+      if (view.kind !== "being" && view.kind !== "item" && view.kind !== "brick") view = null;
     } catch {
       view = null;
     }
   }
-  // Opening a being from another sub-tab (for example from a flag) switches to its sub-tab.
-  if (view && which === "beings" && view.fields.beingKind && view.fields.beingKind !== beingTab) {
-    beingTab = view.fields.beingKind as BeingKind;
-    return sheetPanels(ctx, which);
-  }
-  const key = listKey(which);
-  const sel = listSelection.get(key) ?? new Set<string>();
-  listSelection.set(key, sel);
-  for (const id of [...sel]) if (!(entries ?? []).some((e) => e.id === id)) sel.delete(id);
-  const open = view;
-  // Where a drop goes: every selected sheet if the open one is among them, else the open sheet.
-  const targets = () => {
-    if (!open || open.kind === "brick") return { ids: [] as string[], names: "" };
-    if (sel.size > 1 && sel.has(open.id)) return { ids: [...sel], names: `${sel.size} selected` };
-    return { ids: [open.id], names: open.name };
-  };
-  const library = (leftMode[which] ?? "list") === "library" ? await libraryPanel(ctx, targets, which) : null;
   const c = choices ?? { abilities: [], conditions: [], resources: [] };
-  return {
-    list: listPanel(which, entries ?? [], categories ?? [], ctx, library),
-    editor: open?.kind === "brick" ? brickEditor(open, c, ctx, () => void remove(open.id, ctx)) : sheetEditor(open, which, categories ?? [], c, ctx, targets),
-  };
+  const list = await codexPanel(ctx);
+  const open = view;
+  const targets = () => (open && open.kind !== "brick" ? { ids: [open.id], names: open.name } : { ids: [] as string[], names: "" });
+  let editor: HTMLElement;
+  if (!open) editor = await startScreen(ctx);
+  else if (open.kind === "brick") editor = brickEditor(open, c, ctx, () => void remove(open.id, ctx));
+  else if (open.kind === "item") editor = await itemSheet(open, categories ?? [], c, ctx);
+  else editor = sheetEditor(open, which, categories ?? [], c, ctx, targets);
+  return { list, editor };
 }
 
-// ---------- The list ----------
-
-function listPanel(which: "beings" | "items", all: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx, library: HTMLElement | null) {
-  const key = listKey(which);
-  const sel = listSelection.get(key)!;
-  const f = (filters[key] ??= { text: "", favourites: false, source: "all" });
-  const noun = which === "beings" ? BEING_TABS.find((t) => t.id === beingTab)!.label.toLowerCase() : "item";
-  const match = (e: ListEntry) => (!f.text || e.name.toLowerCase().includes(f.text.toLowerCase())) && (!f.favourites || e.favourite);
-  const filtering = !!f.text || f.favourites || f.source !== "all";
-  // While filtering, a match is shown even if its parent isn't.
-  const entries = filtering ? all.filter(match).map((e) => ({ ...e, depth: 0 })) : all;
-
-  const filterBox = h("input", { class: "text-input small-input", placeholder: "Filter by name", value: f.text, "data-key": `filter-${key}`, "aria-label": "Filter by name" });
-  filterBox.addEventListener("input", () => {
-    f.text = filterBox.value;
-    void ctx.refresh();
-  });
-  const sortable = which === "beings" && (beingTab === "monster" || beingTab === "npc");
-  const sortSelect = sortable
-    ? h("select", { class: "text-input select small-select", "aria-label": "Sort by", title: "Sort by" }, h("option", { value: "name", selected: sortBy !== "challenge" }, "A to Z"), h("option", { value: "challenge", selected: sortBy === "challenge" }, "By challenge"))
-    : null;
-  sortSelect?.addEventListener("change", () => ((sortBy = sortSelect.value as "name" | "challenge"), void ctx.refresh()));
-  const star = h("button", { class: `icon-button small star${f.favourites ? " on" : ""}`, title: f.favourites ? "Showing favourites only" : "Show favourites only", "aria-pressed": f.favourites ? "true" : "false", onClick: () => ((f.favourites = !f.favourites), void ctx.refresh()) }, svg(ICONS.star));
-
-  // Click opens one; Ctrl-click adds or removes one; Shift-click selects a run, like File Explorer.
-  const click = (e: ListEntry, ev: MouseEvent) => {
-    const anchor = listAnchor.get(key);
-    if (ev.shiftKey && anchor) {
-      const a = entries.findIndex((x) => x.id === anchor);
-      const b = entries.findIndex((x) => x.id === e.id);
-      if (a >= 0 && b >= 0) {
-        if (!(ev.ctrlKey || ev.metaKey)) sel.clear();
-        for (const x of entries.slice(Math.min(a, b), Math.max(a, b) + 1)) sel.add(x.id);
-      }
-      return ctx.select(e.id);
-    }
-    if (ev.ctrlKey || ev.metaKey) {
-      if (!sel.size && ctx.selected && entries.some((x) => x.id === ctx.selected)) sel.add(ctx.selected);
-      if (sel.has(e.id)) sel.delete(e.id);
-      else sel.add(e.id);
-      listAnchor.set(key, e.id);
-      return sel.has(e.id) ? ctx.select(e.id) : void ctx.refresh();
-    }
-    sel.clear();
-    sel.add(e.id);
-    listAnchor.set(key, e.id);
-    ctx.select(e.id);
-  };
-  const dropOnItem = (e: ListEntry) => ({
-    onDragover: (ev: DragEvent) => {
-      if (!ev.dataTransfer?.types.includes(DRAG_TYPE) || ctx.view.readOnly) return;
-      ev.preventDefault();
-      (ev.currentTarget as HTMLElement).classList.add("drop-over");
-    },
-    onDragleave: (ev: DragEvent) => (ev.currentTarget as HTMLElement).classList.remove("drop-over"),
-    onDrop: (ev: DragEvent) => {
-      ev.preventDefault();
-      const bricks = JSON.parse(ev.dataTransfer!.getData(DRAG_TYPE) || "[]") as string[];
-      void drop(sel.size > 1 && sel.has(e.id) ? [...sel] : [e.id], bricks, ctx);
-    },
-  });
-  const item = (e: ListEntry) =>
-    h(
-      "li",
-      {
-        class: `item depth-${Math.min(e.depth, 6)}${e.id === ctx.selected ? " selected" : sel.size > 1 && sel.has(e.id) ? " multi" : ""}`,
-        tabindex: 0,
-        "data-key": `item-${e.id}`,
-        "aria-selected": sel.has(e.id) || e.id === ctx.selected ? "true" : "false",
-        onClick: (ev: MouseEvent) => click(e, ev),
-        onKeydown: (ev: KeyboardEvent) => {
-          if (ev.key === "Enter") ctx.select(e.id);
-          if (ev.key === "Delete" && !ctx.view.readOnly) void remove(e.id, ctx);
-        },
-        ...dropOnItem(e),
-      },
-      e.depth ? h("span", { class: "variant-mark", "aria-hidden": "true" }, "↳") : null,
-      h("span", { class: "item-name" }, e.name),
-      e.favourite ? h("span", { class: "star-mark", title: "Favourite" }, svg(ICONS.star)) : null,
-      e.note ? h("span", { class: "item-label" }, e.note) : null,
-      e.fromBelow ? h("span", { class: "from-below", title: "From the system" }, svg(ICONS.layers)) : null,
-    );
-
-  let body: HTMLElement;
-  if (!entries.length) body = h("p", { class: "muted small pad" }, filtering ? "Nothing matches." : `No ${which === "beings" ? BEING_TABS.find((t) => t.id === beingTab)!.plural.toLowerCase() : "items"} yet.`);
-  else if (which === "items" && !filtering) {
-    // Items are grouped by where they are filed.
-    const groups = new Map<string, ListEntry[]>();
-    for (const e of entries) {
-      const top = e.depth === 0 ? (e.categoryPath ?? "Uncategorized") : [...groups.keys()].at(-1)!;
-      groups.set(top, [...(groups.get(top) ?? []), e]);
-    }
-    body = h(
-      "div",
-      null,
-      [...groups.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([title, list]) => h("div", { class: "section" }, h("div", { class: "group-title" }, title), h("ul", { class: "items flat" }, list.map(item)))),
-    );
-  } else body = h("ul", { class: "items flat" }, entries.map(item));
-
-  const mode = leftMode[which] ?? "list";
-  const switcher = h(
-    "div",
-    { class: "switch", role: "tablist", "aria-label": "Show" },
-    h("button", { class: `switch-button${mode === "list" ? " active" : ""}`, role: "tab", "aria-selected": mode === "list" ? "true" : "false", onClick: () => ((leftMode[which] = "list"), void ctx.refresh()) }, which === "beings" ? "Beings" : "Items"),
-    h("button", { class: `switch-button${mode === "library" ? " active" : ""}`, role: "tab", "aria-selected": mode === "library" ? "true" : "false", onClick: () => ((leftMode[which] = "library"), void ctx.refresh()) }, "Library"),
-  );
-  if (library)
-    return h(
-      "aside",
-      { class: "panel list-panel library-mode", "aria-label": "Library" },
-      h("div", { class: "panel-head" }, switcher),
-      sel.size > 1 ? h("div", { class: "multi-note small" }, `${sel.size} sheets are selected in the list: what you add goes to all of them.`) : null,
-      library,
-    );
-  return h(
-    "aside",
-    { class: "panel list-panel", "aria-label": which === "beings" ? "Beings" : "Items", "data-scroll": `list-${key}` },
-    h(
-      "div",
-      { class: "panel-head" },
-      switcher,
-      ctx.view.readOnly ? null : h("button", { class: "button primary small-button head-button", onClick: () => void createNew(which, all, categories, ctx) }, svg(ICONS.plus), `New ${noun}`),
-    ),
-    sel.size > 1 ? h("div", { class: "multi-note small" }, `${sel.size} selected. Open the Library and drop bricks on any one of them to add to all.`) : null,
-    which === "beings"
-      ? h(
-          "div",
-          { class: "subtabs", role: "tablist" },
-          BEING_TABS.map((t) => h("button", { class: `subtab${t.id === beingTab ? " active" : ""}`, role: "tab", "aria-selected": t.id === beingTab ? "true" : "false", onClick: () => ((beingTab = t.id), ctx.select(null)) }, t.plural)),
-        )
-      : null,
-    h("div", { class: "filter-row" }, filterBox, sortSelect, star),
-    (() => {
-      const src = h(
-        "select",
-        { class: "text-input select small-select source-select", "aria-label": "Show", title: "Homemade, from a starter, or from other people" },
-        [
-          ["all", "Everything"],
-          ["mine", "Homemade"],
-          ["template", "From a starter"],
-          ["others", "From others"],
-        ].map(([v, l]) => h("option", { value: v, selected: f.source === v }, l)),
-      );
-      src.addEventListener("change", () => ((f.source = src.value as typeof f.source), void ctx.refresh()));
-      return h("div", { class: "filter-row" }, src);
-    })(),
-    body,
-  );
-}
-
-/**
- * Create new: a name, what it is, and where it starts from: nothing, a variant of something (or of
- * a template), or a copy of something. A new item suggests its category's template.
- */
-async function createNew(which: "beings" | "items", existing: ListEntry[], categories: CategoryOption[], ctx: PlaceCtx) {
-  const templates = ((await attempt(() => api.templates())) ?? []).filter((t) => (which === "beings" ? t.kind === "being" : t.kind === "item"));
-  const d = openDialog(which === "beings" ? "New being" : "New item");
-  const name = h("input", { class: "text-input", placeholder: which === "beings" ? "For example: Goblin" : "For example: Longsword", maxlength: 200 });
-  const kind = h("select", { class: "text-input" }, BEING_TABS.map((t) => h("option", { value: t.id, selected: t.id === beingTab }, t.label)));
-  const start = h(
-    "select",
-    { class: "text-input" },
-    h("option", { value: "" }, "Nothing: it's new"),
-    templates.length ? h("optgroup", { label: "A variant of a template" }, templates.map((t) => h("option", { value: `variant:${t.id}` }, t.name))) : null,
-    existing.length ? h("optgroup", { label: "A variant of" }, existing.map((e) => h("option", { value: `variant:${e.id}` }, `${"\u00a0\u00a0".repeat(e.depth)}${e.name}`))) : null,
-    existing.length ? h("optgroup", { label: "A copy of" }, existing.map((e) => h("option", { value: `copy:${e.id}` }, `${"\u00a0\u00a0".repeat(e.depth)}${e.name}`))) : null,
-  );
-  const category = h("select", { class: "text-input" }, h("option", { value: "" }, "Item (the default)"), categories.filter((c) => c.role !== "creature").map((c) => h("option", { value: c.id }, `${"\u00a0\u00a0\u00a0".repeat(c.depth)}${c.name}`)));
-  const asTemplate = h("input", { type: "checkbox" });
-  const hint = h("p", { class: "muted small" }, "A variant starts with everything its parent has and still gets the parent's later changes. A copy starts the same but goes its own way.");
-  const create = h("button", { class: "button primary" }, "Create");
-  let suggested = false;
-  const refresh = () => {
-    create.disabled = !name.value.trim();
-    kind.disabled = !!start.value;
-    asTemplate.disabled = start.value.startsWith("copy:");
-    if (asTemplate.disabled) asTemplate.checked = false;
-  };
-  // New items suggest their category's template in "Start from", without overriding a choice.
-  category.addEventListener("change", () => {
-    const t = templates.find((x) => x.categoryId === category.value);
-    if (t && (!start.value || suggested)) {
-      start.value = `variant:${t.id}`;
-      suggested = true;
-      hint.textContent = `Suggested: a variant of the ${t.name} template, so it gets the shared parts. Choose Nothing to start blank.`;
-    } else if (suggested && !t) {
-      start.value = "";
-      suggested = false;
-    }
-    refresh();
-  });
-  start.addEventListener("change", () => ((suggested = false), refresh()));
-  name.addEventListener("input", refresh);
-  name.addEventListener("keydown", (e) => e.key === "Enter" && (e.preventDefault(), create.click()));
-  d.body.append(
-    h("label", { class: "field-label" }, "Name"),
-    name,
-    ...(which === "beings" ? [h("label", { class: "field-label spaced" }, "What is it?"), kind] : [h("label", { class: "field-label spaced" }, "Filed under"), category]),
-    h("label", { class: "field-label spaced" }, "Start from"),
-    start,
-    hint,
-    h("label", { class: "check spaced-check" }, asTemplate, "Make it a template: a parent that holds shared parts, not a real thing (kept out of the lists and the rulebook)"),
-  );
-  create.addEventListener("click", async () => {
-    if (!name.value.trim()) return;
-    create.disabled = true;
-    const [how, from] = start.value ? (start.value.split(":") as ["variant" | "copy", string]) : [null, null];
-    if (!how) {
-      d.close();
-      if (!(await offerRestore(name.value, which === "beings" ? "being" : "item", ctx))) return;
-    }
-    const id = await attempt(async () => {
-      if (how === "copy") return api.copyNode(from!, name.value);
-      const variantOf = how === "variant" ? from : null;
-      return which === "beings"
-        ? api.addBeing({ name: name.value, kind: kind.value as BeingKind, variantOf, template: asTemplate.checked })
-        : api.addItem({ name: name.value, categoryId: category.value || null, variantOf, template: asTemplate.checked });
-    });
-    if (!id) return refresh();
-    d.close();
-    if (asTemplate.checked) {
-      // Templates live in the library, so open the library to show where it went.
-      leftMode[which] = "library";
-      notice(`${name.value.trim()} is a template. It lives in the library's Templates group.`, "blue", undefined, 6000);
-    }
-    ctx.select(id);
-  });
-  d.footer.append(h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"), create);
-  refresh();
-  name.focus();
+export async function removeNode(id: string, ctx: PlaceCtx) {
+  return remove(id, ctx);
 }
 
 async function remove(id: string, ctx: PlaceCtx) {
@@ -519,7 +264,7 @@ function sheetEditor(view: NodeView | null, which: "beings" | "items", categorie
 }
 
 /** A brick on a sheet: what it does in plain words, where it came from, and a remove button. */
-function brickCard(view: NodeView, a: AttachmentView, ctx: PlaceCtx) {
+export function brickCard(view: NodeView, a: AttachmentView, ctx: PlaceCtx) {
   const own = !a.from;
   return h(
     "div",

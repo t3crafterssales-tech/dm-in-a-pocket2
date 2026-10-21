@@ -15,6 +15,7 @@ import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, No
 import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
+import type { CodexKey, CodexSection, QuickView } from "./codex.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
 import type { LoreSection } from "./lore.ts";
 import type { TableModeView } from "./tablemode.ts";
@@ -44,6 +45,7 @@ export type { ImportResult, RecycledInfo } from "../storage/index.ts";
 export type { BinView, BookData, BookRequest, Choices, FlagView, HistoryStep, HistoryView, NodeView, Option, RestoreResult, StepResult } from "./editing.ts";
 export type { RulesSection } from "./rules.ts";
 export type { BeingKind, CategoryOption, ListEntry, SheetDef, SourceFilter, TemplateEntry } from "./sheets.ts";
+export type { CodexEntry, CodexKey, CodexSection, QuickView } from "./codex.ts";
 export type { AttachmentView, BrickType, LibraryEntry, LibrarySection } from "./library.ts";
 export type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 export type { FlagBlock, FlagPanelView, MissingDetail, BrokenSlot } from "./flagpanel.ts";
@@ -116,6 +118,8 @@ export interface SettingsView {
   defaultFolder: string;
   isDefault: boolean;
   author: string | null;
+  /** Pounds or kilograms for the weight pickers. */
+  units: "lb" | "kg";
 }
 
 /** Settings → AI, and the corner of the AI panel. */
@@ -251,6 +255,13 @@ export const BACKEND_METHODS = [
   "changeParent",
   "templates",
   "copyNode",
+  "codex",
+  "refile",
+  "quick",
+  "makeOwnCopy",
+  "makeVariant",
+  "printPreview",
+  "newInSection",
   "setTemplate",
   "flagPanel",
   "missingDetail",
@@ -278,6 +289,7 @@ export const BACKEND_METHODS = [
   "bookChoices",
   "bookWord",
   "setAuthor",
+  "setUnits",
   "importFile",
   "share",
   "snapshots",
@@ -457,7 +469,13 @@ export class Backend {
   // ---------- Settings ----------
 
   settings(): SettingsView {
-    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author };
+    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units };
+  }
+
+  /** Pounds or kilograms for the weight pickers. */
+  setUnits(units: "lb" | "kg"): SettingsView {
+    this.settingsFile.update((s) => (s.units = units === "kg" ? "kg" : "lb"));
+    return this.settings();
   }
 
   /** The optional author name ("Created by"); empty clears it. */
@@ -872,6 +890,28 @@ export class Backend {
   }
   templates(): TemplateEntry[] {
     return this.editing.templates();
+  }
+  codex(): CodexSection[] {
+    return this.editing.codex();
+  }
+  refile(ids: Id[], to: CodexKey): true {
+    this.editing.refile(ids, to);
+    return true;
+  }
+  quick(id: Id): QuickView {
+    return this.editing.quick(id);
+  }
+  makeOwnCopy(id: Id, name?: string): Id {
+    return this.editing.makeOwnCopy(id, name);
+  }
+  makeVariant(id: Id, name?: string): Id {
+    return this.editing.makeVariant(id, name);
+  }
+  printPreview(id: Id): { title: string; stats: string | null; paragraphs: string[] } {
+    return this.editing.printPreview(id);
+  }
+  newInSection(key: CodexKey, name: string): Id {
+    return this.editing.newInSection(key, name);
   }
   copyNode(sourceId: Id, name: string): Id {
     return this.editing.copyNode(sourceId, name);

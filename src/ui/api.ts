@@ -32,5 +32,7 @@ export const api = new Proxy({} as Api, {
 });
 
 export function pictureUrl(id: string): string {
-  return `dmpic://pic/${encodeURIComponent(id)}`;
+  // The browser preview (scripts/preview) serves pictures over plain web addresses instead.
+  const base = (window as unknown as { dmPicBase?: string }).dmPicBase ?? "dmpic://pic/";
+  return `${base}${encodeURIComponent(id)}`;
 }

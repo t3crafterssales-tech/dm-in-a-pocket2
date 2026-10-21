@@ -208,7 +208,14 @@ const STAT_LABELS: [string, string][] = [
   [F.cr, "Challenge"],
   [F.cost, "Cost"],
   [F.weight, "Weight"],
+  ["material", "Material"],
+  ["handling", "Held"],
 ];
+
+/** One thing as the rulebook prints it. The sheets' "How it prints" box uses this too, so they always agree. */
+export function bookEntry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant = false): Entry {
+  return entry(ws, layerId, n, asVariant);
+}
 
 function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): Entry {
   const r = ws.resolve(layerId, n.id)!;

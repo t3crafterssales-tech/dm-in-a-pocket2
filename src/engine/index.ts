@@ -11,7 +11,7 @@ export * from "./conventions.ts";
 export { worldRuleFlags, yellowFlags, DEFAULT_CHECKS, MIN_PEERS } from "./checks.ts";
 export type { RuleFlag, YellowFlag, CheckSettings, CheckCategory, Sensitivity } from "./checks.ts";
 export { sentence, coreText, whenText, usesText, TRIGGERS, cap, joinWords } from "./text.ts";
-export { buildBook, chapterOf, BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES, SRD_CREDIT } from "./book.ts";
+export { buildBook, bookEntry, chapterOf, BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES, SRD_CREDIT } from "./book.ts";
 export type { Book, BookType, BookOptions, Chapter, ChapterId, Entry } from "./book.ts";
 export { ruleText, isCoreCheck, CORE_FAMILIES, WORLD_RULE_VALUES } from "./rulestext.ts";
 export { pointBuyFrom, pointBuyOf, pointsSpent, pointBuyText, scoreCost } from "./pointbuy.ts";

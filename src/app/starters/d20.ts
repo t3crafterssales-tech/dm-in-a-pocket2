@@ -84,4 +84,20 @@ export function buildD20Starter(ws: Workspace, sys: Id) {
 
   // ---------- Categories, then everything else ----------
   buildSrdContent({ ws, sys, make, sub, cats, abilities, conditions });
+
+  // ---------- Enchantments ----------
+  // A few ready-made enchantments to drop onto weapons and armour (written for DM in a Pocket,
+  // not from the SRD, so they carry no SRD credit).
+  const own = (name: string, fields: Record<string, Value>, text: string) => ws.create(sys, "brick", name, { source: "template", fields, text });
+  for (const [name, dice, type, text] of [
+    ["Flaming", "1d6", "fire", "Wreathed in flame that never burns the one who holds it."],
+    ["Frost", "1d6", "cold", "Rimed with ice that never melts."],
+    ["Shocking", "1d6", "lightning", "Crackles with sparks that jump to whatever it strikes."],
+    ["Thundering", "2d6", "thunder", "Booms like thunder when it lands a blow."],
+    ["Venomous", "1d4", "poison", "Its edge weeps a thin, green poison."],
+    ["Radiant", "1d6", "radiant", "Shines with a holy light that sears the wicked."],
+  ] as const)
+    own(name, { [F.type]: "damage", [F.dice]: dice, [F.damageType]: type }, text);
+  own("Glowing", { [F.type]: "effect", [F.condition]: null, [F.wording]: "sheds dim light for 10 feet" }, "A soft glow, bright enough to read by.");
+  own("Returning", { [F.type]: "effect", [F.condition]: null, [F.wording]: "flies back to the thrower's hand after it is thrown" }, "Thrown, it turns in the air and comes home.");
 }

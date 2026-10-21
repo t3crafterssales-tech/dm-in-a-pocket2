@@ -265,9 +265,8 @@ async function newSystem(home: HomeData) {
       if (!id) return false;
       d.close();
       notice(`${state.name.trim()} is on the Systems shelf.`, "green");
-      // A system from scratch is offered Quick start straight away (skippable).
-      if (state.start === "scratch") await openPlace({ type: "system", id }, "normal", state.name.trim(), "quickstart");
-      else await showHome(id);
+      // A new system opens straight away. One from scratch is offered Quick start first (skippable).
+      await openPlace({ type: "system", id }, "normal", state.name.trim(), state.start === "scratch" ? "quickstart" : undefined);
       return true;
     },
   );
@@ -300,7 +299,8 @@ async function newWorld(home: HomeData) {
       if (!id) return false;
       d.close();
       notice(`${state.name.trim()} is on the Worlds shelf.`, "green");
-      await showHome(id);
+      // A new world opens straight away (backlog 4).
+      await openPlace({ type: "world", id }, "normal", state.name.trim());
       return true;
     },
   );

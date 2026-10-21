@@ -66,12 +66,28 @@ export function sheetFor(n: NodeRecord, fields: Record<string, Value>): SheetDef
 
 // ---------- Categories ----------
 
+/** The top category a kind of being is filed under. */
+export function beingRole(kind: BeingKind): "race" | "class" | "creature" {
+  return kind === "race" ? "race" : kind === "class" ? "class" : "creature";
+}
+
+/** Files a being under the right top category for its kind, unless it is already in that tree. Inside the caller's step. */
+export function fileBeing(ws: Workspace, layerId: Id, id: Id, kind: BeingKind) {
+  const role = beingRole(kind);
+  const cat = ensureCategories(ws, layerId).get(role)!;
+  const n = ws.get(layerId, id)!;
+  if (categoryTree(ws, layerId).find((c) => c.id === n.category?.link)?.role === role) return;
+  ws.edit(layerId, id, (r) => (r.category = link(cat)));
+}
+
 /** The small starting set of categories from the design, by role. */
 export const STARTER_CATEGORIES: { role: string; name: string }[] = [
   { role: "weapon", name: "Weapon" },
   { role: "armour", name: "Armour" },
   { role: "item", name: "Item" },
   { role: "creature", name: "Creature" },
+  { role: "race", name: "Race" },
+  { role: "class", name: "Class" },
   { role: "spell", name: "Spell" },
 ];
 
@@ -236,7 +252,8 @@ export function createBeing(ws: Workspace, layerId: Id, name: string, kind: Bein
       // A variant starts with everything its parent has, including its category and kind.
       return ws.create(layerId, "being", name, { parent: link(variantOf), category: parent.category, template });
     }
-    return ws.create(layerId, "being", name, { category: link(cats.get("creature")!), fields: { [F.beingKind]: kind }, template });
+    // Races and classes are filed under Race and Class, never among the creatures (backlog 7).
+    return ws.create(layerId, "being", name, { category: link(cats.get(beingRole(kind))!), fields: { [F.beingKind]: kind }, template });
   });
 }
 

@@ -116,6 +116,8 @@ function judged(ws: Workspace, layerId: Id, n: NodeRecord): boolean {
 }
 
 const isMonster = (ws: Workspace, layerId: Id, n: NodeRecord) => n.kind === "being" && ws.resolve(layerId, n.id)!.fields[F.beingKind] === "monster";
+/** Top categories a being may be filed under without a "filed oddly" warning. */
+const BEING_ROLES = new Set(["creature", "race", "class", "character"]);
 const round = (n: number) => Math.round(n * 10) / 10;
 
 function balance(ws: Workspace, layerId: Id, all: NodeRecord[], factor: number): YellowFlag[] {
@@ -155,6 +157,9 @@ function economy(ws: Workspace, layerId: Id, all: NodeRecord[], factor: number):
   const out: YellowFlag[] = [];
   for (const a of items) {
     if (!judged(ws, layerId, a.n)) continue;
+    // The system's own content is what normal is: a copy priced like a starter item with the same
+    // damage (a copied Battleaxe) is normal, even where the starter itself is uneven.
+    if (items.some((b) => b.n.id !== a.n.id && !judged(ws, layerId, b.n) && b.cat === a.cat && b.cost === a.cost && b.dmg === a.dmg)) continue;
     const cheaperStronger = items.find((b) => b.n.id !== a.n.id && b.cat === a.cat && b.dmg > a.dmg && a.cost! > b.cost! * factor);
     if (cheaperStronger) {
       out.push({ key: `economy:price:${a.n.id}`, color: "yellow", category: "economy", kind: "price", nodes: [a.n.id, cheaperStronger.n.id], title: `${a.n.name} costs more than ${cheaperStronger.n.name}`, detail: `${cheaperStronger.n.name} hits harder but costs less.` });
@@ -170,7 +175,7 @@ function filing(ws: Workspace, layerId: Id, all: NodeRecord[]): YellowFlag[] {
     if (n.kind === "item" && role === "weapon" && !hasAttack(ws, layerId, n.id)) {
       out.push({ key: `filing:weapon-no-attack:${n.id}`, color: "yellow", category: "filing", kind: "weapon-no-attack", nodes: [n.id], title: `${n.name} is filed as a weapon but has no attack`, detail: "Add an attack, or file it somewhere else." });
     }
-    if ((n.kind === "being" && role && role !== "creature") || (n.kind === "item" && role === "creature")) {
+    if ((n.kind === "being" && role && !BEING_ROLES.has(role)) || (n.kind === "item" && role && BEING_ROLES.has(role))) {
       out.push({ key: `filing:filed-oddly:${n.id}`, color: "yellow", category: "filing", kind: "filed-oddly", nodes: [n.id], title: `${n.name} is a ${n.kind === "being" ? "creature" : "item"} filed under ${role === "creature" ? "creatures" : role}. Intended?`, detail: "It's allowed. Choose I meant that if it's on purpose." });
     }
     if (n.kind === "being") {
