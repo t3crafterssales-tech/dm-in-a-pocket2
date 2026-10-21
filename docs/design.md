@@ -491,6 +491,13 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   you like). Within a category, priority 1 pages stay at the top, then 2, and so on. Once a page
   is done with, give it priority 30 and it sinks to the bottom. Pages can also be starred as
   favourites and pinned to any screen, like anything else.
+- **Categories have a priority too (Jeff, October 21, 2026),** so a full journal reads in the order
+  the DM wants: Characters first, then Lore, then NPCs (everyone the party has ever met), and so on.
+- **Each page can have a picture** that shows beside its name in the tree, so the NPC list shows
+  the barmaid's and the town boy's faces at a glance.
+- **Journal pages are things in the Codex** (a Journal section, visible only to who may see it), so
+  they work like everything else: share, star, pin, delete to the recycle bin, copy, and bring
+  into other worlds and modules.
 - **Building a page from blocks (Jeff, October 21, 2026).** A new page is blank, with **+ Add**:
   - **Image:** opens a file browser, or just drop a picture onto the page. It can be resized to
     the page or any size.
