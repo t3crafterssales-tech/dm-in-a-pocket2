@@ -424,6 +424,24 @@ DM's table), so they are there next time.
 - **Pins and bookmarks are different:** bookmarks are a tidy list in one tool; pins float on top of
   whatever you're doing. This is the "floating, pinnable windows" idea parked in the feel pass.
 
+### The initiative tracker (Jeff, October 21, 2026; in progress)
+
+Foundry has dozens of mods that change how initiative works, so there is no one right way. Out of
+the box the tracker has **many settings** (its gear), and the DM sets it up for their table.
+
+- **Rolling:** roll once at the start of the fight and keep those numbers, or re-roll every round.
+  The default comes from the game system; the DM can change it.
+- **Monsters hidden until their turn:** everyone rolls, but players don't see where the goblin and
+  the goblin leader sit in the order. When a hidden monster's turn comes, the names **slide apart
+  and the monster's name squeezes in** between them with a little squash animation ("John's up
+  next... nope, the goblin goes").
+- **Always hidden:** monsters never show in the order at all, so the DM can let them act whenever
+  they like, not following initiative.
+- **Who moves it on:** anyone with permission on the tracker (the DM, an assistant GM, an
+  initiative keeper, or every player). It's live for everyone: whoever clicks first, all screens
+  update. A table rule "advance it yourself when your turn is done" is everyone having permission;
+  each player then sees an **End my turn** button only on their own turn.
+
 ### The journal
 
 - Write as you play, with links: typing a name links to that sheet.
