@@ -463,8 +463,10 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   be saved and named ("Gauntlet: Dex saves") to switch back in one click. Players can choose what
   shows on their own screen, within what the DM allows.
 - **During a fight (decided by Jeff, October 21, 2026):**
-  - **Groups:** the DM picks per fight: one card for "4 goblins" (one roll, they act together) or a
-    card each.
+  - **Groups (Jeff, October 21, 2026):** dragging a monster in asks **How many?** (a stepper) and
+    **Separately or As a group**. Separately adds Goblin 1, Goblin 2, Goblin 3, Goblin 4, each
+    rolling its own initiative. As a group adds one card where all four share one initiative; the
+    card opens to show each goblin's own hit points, so damage still goes to the right one.
   - **Delay and ready:** drag a card to where it acts (anyone with permission); a Delay button
     sets a card aside until the player jumps back in.
   - **At 0 hit points:** follows the system's rule (unconscious, dying or dead); defeated monsters
