@@ -9,6 +9,7 @@ import { ensureSections } from "../rules.ts";
 import type { SectionKey } from "../rules.ts";
 import { ensureCategories } from "../sheets.ts";
 import { SRD_DATA, buildSrdContent } from "./srd.ts";
+import { starterMacros } from "../macros.ts";
 
 const LIC = { [F.license]: SRD_LICENSE };
 
@@ -44,6 +45,8 @@ export function buildD20Starter(ws: Workspace, sys: Id) {
     abilities[label] = rule("abilities", name, { [F.label]: label, [F.rangeMin]: 1, [F.rangeMax]: 30, [F.bonus]: "d20" }, text);
   }
   const ab = (l: string) => link(abilities[l]!);
+  // Ready-made roll macros for the DM's table (version 2).
+  starterMacros(ws, sys, abilities);
 
   // ---------- Conditions (the SRD's own words) ----------
   const conditions: Record<string, Id> = {};

@@ -91,6 +91,13 @@ export function sectionOfNode(ws: Workspace, layerId: Id, n: NodeRecord): CodexK
   // Ready-made encounters (top level only; the ones inside them come along when placed).
   if (n.kind === "encounter") return n.template && !isLink(ws.resolve(layerId, n.id)?.fields.inside) ? "encounters" : null;
   if (n.template && (n.kind === "item" || n.kind === "being")) return "templates";
+  // Version 2: the table's things live in the Codex too.
+  if (n.kind === "condition") return "conditions";
+  if (n.kind === "table") return "tables";
+  if (n.kind === "map") return "maps";
+  if (n.kind === "journal") return ws.resolve(layerId, n.id)?.fields.owner ? null : "journal";
+  if (n.kind === "macro") return "macros";
+  if (n.kind === "layout") return "layouts";
   const f = ws.resolve(layerId, n.id)?.fields ?? {};
   if (n.kind === "item") return itemSection(ws, layerId, n);
   if (n.kind === "being") return BEING_SECTION[(typeof f[F.beingKind] === "string" ? f[F.beingKind] : "monster") as BeingKind] ?? "monsters";
@@ -162,6 +169,12 @@ function subLine(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<string, Va
     const school = typeof f[F.school] === "string" ? f[F.school] : "";
     return typeof lvl === "number" ? (lvl === 0 ? `${school} cantrip`.trim() : `Level ${lvl} ${school}`.trim()) : brickNote(ws, layerId, n.id);
   }
+  if (n.kind === "table") return `${typeof f.die === "string" ? f.die : "d6"} · ${Array.isArray(f.rows) ? f.rows.length : 0} rows`;
+  if (n.kind === "journal") return [typeof f.category === "string" ? f.category : "", typeof f.priority === "number" ? `priority ${f.priority}` : ""].filter(Boolean).join(" · ");
+  if (n.kind === "map") return `${Array.isArray(f.pins) ? f.pins.length : 0} pins`;
+  if (n.kind === "condition") return n.text.split(/[.\n]/)[0]?.slice(0, 60) ?? "";
+  if (n.kind === "macro") return typeof f.summary === "string" ? f.summary : "";
+  if (n.kind === "layout") return f.layoutKind === "book" ? "Book" : "Sheet";
   return n.kind === "brick" ? brickNote(ws, layerId, n.id) : "";
 }
 
@@ -330,7 +343,16 @@ export function makeVariant(ws: Workspace, layerId: Id, sourceId: Id, name?: str
 export function newInSection(ws: Workspace, layerId: Id, key: CodexKey, name: string): Id {
   const cats = ensureCategories(ws, layerId);
   const s = CODEX_SECTIONS.find((x) => x.key === key);
-  if (!s || s.what === "template") throw new Error("That isn't something that can be made here.");
+  if (!s || s.what === "template" || key === "layouts") throw new Error("That isn't something that can be made here.");
+  if (key === "conditions") {
+    const sec = ws.list(layerId, "category").find((c) => c.fields[F.section] === "conditions");
+    return ws.create(layerId, "condition", name, { category: sec ? link(sec.id) : null, fields: { [F.stages]: 1, [F.duration]: "", [F.save]: null } });
+  }
+  if (key === "tables") return ws.create(layerId, "table", name, { fields: { die: "d6", rows: [] } });
+  if (key === "maps") return ws.create(layerId, "map", name, { fields: { width: 1600, height: 1000, background: "#efe6d2", grid: { kind: "none", size: 50, scale: "5 feet", show: true }, pins: [], shapes: [] } });
+  if (key === "journal") return ws.create(layerId, "journal", name, { fields: { category: "Notes", priority: 1, blocks: [], session: null, owner: null, shared: [], revealed: false } });
+  if (key === "macros") return ws.create(layerId, "macro", name, { fields: { blocks: [{ type: "dice", dice: "1d20", op: "+" }], against: null, who: "me", see: "public", summary: "1d20" } });
+  if (key === "encounters") return ws.create(layerId, "encounter", name, { template: true, fields: { readAloud: "", inside: null, order: 0, leadsTo: [], creatures: [], treasure: [], handouts: [] } });
   if (s.what === "being") {
     const kind = SECTION_BEING[key];
     const fields: Record<string, Value> = { [F.beingKind]: kind };

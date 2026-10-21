@@ -3,7 +3,8 @@
 
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, extname } from "node:path";
-import { newId } from "../engine/index.ts";
+import { newId, roll } from "../engine/index.ts";
+import type { RollResult } from "../engine/index.ts";
 import { panelView, readPanel } from "./flagpanel.ts";
 import type { Activation, CheckCategory, CheckSettings, Id, NodeKind, Sensitivity, Slot, Uses, Value } from "../engine/index.ts";
 import { Library, LibraryError, realTimers } from "../storage/index.ts";
@@ -32,6 +33,11 @@ import { rollScores } from "./characters.ts";
 import { imagesPdf } from "./pdf-image.ts";
 import { pictureSize } from "./docx.ts";
 import type { Grid, MapTreeNode, MapView, Shape } from "./maps.ts";
+import type { BeginInput, ClockStep, ConditionOn, LogLine, TableView, Timer } from "./table.ts";
+import type { Macro, MacroBlock, MacroResult } from "./macros.ts";
+import type { Block, PageView } from "./journal.ts";
+import { tableMetaFrom } from "./tablemeta.ts";
+import type { ChatLine, TableMeta } from "./tablemeta.ts";
 import type { BuilderOptions, CharacterInput, CharacterView } from "./characters.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
@@ -48,6 +54,10 @@ import { whenLabel } from "./words.ts";
 
 export type { Place } from "./settings.ts";
 export type { Grid, MapTreeNode, MapView, PinView, Shape } from "./maps.ts";
+export type { BeginInput, CardView, ClockStep, Combatant, ConditionOn, LogLine, Member, SessionState, TableView, Timer, WorldDate, Calendar } from "./table.ts";
+export type { Macro, MacroBlock, MacroResult } from "./macros.ts";
+export type { Block, PageEntry, PageView } from "./journal.ts";
+export type { ChatLine, TableMeta, ToolPlace, Bookmark, FloatingPin } from "./tablemeta.ts";
 export type { BuilderOptions, CharacterInput, CharacterView, Method, OptionChoice, OptionClass, OptionRace, TrackerView } from "./characters.ts";
 export type RosterEntry = ReturnType<typeof import("./characters.ts").roster>[number];
 export type { ImportResult, RecycledInfo } from "../storage/index.ts";
@@ -174,7 +184,9 @@ export type BackendEvent =
   /** A live AI check finished: the flag panel has new findings. */
   | { type: "aiFlags"; found: number }
   /** A background AI job didn't finish; nothing from it was applied. */
-  | { type: "aiNotice"; message: string };
+  | { type: "aiNotice"; message: string }
+  /** A new line in the table's chat (a roll, a message). */
+  | { type: "chat"; line: import("./tablemeta.ts").ChatLine };
 
 export interface BackendOptions {
   settingsPath: string;
@@ -325,6 +337,47 @@ export const BACKEND_METHODS = [
   "setMapSettings",
   "pictureData",
   "exportImage",
+  "resetTable",
+  "spreadTable",
+  "tableFrom",
+  "tableView",
+  "beginSession",
+  "setSession",
+  "wrapUp",
+  "addLog",
+  "startFight",
+  "addToFight",
+  "addEvent",
+  "nextTurn",
+  "moveInOrder",
+  "setCombatant",
+  "revealAll",
+  "clearDefeated",
+  "damage",
+  "endFight",
+  "addCondition",
+  "addCharacterCondition",
+  "changeCondition",
+  "addTimer",
+  "setTimer",
+  "advanceClock",
+  "partyRest",
+  "macros",
+  "saveMacro",
+  "runMacro",
+  "journalTree",
+  "pageView",
+  "mentionedIn",
+  "createPage",
+  "setPage",
+  "addBlock",
+  "setBlock",
+  "pageToNode",
+  "tableMeta",
+  "madeSince",
+  "setTableMeta",
+  "postChat",
+  "rollDice",
   "encounterTree",
   "modulePage",
   "addEncounter",
@@ -812,7 +865,7 @@ export class Backend {
   }
 
   /** Share (World or System settings): saves a copy to send. Saves any waiting changes first. */
-  async share(opts: { history?: boolean; snapshots?: boolean; chat?: boolean } = {}, dest?: string): Promise<string | null> {
+  async share(opts: { history?: boolean; snapshots?: boolean; chat?: boolean; journal?: boolean } = {}, dest?: string): Promise<string | null> {
     const s = this.session;
     if (!s) throw new LibraryError("Open the world or system to share first.");
     s.saveNow();
@@ -1050,6 +1103,160 @@ export class Backend {
   }
   encounterTree(): EncounterNode[] {
     return this.editing.encounterTree();
+  }
+  // ---------- The DM's table (version 2) ----------
+  resetTable(id: Id): true {
+    return this.editing.resetTable(id);
+  }
+  spreadTable(id: Id): true {
+    return this.editing.spreadTable(id);
+  }
+  tableFrom(name: string, ids: Id[]): Id {
+    return this.editing.tableFrom(name, ids);
+  }
+  tableView(glance: string[] = ["hp", "ac"]): TableView {
+    return this.editing.tableView(glance);
+  }
+  beginSession(input: BeginInput): Id {
+    return this.editing.beginSession(input);
+  }
+  setSession(change: { present?: Id[]; starred?: Id[]; encounter?: Id | null; lastTime?: string }): true {
+    return this.editing.setSession(change);
+  }
+  wrapUp(input: { xpEach: number; to: Id[]; remove: Id[] }): true {
+    return this.editing.wrapUp(input);
+  }
+  addLog(kind: LogLine["kind"], text: string): true {
+    return this.editing.addLog(kind, text);
+  }
+  startFight(opts: { encounter: Id | null; hidden: boolean; groupFrom: number }): true {
+    return this.editing.startFight(opts);
+  }
+  addToFight(being: Id, opts: { count: number; group: boolean; hidden: boolean }): Id[] {
+    return this.editing.addToFight(being, opts);
+  }
+  addEvent(name: string, init: number, note: string): Id {
+    return this.editing.addEvent(name, init, note);
+  }
+  nextTurn(opts: { rerollEachRound: boolean }): { round: number; fired: string[] } {
+    return this.editing.nextTurn(opts);
+  }
+  moveInOrder(combatant: Id, before: Id | null): true {
+    return this.editing.moveInOrder(combatant, before);
+  }
+  setCombatant(combatant: Id, change: { delayed?: boolean; hidden?: boolean; init?: number; name?: string; note?: string } | null): true {
+    return this.editing.setCombatant(combatant, change);
+  }
+  revealAll(): true {
+    return this.editing.revealAll();
+  }
+  clearDefeated(): true {
+    return this.editing.clearDefeated();
+  }
+  damage(combatant: Id, member: Id | null, amount: number): string {
+    return this.editing.damage(combatant, member, amount);
+  }
+  endFight(): true {
+    return this.editing.endFight();
+  }
+  addCondition(targets: { combatant: Id; member: Id | null }[], c: { condition: Id; left: number | null; unit: ConditionOn["unit"]; counter: number | null; source: string }): true {
+    return this.editing.addCondition(targets, c);
+  }
+  addCharacterCondition(character: Id, c: { condition: Id; left: number | null; unit: ConditionOn["unit"]; counter: number | null; source: string }): true {
+    return this.editing.addCharacterCondition(character, c);
+  }
+  changeCondition(where: { character?: Id; combatant?: Id; member?: Id }, conditionId: Id, change: { counter?: number; left?: number } | null): true {
+    return this.editing.changeCondition(where, conditionId, change);
+  }
+  addTimer(t: Omit<Timer, "id">): Id {
+    return this.editing.addTimer(t);
+  }
+  setTimer(timer: Id, change: { paused?: boolean; left?: number; name?: string } | null): true {
+    return this.editing.setTimer(timer, change);
+  }
+  advanceClock(minutes: number): ClockStep {
+    return this.editing.advanceClock(minutes);
+  }
+  partyRest(kind: "short rest" | "long rest"): true {
+    return this.editing.partyRest(kind);
+  }
+  macros(): (Macro & { words: string })[] {
+    return this.editing.macros();
+  }
+  saveMacro(id: Id | null, input: { name: string; blocks: MacroBlock[]; against: number | null; who: Macro["who"]; see: Macro["see"] }): Id {
+    return this.editing.saveMacro(id, input);
+  }
+  runMacro(id: Id | null, input: { blocks?: MacroBlock[]; against?: number | null }, characters: Id[], mode: "normal" | "advantage" | "disadvantage" = "normal"): MacroResult[] {
+    return this.editing.runMacro(id, input, characters, mode);
+  }
+  journalTree(viewer: string | null = null): ReturnType<Editing["journalTree"]> {
+    return this.editing.journalTree(this.journalOrder(), viewer);
+  }
+  pageView(id: Id): PageView {
+    return this.editing.pageView(id);
+  }
+  mentionedIn(id: Id): { id: Id; name: string }[] {
+    return this.editing.mentionedIn(id);
+  }
+  createPage(name: string, category: string, opts: { owner?: string | null; picture?: Id | null } = {}): Id {
+    return this.editing.createPage(name, category, opts);
+  }
+  setPage(id: Id, change: { category?: string; priority?: number; shared?: string[]; revealed?: boolean }): true {
+    return this.editing.setPage(id, change);
+  }
+  addBlock(id: Id, type: "text" | "image", picture: Id | null = null, at: { x: number; y: number } | null = null): Id {
+    return this.editing.addBlock(id, type, picture, at);
+  }
+  setBlock(id: Id, block: Id, change: Partial<Omit<Block, "id" | "type">> | null): true {
+    return this.editing.setBlock(id, block, change);
+  }
+  pageToNode(id: Id, kind: "lore" | "npc"): Id {
+    return this.editing.pageToNode(id, kind);
+  }
+  madeSince(since: number): { id: Id; name: string; what: string }[] {
+    return this.editing.madeSince(since);
+  }
+  private journalOrder(): { name: string; priority: number }[] {
+    return this.tableMetaOf().journalCategories;
+  }
+  private need(): Session {
+    if (!this.session) throw new LibraryError("Open a world, module or system first.");
+    return this.session;
+  }
+  private tableMetaOf(): TableMeta {
+    return tableMetaFrom(this.need().table);
+  }
+  /** The table's memory: chat and rolls, the screen's arrangement, bookmarks, pins, settings. */
+  tableMeta(): TableMeta {
+    return this.tableMetaOf();
+  }
+  /** Changes part of the table's memory (not the chat, which only grows through postChat). */
+  setTableMeta(patch: Partial<Omit<TableMeta, "chat">>): TableMeta {
+    const s = this.need();
+    const next = { ...this.tableMetaOf(), ...patch };
+    s.setTable(next);
+    return next;
+  }
+  /** A line in the table's chat: a message, a roll, or a note from the table. */
+  postChat(line: Omit<ChatLine, "id" | "time">): ChatLine {
+    const s = this.need();
+    const meta = this.tableMetaOf();
+    const full: ChatLine = { ...line, id: newId(), time: this.now() };
+    meta.chat = [...meta.chat, full].slice(-1000);
+    s.setTable(meta);
+    this.opts.emit({ type: "chat", line: full });
+    return full;
+  }
+  /** The dice tray: rolls a formula and puts it in the chat ("Rob rolled 14"). */
+  rollDice(input: { formula: string; mode?: "normal" | "advantage" | "disadvantage"; who: string; color: string; see: ChatLine["see"]; label?: string }): ChatLine {
+    let r: RollResult;
+    try {
+      r = roll(input.formula, { mode: input.mode ?? "normal" });
+    } catch (e) {
+      throw new LibraryError(e instanceof Error ? e.message : String(e));
+    }
+    const mode = input.mode === "advantage" ? " with advantage" : input.mode === "disadvantage" ? " with disadvantage" : "";
+    return this.postChat({ kind: "roll", who: input.who, color: input.color, see: input.see, to: [], text: `${input.label ? `${input.label}: ` : ""}${r.total}`, roll: { formula: r.formula + mode, total: r.total, breakdown: r.breakdown + (r.other !== null ? ` (the other roll was ${r.other})` : ""), natural: r.natural }, ic: false });
   }
   // ---------- Maps (version 2) ----------
   mapTree(): MapTreeNode[] {

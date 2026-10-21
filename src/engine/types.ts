@@ -35,6 +35,7 @@ export type NodeKind =
   | "map"
   | "journal"
   | "macro"
+  | "session"
   | "layout"
   | "category";
 

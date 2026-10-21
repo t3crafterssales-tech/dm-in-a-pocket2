@@ -38,6 +38,8 @@ export class Session {
   flagPanel: unknown;
   /** The AI's chat and World Notes, saved with the world (see ai/assistant.ts). Plain JSON. */
   ai: unknown;
+  /** The DM's table: chat and rolls, the screen's arrangement, bookmarks, pins. Plain JSON. */
+  table: unknown;
 
   private constructor(lib: Library, type: "world" | "system" | "module", id: Id, ws: Workspace, world: OpenWorld | null, events: SessionEvents, timers: Timers) {
     this.lib = lib;
@@ -53,6 +55,7 @@ export class Session {
     const meta = lib.readMeta(type, id);
     this.flagPanel = meta.flagPanel ?? null;
     this.ai = meta.ai ?? null;
+    this.table = meta.table ?? null;
     this.saver = new Autosaver(() => this.save(), { onSaved: () => events.saved?.(), onError: (e) => this.saveError(e) }, timers);
     this.stopListening = ws.onChange(() => {
       if (!this.readOnly) this.saver.changed();
@@ -141,8 +144,14 @@ export class Session {
     if (!this.readOnly) this.saver.changed();
   }
 
+  /** Changes the table's memory (chat, arrangement, pins) and saves it with the next save. */
+  setTable(state: unknown) {
+    this.table = state;
+    if (!this.readOnly) this.saver.changed();
+  }
+
   private save() {
-    const extra = { flagPanel: this.flagPanel ?? undefined, ai: this.ai ?? undefined };
+    const extra = { flagPanel: this.flagPanel ?? undefined, ai: this.ai ?? undefined, table: this.table ?? undefined };
     if (this.world) this.lib.saveWorld(this.world, {}, extra);
     else this.lib.saveSystem(this.ws, this.id, {}, extra);
   }

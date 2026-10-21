@@ -19,7 +19,7 @@ flow down" work.
 | Field | What it holds |
 | --- | --- |
 | `id` | Permanent ID. Never changes, never reused. |
-| `kind` | `ability`, `resource`, `skill`, `condition`, `rule`, `brick`, `being`, `item`, `lore`, `table`, `encounter`, `map`, `journal`, `macro`, `layout` or `category` (the last four from version 2) |
+| `kind` | `ability`, `resource`, `skill`, `condition`, `rule`, `brick`, `being`, `item`, `lore`, `table`, `encounter`, `map`, `journal`, `macro`, `session`, `layout` or `category` |
 | `name` | Display name. Renaming never breaks anything, because links use the ID. |
 | `category` | Link to a `category` node, or null. Categories are nodes, so they have IDs too. |
 | `picture` | ID of a picture stored once in the file's picture store, or null. |
@@ -111,12 +111,56 @@ item. Besides `hp`, `ac`, `speed`, `level` and the `score_<ability id>` values e
 | `choices` | `{ <attachment id>: [links] }`: what was picked in each Choices box of the class or race. |
 | `gearPictures` | True to show gear pictures on the sheet and in print. |
 | `approved` | False while a character a player made waits for the DM's OK. |
+| `conditions` | A list of `{ id, condition (link), left, unit ("rounds", "minutes", "hours", "save" or "removed"), counter, source }` on the character right now. |
+
+A tracker can also have `lasts`: minutes one lasts once used (a torch burns for 60), which starts a
+timer at the table.
 
 A rule's `method` can also be "standard" (with `standardSet`, such as "15, 14, 13, 12, 10, 8"),
 "roll4d6" (roll 4d6, keep the highest three, arrange as you like) or "roll3d6" (3d6 in order). A
 resource's `recovery` can also be "award": it comes back only when the DM awards it (Inspiration).
 A system can list extra character fields for everyone in a rule with `characterFields`: a list of
 `{ section, label }`. These are ordinary fields; older files without them still open.
+
+## The DM's table (version 2)
+
+**Sessions.** One game night is a node of kind `session` in the module (or world) being played.
+Playing never changes the world: a monster's damage lives in the session, not on its sheet.
+Characters are the party's own, so their hit points, trackers and conditions change on them.
+
+| Field | What it holds |
+| --- | --- |
+| `number`, `started`, `ended` | Session 7; when it began; when it was wrapped up (null while it can be resumed). |
+| `present` | Links to the characters at the table tonight. |
+| `lastTime` | "Last time…" text. |
+| `encounter`, `starred` | The current encounter, and the ones expected tonight. |
+| `clock` | The in-world time, in minutes from the start of the calendar. |
+| `combat` | `{ active, round, turn, combatants: [...] }`. A combatant is `{ id, name, kind ("character", "monster" or "event"), ref (link), init, hidden, delayed, note, members: [{ id, name, hp, maxHp, ac, defeated, conditions }] }`. |
+| `timers` | A list of `{ id, name, kind ("rounds", "world", "repeat" or "real"), left, every, table (link), endsAt, paused, remaining, sound, dmOnly }`. |
+| `log` | What matters, in order: `{ time, kind, text }` ("Round 3: Mira dropped to 0 hit points"). |
+| `defeated` | `{ being (link), count }`, for experience at the end of the night. |
+| `made` | Links to things made up during the session, for "keep this?" at the end. |
+
+**Journal pages** are nodes of kind `journal`: `category` (words), `priority` (a number; 1 first),
+`blocks` (a list of `{ id, type ("text" or "image"), x, y, w, h, text, font, size, color, picture }`
+on a page 800 units wide), `session` (a link, for a session's page), `owner` (a player's name for a
+private player journal, or null for the DM's), `shared` (names it is shared with), `revealed`.
+The journal is the DM's notebook, so it is private: it is left out of shared files unless ticked.
+
+**Macros** are nodes of kind `macro`: `blocks` (a list of `{ type ("dice", "stat" or "number"),
+dice, ability (link), use ("bonus" or "score"), value, op ("+" or "-") }`), `against` (a number to
+meet or beat, or null), `who` ("me", "turn", "everyone" or "pick"), `see` ("public", "private",
+"dm" or "blind").
+
+**Conditions** can have a `look`: `{ color, symbol }`. **Roll tables** gain `used` (row numbers
+already rolled for rows marked `once`), and each row can have `once` (true) and `weight`
+("common", "uncommon", "rare" or a number). A row whose result links to another table rolls it
+too. **A calendar** is a rule with `calendar`: `{ months: [{ name, days }], weekdays: [names],
+holidays: [{ month, day, name }], moons: [{ name, cycle, offset }], seasons: [{ name, month, day,
+weather (link to a table) }], year }`.
+
+The table's chat and rolls, the arrangement of the DM's screen, bookmarks and floating pins are
+kept with the file like the AI's chat (`table` in the file's meta), not in undo history.
 
 ## Attachments (a brick on a sheet)
 

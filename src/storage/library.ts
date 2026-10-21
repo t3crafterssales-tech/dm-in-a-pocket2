@@ -129,6 +129,21 @@ export interface LayerMeta {
   flagPanel?: unknown;
   /** The AI's memory: { notes: World Notes lines, chat: the conversation }. */
   ai?: unknown;
+  /** The DM's table (version 2): chat and rolls, the screen's arrangement, bookmarks, pins. */
+  table?: unknown;
+}
+
+/**
+ * The DM's private notebook (journal pages) and game nights stay home unless ticked: a shared
+ * copy leaves them out of every layer.
+ */
+function withoutPrivate(layers: Layer[], keep: boolean): Layer[] {
+  if (keep) return layers;
+  return layers.map((l) => {
+    const out = structuredClone(l);
+    for (const [id, n] of Object.entries(out.nodes)) if (n.kind === "journal" || n.kind === "session") delete out.nodes[id];
+    return out;
+  });
 }
 
 /** What a shared file carries of the AI's memory: always the World Notes, the chat only if ticked. */
@@ -649,7 +664,7 @@ export class Library {
    * Writes a copy of a world to send to someone: always the world, its whole system chain and its
    * pictures; undo history and snapshots only if ticked. Settings are never in a world file.
    */
-  exportWorld(worldId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean; chat?: boolean } = {}) {
+  exportWorld(worldId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean; chat?: boolean; journal?: boolean } = {}) {
     const path = this.worldPath(worldId);
     if (!existsSync(path)) throw new LibraryError("That world isn't in the Worlds folder.");
     const { data } = readArchive(path, "world.json", this, false);
@@ -665,7 +680,7 @@ export class Library {
       format: FORMAT_VERSION,
       app: data.app,
       main: worldId,
-      layers: [...chain, world].map((l) => structuredClone(l)),
+      layers: withoutPrivate([...chain, world].map((l) => structuredClone(l)), !!opts.journal),
       bin: opts.history ? data.bin : [],
       history: opts.history ? data.history : [],
       redo: opts.history ? data.redo : [],
@@ -826,7 +841,7 @@ export class Library {
   }
 
   /** Writes a copy of a module to send to someone: the module, its world and system chain, its pictures. */
-  exportModule(moduleId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean; chat?: boolean } = {}) {
+  exportModule(moduleId: Id, dest: string, opts: { history?: boolean; snapshots?: boolean; chat?: boolean; journal?: boolean } = {}) {
     const path = this.modulePath(moduleId);
     if (!existsSync(path)) throw new LibraryError("That module isn't in the Modules folder.");
     const { data } = readArchive(path, "module.json", this, false);
@@ -842,7 +857,7 @@ export class Library {
       format: FORMAT_VERSION,
       app: data.app,
       main: moduleId,
-      layers: [...below, mod].map((l) => structuredClone(l)),
+      layers: withoutPrivate([...below, mod].map((l) => structuredClone(l)), !!opts.journal),
       bin: opts.history ? data.bin : [],
       history: opts.history ? data.history : [],
       redo: opts.history ? data.redo : [],

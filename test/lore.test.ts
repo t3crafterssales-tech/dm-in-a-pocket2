@@ -65,7 +65,7 @@ test("roll tables: rows with ranges, results that link to things, and a Roll but
   for (let i = 0; i < 20; i++) {
     const r = backend.rollTable(t);
     assert.ok(r.roll >= 1 && r.roll <= 6);
-    if (r.roll === 6) assert.deepEqual(r.result, { id: ogre, name: "Ogre" });
+    if (r.roll === 6) assert.deepEqual(r.result, { id: ogre, name: "Ogre", kind: "being" });
   }
   assert.equal(backend.history().done[0]!.label.startsWith("Changed"), true, "rolling isn't an undo step");
   // A fixed roll shows which row it lands on.

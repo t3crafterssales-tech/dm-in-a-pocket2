@@ -1,10 +1,10 @@
 // The Codex sections and the pickers' starting lists. No imports, so the window can use them
 // without pulling in the back end.
 
-export type CodexKey = "weapons" | "armour" | "gear" | "magic" | "monsters" | "npcs" | "characters" | "races" | "classes" | "spells" | "attacks" | "enchantments" | "traits" | "encounters" | "templates";
+export type CodexKey = "weapons" | "armour" | "gear" | "magic" | "monsters" | "npcs" | "characters" | "races" | "classes" | "spells" | "attacks" | "enchantments" | "traits" | "conditions" | "tables" | "encounters" | "maps" | "journal" | "macros" | "layouts" | "templates";
 
 /** In the order they show. `what` is what a node in it is. */
-export const CODEX_SECTIONS: { key: CodexKey; title: string; one: string; icon: string; what: "item" | "being" | "brick" | "encounter" | "template" }[] = [
+export const CODEX_SECTIONS: { key: CodexKey; title: string; one: string; icon: string; what: "item" | "being" | "brick" | "encounter" | "template" | "other" }[] = [
   { key: "weapons", title: "Weapons", one: "weapon", icon: "⚔️", what: "item" },
   { key: "armour", title: "Armour", one: "armour", icon: "🛡️", what: "item" },
   { key: "gear", title: "Gear", one: "piece of gear", icon: "🏮", what: "item" },
@@ -18,7 +18,13 @@ export const CODEX_SECTIONS: { key: CodexKey; title: string; one: string; icon: 
   { key: "attacks", title: "Attacks", one: "attack", icon: "🗡️", what: "brick" },
   { key: "enchantments", title: "Enchantments", one: "enchantment", icon: "✨", what: "brick" },
   { key: "traits", title: "Traits and features", one: "trait", icon: "🧩", what: "brick" },
-  { key: "encounters", title: "Encounters", one: "encounter", icon: "🗺️", what: "encounter" },
+  { key: "conditions", title: "Conditions", one: "condition", icon: "🩹", what: "other" },
+  { key: "tables", title: "Roll tables", one: "roll table", icon: "🎲", what: "other" },
+  { key: "encounters", title: "Encounters", one: "encounter", icon: "⚔️", what: "encounter" },
+  { key: "maps", title: "Maps", one: "map", icon: "🗺️", what: "other" },
+  { key: "journal", title: "Journal", one: "journal page", icon: "📓", what: "other" },
+  { key: "macros", title: "Macros", one: "macro", icon: "🪄", what: "other" },
+  { key: "layouts", title: "Sheet and book layouts", one: "layout", icon: "📐", what: "other" },
   { key: "templates", title: "Templates", one: "template", icon: "📐", what: "template" },
 ];
 

@@ -8,7 +8,7 @@ import { BOOK_CHAPTERS, CHAPTER_TITLES, bookEntry, isCoreCheck, DEFAULT_CHECKS, 
 import type { Book, BookType, ChapterId, CheckCategory, CheckSettings, Sensitivity } from "../engine/index.ts";
 
 const BOOK_TYPES = Object.keys(BOOK_CHAPTERS) as BookType[];
-import type { Activation, Id, NodeKind, Uses, Value, Workspace } from "../engine/index.ts";
+import type { Activation, Id, NodeKind, NodeRecord, Uses, Value, Workspace } from "../engine/index.ts";
 import { LibraryError } from "../storage/index.ts";
 import { createRuleNode, createSection, ensureSections, ruleSummary, rulesTab, sectionOf } from "./rules.ts";
 import type { RulesSection, SectionKey } from "./rules.ts";
@@ -19,10 +19,17 @@ import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, li
 import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
-import { createLore, loreList, rollTable } from "./lore.ts";
+import { createLore, loreList, markUsed, rollTable, rowsValue, tableFromList, tableRows, weightedRanges } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
 import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
 import { buildAdventureBook } from "./adventure-book.ts";
+import { addCondition, addConditionToCharacter, addEvent, addLog, addTimer, addToFight, advanceClock, beginSession, changeCondition, clearDefeated, damage, endFight, moveInOrder, nextTurn, openSession, revealAll, rollChain, sessionOf, setCombatant, setSession, setTimer, startFight, tableView, wrapUp } from "./table.ts";
+import type { BeginInput, ClockStep, ConditionOn, LogLine, TableView, Timer } from "./table.ts";
+import { blocksValue, macroOf, macroWords, runMacro } from "./macros.ts";
+import type { Macro, MacroBlock, MacroResult } from "./macros.ts";
+import { addBlock, createPage, diary, journalTree, mentionedIn, pageToNode, pageView, setBlock, setPage } from "./journal.ts";
+import type { Block, PageView } from "./journal.ts";
+import { rest as restCharacter } from "./characters.ts";
 import { addPins, addShape, copyPins, createMap, deletePins, deleteShapes, editPins, fillShape, mapTree, mapView, mapsShowing, movePins, setMapSettings } from "./maps.ts";
 import type { Grid, MapTreeNode, MapView, Shape } from "./maps.ts";
 import { addExtra, addTracker, award, builderOptions, characterView, createCharacter, levelUp, levelUpPreview, makeItForMe, rest, roster, setAppearance, setChoice, setExtra, setTracker } from "./characters.ts";
@@ -518,15 +525,239 @@ export class Editing {
   }
 
   /** Rolls a roll table. Nothing changes, so it isn't an undo step (and works read-only too). */
-  rollTable(id: Id): { roll: number; text: string; result: { id: Id; name: string } | null } {
+  rollTable(id: Id): { roll: number; text: string; result: { id: Id; name: string; kind: string } | null; chain: string; allUsed: boolean } {
+    let r: ReturnType<typeof rollTable>;
     try {
-      const r = rollTable(this.ws, this.layer, id);
-      const target = r.row?.result ? this.ws.get(this.layer, r.row.result.link) : null;
-      return { roll: r.roll, text: r.row?.text ?? "", result: target ? { id: target.id, name: target.name } : null };
+      r = rollTable(this.ws, this.layer, id);
+    } catch (e) {
+      throw new LibraryError(e instanceof Error ? e.message : String(e));
+    }
+    const target = r.row?.result ? this.ws.get(this.layer, r.row.result.link) : null;
+    // A once-only row is crossed out until the DM resets the table.
+    if (r.onceRow !== null && !this.session.readOnly) this.ws.transact(`Crossed out a row on ${this.must(id).name}`, () => markUsed(this.ws, this.layer, id, r.onceRow));
+    // A row that leads to another table rolls that one too ("roll on Treasure").
+    let chain = "";
+    if (target?.kind === "table") {
+      try {
+        chain = rollChain(this.ws, this.layer, target.id).text;
+      } catch {
+        chain = "";
+      }
+    }
+    return { roll: r.roll, text: r.allUsed ? "Every once-only row has been rolled. Reset the table to use them again." : (r.row?.text ?? ""), result: target ? { id: target.id, name: target.name, kind: target.kind } : null, chain, allUsed: r.allUsed };
+  }
+
+  resetTable(id: Id): true {
+    const n = this.must(id);
+    this.run(() => this.ws.transact(`Reset ${n.name}`, () => markUsed(this.ws, this.layer, id, null)));
+    return true;
+  }
+
+  /** "How common": works the ranges out on the die from each row's Common, Uncommon or Rare. */
+  spreadTable(id: Id): true {
+    const n = this.must(id);
+    const f = this.ws.resolve(this.layer, id)!.fields;
+    this.run(() => this.ws.transact(`Worked out the ranges on ${n.name}`, () => this.ws.setField(this.layer, id, "rows", rowsValue(weightedRanges(tableRows(f), typeof f.die === "string" ? f.die : "d6")))));
+    return true;
+  }
+
+  /** A roll table made from things in the Codex in one go, spread evenly over the die. */
+  tableFrom(name: string, ids: Id[]): Id {
+    const n = cleanName(name);
+    const list = ids.map((x) => this.ws.get(this.layer, x)).filter((x): x is NodeRecord => !!x).map((x) => ({ id: x.id, name: x.name }));
+    if (!list.length) throw new LibraryError("Pick some things from the Codex for the table first.");
+    const t = tableFromList(list);
+    return this.run(() => this.ws.transact(`Made the roll table ${n}`, () => this.ws.create(this.layer, "table", n, { fields: { die: t.die, rows: rowsValue(t.rows) } })));
+  }
+
+  // ---------- The DM's table (version 2) ----------
+
+  private now(): number {
+    return this.ws.now();
+  }
+  tableView(glance: string[]): TableView {
+    return tableView(this.ws, this.layer, glance);
+  }
+  private night(): Id {
+    const s = openSession(this.ws, this.layer);
+    if (!s) throw new LibraryError("Begin a session first.");
+    return s.id;
+  }
+  private table<T>(label: string, fn: (sessionId: Id) => T): T {
+    const id = this.night();
+    return this.run(() => this.ws.transact(label, () => fn(id)));
+  }
+  beginSession(input: BeginInput): Id {
+    if (openSession(this.ws, this.layer)) throw new LibraryError("A session is already going. Wrap it up first, or carry on with it.");
+    return this.run(() => this.ws.transact("Began a session", () => beginSession(this.ws, this.layer, input, this.now())));
+  }
+  setSession(change: { present?: Id[]; starred?: Id[]; encounter?: Id | null; lastTime?: string }): true {
+    this.table("Changed tonight's session", (id) => setSession(this.ws, this.layer, id, change));
+    return true;
+  }
+  wrapUp(input: { xpEach: number; to: Id[]; remove: Id[] }): true {
+    this.table("Wrapped up the session", (id) => wrapUp(this.ws, this.layer, id, input, this.now()));
+    return true;
+  }
+  addLog(kind: LogLine["kind"], text: string): true {
+    this.table("Wrote in the log", (id) => addLog(this.ws, this.layer, id, kind, text, this.now()));
+    return true;
+  }
+  startFight(opts: { encounter: Id | null; hidden: boolean; groupFrom: number }): true {
+    this.table("Started a fight", (id) => startFight(this.ws, this.layer, id, opts, this.now()));
+    return true;
+  }
+  addToFight(being: Id, opts: { count: number; group: boolean; hidden: boolean }): Id[] {
+    const n = this.must(being);
+    return this.table(`${n.name} joined the fight`, (id) => addToFight(this.ws, this.layer, id, being, opts));
+  }
+  addEvent(name: string, init: number, note: string): Id {
+    return this.table(`Added the event ${name.trim() || "Event"}`, (id) => addEvent(this.ws, this.layer, id, name, init, note));
+  }
+  nextTurn(opts: { rerollEachRound: boolean }): { round: number; fired: string[] } {
+    return this.table("Next turn", (id) => nextTurn(this.ws, this.layer, id, opts, this.now()));
+  }
+  moveInOrder(combatant: Id, before: Id | null): true {
+    this.table("Moved a card in the order", (id) => moveInOrder(this.ws, this.layer, id, combatant, before));
+    return true;
+  }
+  setCombatant(combatant: Id, change: { delayed?: boolean; hidden?: boolean; init?: number; name?: string; note?: string } | null): true {
+    const label = change === null ? "Took a card out of the fight" : change.hidden === false ? "Revealed a card" : change.delayed !== undefined ? (change.delayed ? "Delayed a turn" : "Back in the order") : "Changed a card";
+    this.table(label, (id) => setCombatant(this.ws, this.layer, id, combatant, change));
+    return true;
+  }
+  revealAll(): true {
+    this.table("Revealed everyone", (id) => revealAll(this.ws, this.layer, id));
+    return true;
+  }
+  clearDefeated(): true {
+    this.table("Cleared the defeated", (id) => clearDefeated(this.ws, this.layer, id));
+    return true;
+  }
+  damage(combatant: Id, member: Id | null, amount: number): string {
+    return this.table(amount >= 0 ? "Damage" : "Healing", (id) => damage(this.ws, this.layer, id, combatant, member, amount, this.now()));
+  }
+  endFight(): true {
+    this.table("Ended the fight", (id) => endFight(this.ws, this.layer, id, this.now()));
+    return true;
+  }
+  addCondition(targets: { combatant: Id; member: Id | null }[], c: { condition: Id; left: number | null; unit: ConditionOn["unit"]; counter: number | null; source: string }): true {
+    const name = this.must(c.condition).name;
+    this.table(`Gave ${name}`, (id) => addCondition(this.ws, this.layer, id, targets, c, this.now()));
+    return true;
+  }
+  /** A condition on a character, outside a fight too (from the character sheet). */
+  addCharacterCondition(character: Id, c: { condition: Id; left: number | null; unit: ConditionOn["unit"]; counter: number | null; source: string }): true {
+    const name = this.must(c.condition).name;
+    this.run(() => this.ws.transact(`Gave ${this.must(character).name} ${name}`, () => addConditionToCharacter(this.ws, this.layer, character, c)));
+    return true;
+  }
+  changeCondition(where: { character?: Id; combatant?: Id; member?: Id }, conditionId: Id, change: { counter?: number; left?: number } | null): true {
+    const s = openSession(this.ws, this.layer);
+    this.run(() => this.ws.transact(change === null ? "Removed a condition" : "Changed a condition", () => changeCondition(this.ws, this.layer, s?.id ?? null, where, conditionId, change, this.now())));
+    return true;
+  }
+  addTimer(t: Omit<Timer, "id">): Id {
+    return this.table(`Started the timer ${t.name}`, (id) => addTimer(this.ws, this.layer, id, t, this.now()));
+  }
+  setTimer(timer: Id, change: { paused?: boolean; left?: number; name?: string } | null): true {
+    this.table(change === null ? "Stopped a timer" : change.paused ? "Paused a timer" : "Changed a timer", (id) => setTimer(this.ws, this.layer, id, timer, change, this.now()));
+    return true;
+  }
+  advanceClock(minutes: number): ClockStep {
+    return this.table(`Moved the clock on`, (id) => advanceClock(this.ws, this.layer, id, minutes, this.now()));
+  }
+  /** Short or long rest for everyone at the table: trackers refill, and the clock moves on. */
+  partyRest(kind: "short rest" | "long rest"): true {
+    this.table(`The party took a ${kind}`, (id) => {
+      const s = sessionOf(this.ws, this.layer, id);
+      for (const c of s.present) if (this.ws.get(this.layer, c)) restCharacter(this.ws, this.layer, c, kind);
+      advanceClock(this.ws, this.layer, id, kind === "long rest" ? 480 : 60, this.now());
+      addLog(this.ws, this.layer, id, "rest", `The party took a ${kind}.`, this.now());
+    });
+    return true;
+  }
+
+  /** Things made in this place since a time (for "keep this?" when a session wraps up). */
+  madeSince(since: number): { id: Id; name: string; what: string }[] {
+    const what = (n: NodeRecord) => (n.kind === "being" ? String(this.ws.resolve(this.layer, n.id)!.fields.beingKind ?? "being") : n.kind === "lore" ? "lore page" : n.kind);
+    return this.ws
+      .list(this.layer)
+      .filter((n) => n.created >= since && this.ws.owner(this.layer, n.id) === this.layer && (n.kind === "item" || n.kind === "lore" || (n.kind === "being" && this.ws.resolve(this.layer, n.id)!.fields.beingKind !== "character")))
+      .map((n) => ({ id: n.id, name: n.name, what: what(n) }));
+  }
+
+  // ---------- Macros ----------
+
+  macros(): (Macro & { words: string })[] {
+    return this.ws
+      .list(this.layer, "macro")
+      .map((n) => macroOf(this.ws, this.layer, n.id))
+      .map((m) => ({ ...m, words: macroWords(this.ws, this.layer, m) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  saveMacro(id: Id | null, input: { name: string; blocks: MacroBlock[]; against: number | null; who: Macro["who"]; see: Macro["see"] }): Id {
+    const n = cleanName(input.name);
+    const fields = { blocks: blocksValue(input.blocks), against: input.against, who: input.who, see: input.see, summary: macroWords(this.ws, this.layer, input) };
+    if (id) {
+      this.run(() =>
+        this.ws.transact(`Changed the macro ${n}`, () => {
+          if (this.must(id).name !== n) this.ws.edit(this.layer, id, (r) => (r.name = n));
+          for (const [k, v] of Object.entries(fields)) this.ws.setField(this.layer, id, k, v as Value);
+        }),
+      );
+      return id;
+    }
+    return this.run(() => this.ws.transact(`Made the macro ${n}`, () => this.ws.create(this.layer, "macro", n, { fields: fields as Record<string, Value> })));
+  }
+  /** Rolls a macro for the characters given. Nothing changes, so it isn't an undo step. */
+  runMacro(id: Id | null, input: { blocks?: MacroBlock[]; against?: number | null }, characters: Id[], mode: "normal" | "advantage" | "disadvantage" = "normal"): MacroResult[] {
+    const m = id ? macroOf(this.ws, this.layer, id) : { blocks: input.blocks ?? [], against: input.against ?? null };
+    try {
+      return runMacro(this.ws, this.layer, m, characters, { mode });
     } catch (e) {
       throw new LibraryError(e instanceof Error ? e.message : String(e));
     }
   }
+
+  // ---------- The journal ----------
+
+  journalTree(order: { name: string; priority: number }[], viewer: string | null = null) {
+    return journalTree(this.ws, this.layer, order, viewer);
+  }
+  pageView(id: Id): PageView {
+    return { ...pageView(this.ws, this.layer, id), readOnly: this.session.readOnly };
+  }
+  mentionedIn(id: Id): { id: Id; name: string }[] {
+    return mentionedIn(this.ws, this.layer, id);
+  }
+  createPage(name: string, category: string, opts: { owner?: string | null; picture?: Id | null } = {}): Id {
+    const n = cleanName(name);
+    return this.run(() => this.ws.transact(`Added the journal page ${n}`, () => createPage(this.ws, this.layer, n, category, opts)));
+  }
+  setPage(id: Id, change: { category?: string; priority?: number; shared?: string[]; revealed?: boolean }): true {
+    const n = this.must(id);
+    this.run(() => this.ws.transact(change.category !== undefined ? `Moved ${n.name} to ${change.category}` : `Changed ${n.name}`, () => setPage(this.ws, this.layer, id, change)));
+    return true;
+  }
+  addBlock(id: Id, type: "text" | "image", picture: Id | null = null, at: { x: number; y: number } | null = null): Id {
+    const n = this.must(id);
+    return this.run(() => this.ws.transact(`Added ${type === "image" ? "a picture" : "text"} to ${n.name}`, () => addBlock(this.ws, this.layer, id, type, picture, at)));
+  }
+  setBlock(id: Id, block: Id, change: Partial<Omit<Block, "id" | "type">> | null): true {
+    const n = this.must(id);
+    this.run(() => this.ws.transact(change === null ? `Removed a block from ${n.name}` : `Changed ${n.name}`, () => setBlock(this.ws, this.layer, id, block, change)));
+    return true;
+  }
+  pageToNode(id: Id, kind: "lore" | "npc"): Id {
+    const n = this.must(id);
+    return this.run(() => this.ws.transact(`Made ${n.name} ${kind === "npc" ? "an NPC" : "a lore page"}`, () => pageToNode(this.ws, this.layer, id, kind)));
+  }
+  diary(dmPages: boolean) {
+    return diary(this.ws, this.layer, { dmPages });
+  }
+
+  /** "Start blank" on the start screen. */
 
   /** World settings: which yellow checks run and how sensitive they are. Red flags can't be switched off. */
   checkSettings(): CheckSettings {
