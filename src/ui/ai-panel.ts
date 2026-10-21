@@ -35,7 +35,7 @@ export async function aiPanel(ctx: PlaceCtx, selectedName: string | null): Promi
   const st = stateFor(ctx.view.id);
   const status = await attempt(() => api.aiStatus());
   const view = st.open ? await attempt(() => api.aiView()) : null;
-  const place = ctx.view.type === "world" ? "world" : "system";
+  const place = ctx.view.type;
   const target = !st.whole && ctx.selected && selectedName ? { id: ctx.selected, name: selectedName } : null;
 
   const workingOn = h(

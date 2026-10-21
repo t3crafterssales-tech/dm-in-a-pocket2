@@ -14,6 +14,7 @@ import { startOver } from "./start-screen.ts";
 import { separateCopy, variantOf } from "./item-sheet.ts";
 import { showHistory } from "./history-dialog.ts";
 import { lorePanels } from "./lore-tab.ts";
+import { adventurePanels } from "./adventure-tab.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
@@ -21,8 +22,13 @@ import { sheetPanels } from "./sheets-tab.ts";
 import { drawTableMode, focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
 
-const TABS = ["Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
+const TABS = ["Adventure", "Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
 type Tab = (typeof TABS)[number];
+
+/** The tabs a place shows: a module (version 2) starts with its Adventure tab. */
+function tabsOf(view: PlaceView): readonly Tab[] {
+  return view.type === "module" ? TABS : TABS.filter((t) => t !== "Adventure");
+}
 
 /** What is open right now, or null on the home screen. */
 export let current: PlaceView | null = null;
@@ -48,6 +54,7 @@ function tabFor(kind: string): Tab {
   if (kind === "being") return "Beings";
   if (kind === "brick") return tab === "Beings" || tab === "Items" ? tab : "Items";
   if (kind === "lore" || kind === "table") return "Lore";
+  if (kind === "encounter") return current?.type === "module" ? "Adventure" : "Beings";
   return "Rules";
 }
 
@@ -88,7 +95,7 @@ export async function openPlace(place: Place, mode: "normal" | "read-only" | "ta
     return;
   }
   current = res.view;
-  tab = "Rules";
+  tab = res.view.type === "module" ? "Adventure" : "Rules";
   tableMode = false;
   search = null;
   for (const t of TABS) selected[t] = null;
@@ -154,13 +161,13 @@ async function draw() {
   const tabs = h(
     "nav",
     { class: "tabs", role: "tablist" },
-    TABS.map((t) => h("button", { class: `tab${t === tab ? " active" : ""}`, role: "tab", "aria-selected": t === tab ? "true" : "false", onClick: () => ((tab = t), void renderPlace()) }, t)),
+    tabsOf(view).map((t) => h("button", { class: `tab${t === tab ? " active" : ""}`, role: "tab", "aria-selected": t === tab ? "true" : "false", onClick: () => ((tab = t), void renderPlace()) }, t)),
   );
   const top = h(
     "header",
     { class: "topbar place" },
     brand(),
-    h("div", { class: "place-title" }, h("span", { class: "place-name" }, view.name), h("span", { class: "muted small" }, isWorld ? `World · ${view.systemName}` : "System")),
+    h("div", { class: "place-title" }, h("span", { class: "place-name" }, view.name), h("span", { class: "muted small" }, view.type === "module" ? `Module · ${view.worldName ? `${view.worldName} · ` : ""}${view.systemName}` : isWorld ? `World · ${view.systemName}` : "System")),
     tabs,
     searchBox(),
     h(
@@ -173,14 +180,15 @@ async function draw() {
       iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
       iconButton(ICONS.bin, "Recycle bin", () => void showNodeBin(ctx), { iconOnly: true, title: "Recycle bin: restore deleted things" }),
       iconButton(ICONS.home, "Home", () => void goHome()),
-      iconButton(ICONS.gear, isWorld ? "World settings" : "System settings", () => void placeSettings(view)),
+      iconButton(ICONS.gear, view.type === "module" ? "Module settings" : isWorld ? "World settings" : "System settings", () => void placeSettings(view)),
     ),
   );
   const banner = view.readOnly ? h("div", { class: "banner" }, h("strong", null, "Read-only. "), view.readOnlyReason ?? "", " Nothing you do here is saved.") : null;
 
   let list: HTMLElement;
   let editor: HTMLElement;
-  if (tab === "Rules") ({ list, editor } = await rulesPanels(ctx));
+  if (tab === "Adventure") ({ list, editor } = await adventurePanels(ctx));
+  else if (tab === "Rules") ({ list, editor } = await rulesPanels(ctx));
   else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
   else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
   else if (tab === "Rulebook") ({ list, editor } = await rulebookPanels(ctx));
@@ -216,6 +224,7 @@ async function draw() {
 
 function comingSoon(t: Tab, view: PlaceView) {
   const coming: Record<Tab, string> = {
+    Adventure: "",
     Rules: "",
     Beings: "",
     Items: "",
@@ -402,11 +411,13 @@ async function goHome() {
 }
 
 async function placeSettings(view: PlaceView) {
-  const isWorld = view.type === "world";
-  const d = openDialog(isWorld ? "World settings" : "System settings", { wide: true, onClose: () => void renderPlace() });
+  // Worlds and modules have the same settings (share, snapshots, backups); systems fewer.
+  const isWorld = view.type !== "system";
+  const word = view.type;
+  const d = openDialog(view.type === "module" ? "Module settings" : isWorld ? "World settings" : "System settings", { wide: true, onClose: () => void renderPlace() });
   const draw = async () => {
     const parts: HTMLElement[] = [
-      h("dl", { class: "facts" }, h("dt", null, "Name"), h("dd", null, view.name), ...(isWorld ? [h("dt", null, "Game system"), h("dd", null, view.systemName ?? "")] : [])),
+      h("dl", { class: "facts" }, h("dt", null, "Name"), h("dd", null, view.name), ...(view.worldName ? [h("dt", null, "World"), h("dd", null, view.worldName)] : []), ...(isWorld ? [h("dt", null, "Game system"), h("dd", null, view.systemName ?? "")] : [])),
       h("p", { class: "muted small" }, "Renaming and the card picture arrive here in a later milestone."),
     ];
 
@@ -415,8 +426,8 @@ async function placeSettings(view: PlaceView) {
     const snaps = h("input", { type: "checkbox" });
     const chat = h("input", { type: "checkbox" });
     parts.push(
-      h("h3", null, isWorld ? "Share this world" : "Share this system"),
-      h("p", { class: "muted" }, isWorld ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the world, its system, its pictures and its World Notes; never your settings or your API key." : "Saves one file with this system (and any system it is built on) to send to someone."),
+      h("h3", null, `Share this ${word}`),
+      h("p", { class: "muted" }, view.type === "module" ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the module, its world and system, and its pictures; never your settings or your API key." : isWorld ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the world, its system, its pictures and its World Notes; never your settings or your API key." : "Saves one file with this system (and any system it is built on) to send to someone."),
       h("label", { class: "check" }, history, "Include undo history"),
       isWorld ? h("label", { class: "check" }, snaps, "Include snapshots") : h("span"),
       h("label", { class: "check" }, chat, "Include the AI chat"),
