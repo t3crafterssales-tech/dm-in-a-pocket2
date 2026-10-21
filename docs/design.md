@@ -663,6 +663,10 @@ printing at real size for miniatures is not needed (maps print in the booklet an
   they are saved for the next session (with the module's play, never changing the world's map).
   Double-click any mark to select it and press Delete to erase it. Players can be allowed to use
   the pointer too (a permission).
+  - **The marker (Jeff, October 21, 2026):** a pen with a thickness slider (from a thin pencil line
+    to a fat marker), an opacity slider (100% solid, 50%, barely there), and five or six colours,
+    black included. The highlighter is the same pen set see-through.
+  - Later versions: stamps for marks (stars, arrows, little pictures). Not now.
 
 ### Open questions for version 2
 
