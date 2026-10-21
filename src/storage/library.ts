@@ -2,6 +2,8 @@
 //
 //   <root>/Systems/<id>.dmsys        one file per system (its rules, history and pictures)
 //   <root>/Worlds/<id>.dmworld       one file per world (its things, a copy of its system, pictures)
+//   <root>/Modules/<id>.dmmod        one file per module (version 2: an adventure, with a copy of its
+//                                    world and system underneath)
 //   <root>/Imported/                 worlds and systems from other people
 //   <root>/Backups/<worldId>/        automatic daily and weekly backups
 //   <root>/Snapshots/<worldId>/      named snapshots the user made
@@ -23,6 +25,7 @@ import { readZip, writeZip } from "./zip.ts";
 
 export const WORLD_EXT = ".dmworld";
 export const SYSTEM_EXT = ".dmsys";
+export const MODULE_EXT = ".dmmod";
 const DAY = 24 * 60 * 60 * 1000;
 
 export class LibraryError extends Error {}
@@ -31,6 +34,19 @@ export interface WorldInfo {
   id: Id;
   name: string;
   systemId: Id;
+  systemName: string;
+  picture: Id | null;
+  changed: number;
+  path: string;
+}
+
+export interface ModuleInfo {
+  id: Id;
+  name: string;
+  /** What it is built on: a world, or straight on a system (a setting-free module). */
+  baseId: Id;
+  baseType: "world" | "system";
+  baseName: string;
   systemName: string;
   picture: Id | null;
   changed: number;
@@ -51,20 +67,26 @@ export interface SystemInfo {
 export interface RecycledInfo {
   id: Id;
   /** What the user deleted. */
-  kind: "world" | "system";
+  kind: "world" | "system" | "module";
   name: string;
   time: number;
   /** Everything that went into the bin together, restored together. */
   worlds: { id: Id; name: string }[];
   systems: { id: Id; name: string }[];
+  /** Modules (version 2); older entries have none. */
+  modules?: { id: Id; name: string }[];
 }
 
-type LibraryDir = "Systems" | "Worlds" | "Imported" | "Backups" | "Snapshots" | ".pictures" | "Recycle bin";
-const LIBRARY_DIRS: LibraryDir[] = ["Systems", "Worlds", "Imported", "Backups", "Snapshots", ".pictures", "Recycle bin"];
+type LibraryDir = "Systems" | "Worlds" | "Modules" | "Imported" | "Backups" | "Snapshots" | ".pictures" | "Recycle bin";
+const LIBRARY_DIRS: LibraryDir[] = ["Systems", "Worlds", "Modules", "Imported", "Backups", "Snapshots", ".pictures", "Recycle bin"];
 
+/** An open world, or an open module (version 2), which works the same way. */
 export interface OpenWorld {
   ws: Workspace;
+  /** The world's id, or the module's. */
   worldId: Id;
+  /** Which kind of file is open. Older code that never sets it means a world. */
+  kind?: "world" | "module";
   path: string;
   readOnly: boolean;
   /** Why it is read-only, in plain words. */
@@ -164,6 +186,15 @@ export class Library {
     return join(this.dir("Worlds"), `${safeName(id)}${WORLD_EXT}`);
   }
 
+  modulePath(id: Id) {
+    return join(this.dir("Modules"), `${safeName(id)}${MODULE_EXT}`);
+  }
+
+  /** The file and the JSON inside it for an open world or module. */
+  private placeFile(open: OpenWorld): string {
+    return open.kind === "module" ? "module.json" : "world.json";
+  }
+
   /** Creates a new, empty system file (optionally a variant of another system). */
   createSystem(name: string, base: Id | null = null, author: string | null = null): Id {
     const ws = new Workspace();
@@ -211,10 +242,10 @@ export class Library {
   }
 
   /** Home-screen and flag-panel details stored with a world or system. */
-  readMeta(type: "world" | "system", id: Id): LayerMeta {
-    const path = type === "world" ? this.worldPath(id) : this.systemPath(id);
+  readMeta(type: "world" | "system" | "module", id: Id): LayerMeta {
+    const path = type === "world" ? this.worldPath(id) : type === "module" ? this.modulePath(id) : this.systemPath(id);
     if (!existsSync(path)) return {};
-    return readArchive(path, type === "world" ? "world.json" : "system.json", this, false).data.meta?.[id] ?? {};
+    return readArchive(path, `${type}.json`, this, false).data.meta?.[id] ?? {};
   }
 
   private writeSystem(ws: Workspace, systemId: Id, hooks: WriteHooks = {}, withHistory = true, extra: Partial<LayerMeta> = {}) {
@@ -268,6 +299,54 @@ export class Library {
     });
   }
 
+  // ---------- Modules (version 2) ----------
+
+  /** A new module on a world, or straight on a system (a setting-free module). */
+  createModule(name: string, baseId: Id, author: string | null = null): Id {
+    const ws = new Workspace();
+    ws.now = this.now;
+    let below: Layer[];
+    try {
+      below = this.layersBelow(baseId);
+    } catch {
+      throw new LibraryError("A module needs a world or a system to be built on.");
+    }
+    for (const l of below) ws.layers.set(l.id, l);
+    const id = ws.addLayer("module", name, baseId, author);
+    writeArchive(this.modulePath(id), "module.json", { ...ws.toFile(id), meta: { [id]: { changed: this.now() } } }, this);
+    return id;
+  }
+
+  listModules(): ModuleInfo[] {
+    return listFiles(this.dir("Modules"), MODULE_EXT).flatMap((path) => {
+      try {
+        const f = readArchive(path, "module.json", this, false).data;
+        const m = f.layers.find((x) => x.id === f.main)!;
+        const base = f.layers.find((x) => x.id === m.base);
+        const sys = base?.type === "world" ? f.layers.find((x) => x.id === base.base) : base;
+        // The shelf's own world or system name wins (it may have been renamed since).
+        const live = base?.type === "world" ? this.listWorlds().find((w) => w.id === base.id)?.name : this.listSystems().find((x) => x.id === m.base)?.name;
+        return [{ id: m.id, name: m.name, baseId: m.base!, baseType: base?.type === "world" ? ("world" as const) : ("system" as const), baseName: live ?? base?.name ?? "", systemName: sys?.name ?? "", picture: f.meta?.[m.id]?.picture ?? null, changed: f.meta?.[m.id]?.changed ?? 0, path }];
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  /** Opens a module, with its world and system from the shelves (or the copies inside it). */
+  openModule(id: Id, opts: { readOnly?: boolean; takeOver?: boolean } = {}): OpenWorld {
+    const path = this.modulePath(id);
+    if (!existsSync(path)) throw new LibraryError("That module isn't in the Modules folder.");
+    return this.openPlace("module", id, path, opts);
+  }
+
+  /** Moves a module to the recycle bin. */
+  deleteModule(id: Id): Id {
+    const m = this.listModules().find((x) => x.id === id);
+    if (!m) throw new LibraryError("That module isn't in the Modules folder.");
+    return this.recycle("module", m.name, [], [], [m]);
+  }
+
   /**
    * Opens a world. Its system comes from the Systems folder, so changes made to the system
    * elsewhere flow in. If the system file is missing (a world someone sent you), the copy
@@ -276,22 +355,32 @@ export class Library {
   openWorld(id: Id, opts: { readOnly?: boolean; takeOver?: boolean } = {}): OpenWorld {
     const path = this.worldPath(id);
     if (!existsSync(path)) throw new LibraryError("That world isn't in the Worlds folder.");
+    return this.openPlace("world", id, path, opts);
+  }
+
+  private openPlace(kind: "world" | "module", id: Id, path: string, opts: { readOnly?: boolean; takeOver?: boolean }): OpenWorld {
     const interrupted = clearInterruptedSave(path);
-    const { data, upgradedFrom, newer } = readArchive(path, "world.json", this);
-    const world = data.layers.find((l) => l.id === data.main);
-    if (!world) throw new LibraryError("That world file is damaged.");
+    const { data, upgradedFrom, newer } = readArchive(path, `${kind}.json`, this);
+    const main = data.layers.find((l) => l.id === data.main);
+    if (!main) throw new LibraryError(`That ${kind} file is damaged.`);
     const layers = new Map(data.layers.map((l) => [l.id, l]));
-    if (world.base) {
+    if (main.base) {
+      // Systems (and a module's world) missing from the shelf are put back from the copy inside.
       for (const embedded of data.layers.filter((l) => l.type === "system")) {
         if (!existsSync(this.systemPath(embedded.id))) {
           writeArchive(this.systemPath(embedded.id), "system.json", { format: FORMAT_VERSION, app: data.app, main: embedded.id, layers: [embedded], bin: [], history: [], redo: [] }, this);
         }
       }
-      for (const l of this.loadSystemChain(world.base)) layers.set(l.id, l);
+      for (const embedded of data.layers.filter((l) => l.type === "world")) {
+        if (!existsSync(this.worldPath(embedded.id))) {
+          writeArchive(this.worldPath(embedded.id), "world.json", { format: FORMAT_VERSION, app: data.app, main: embedded.id, layers: data.layers.filter((l) => l.type === "system" || l.id === embedded.id), bin: [], history: [], redo: [] }, this);
+        }
+      }
+      for (const l of this.layersBelow(main.base)) layers.set(l.id, l);
     }
     const ws = Workspace.fromFile({ ...data, layers: [...layers.values()] });
     ws.now = this.now;
-    const open: OpenWorld = { ws, worldId: id, path, readOnly: false, readOnlyReason: null, recovered: interrupted, inUseBy: null, lock: null, upgradedFrom };
+    const open: OpenWorld = { ws, worldId: id, kind, path, readOnly: false, readOnlyReason: null, recovered: interrupted, inUseBy: null, lock: null, upgradedFrom };
     if (newer) {
       open.readOnly = true;
       open.readOnlyReason = "Made with a newer version of DM in a Pocket. Update to edit it.";
@@ -320,9 +409,29 @@ export class Library {
     return open;
   }
 
+  /**
+   * Everything under a module or world, bottom first, from the shelves: a system chain, or a
+   * world's system chain plus the world itself.
+   */
+  layersBelow(baseId: Id): Layer[] {
+    if (existsSync(this.worldPath(baseId))) {
+      const { data } = readArchive(this.worldPath(baseId), "world.json", this, false);
+      const world = data.layers.find((l) => l.id === data.main);
+      if (!world) throw new LibraryError("That world file is damaged.");
+      let below: Layer[];
+      try {
+        below = world.base ? this.loadSystemChain(world.base) : [];
+      } catch {
+        below = orderChain(data.layers.filter((l) => l.type === "system"));
+      }
+      return [...below, world];
+    }
+    return this.loadSystemChain(baseId);
+  }
+
   /** Saves an open world: its own file, plus any of its systems that changed. */
   saveWorld(open: OpenWorld, hooks: WriteHooks = {}, extra: Partial<LayerMeta> = {}) {
-    if (open.readOnly) throw new LibraryError(open.readOnlyReason ?? "This world is read-only.");
+    if (open.readOnly) throw new LibraryError(open.readOnlyReason ?? `This ${open.kind ?? "world"} is read-only.`);
     if (open.lock && open.lock.heartbeat() === "lost") {
       open.readOnly = true;
       open.readOnlyReason = "Another computer took over this world.";
@@ -336,20 +445,35 @@ export class Library {
       const onDisk = existsSync(this.systemPath(l.id)) ? this.readSystemFile(l.id).layers.find((x) => x.id === l.id) : null;
       if (!onDisk || JSON.stringify(onDisk) !== JSON.stringify(l)) this.writeSystem(ws, l.id, {}, false);
     }
+    // A module's world, changed from inside the module (Edit parent), is written back to its file.
+    for (const l of chain) {
+      if (l.type !== "world" || l.id === open.worldId) continue;
+      const wp = this.worldPath(l.id);
+      if (!existsSync(wp)) continue;
+      const wf = readArchive(wp, "world.json", this, false).data;
+      const onDisk = wf.layers.find((x) => x.id === l.id);
+      if (onDisk && JSON.stringify(onDisk) === JSON.stringify(l)) continue;
+      const held = new WorldLock(wp, this.me, this.now).read();
+      if (held && held.session !== this.me.session && this.now() - held.heartbeat < LOCK_STALE_MS) {
+        throw new LibraryError(`${l.name} is open on ${held.machine}, so its changes can't be saved from here. Close it there first.`);
+      }
+      writeArchive(wp, "world.json", { ...wf, layers: wf.layers.map((x) => (x.id === l.id ? structuredClone(l) : x)) }, this);
+    }
+    const json = this.placeFile(open);
     const file: FileWithMeta = { ...ws.toFile(open.worldId), layers: chain.map((l) => structuredClone(l)) };
-    const old = existsSync(open.path) ? readArchive(open.path, "world.json", this, false).data.meta : undefined;
+    const old = existsSync(open.path) ? readArchive(open.path, json, this, false).data.meta : undefined;
     file.meta = { ...old, [open.worldId]: { ...old?.[open.worldId], ...extra, changed: this.now() } };
-    writeArchive(open.path, "world.json", file, this, hooks);
+    writeArchive(open.path, json, file, this, hooks);
   }
 
   setWorldPicture(open: OpenWorld, picture: Id | null) {
     this.setPicture("world", open.worldId, picture);
   }
 
-  /** Sets the picture on a world or system card. */
-  setPicture(type: "world" | "system", id: Id, picture: Id | null) {
-    const path = type === "world" ? this.worldPath(id) : this.systemPath(id);
-    const json = type === "world" ? "world.json" : "system.json";
+  /** Sets the picture on a world, system or module card. */
+  setPicture(type: "world" | "system" | "module", id: Id, picture: Id | null) {
+    const path = type === "world" ? this.worldPath(id) : type === "module" ? this.modulePath(id) : this.systemPath(id);
+    const json = `${type}.json`;
     if (!existsSync(path)) throw new LibraryError(`That ${type} isn't in the main folder.`);
     const f = readArchive(path, json, this, false).data;
     f.meta = { ...f.meta, [id]: { ...f.meta?.[id], picture } };
@@ -382,40 +506,45 @@ export class Library {
 
   // ---------- Recycle bin (whole worlds and systems) ----------
 
-  /** What else goes into the bin with a system: the systems built on it and every world using any of them. */
-  systemDependents(id: Id): { systems: SystemInfo[]; worlds: WorldInfo[] } {
+  /**
+   * What else goes into the bin with a system: the systems built on it, every world using any of
+   * them, and every module built on those worlds or systems.
+   */
+  systemDependents(id: Id): { systems: SystemInfo[]; worlds: WorldInfo[]; modules: ModuleInfo[] } {
     const all = this.listSystems();
     const family = new Set<Id>([id]);
     for (let grew = true; grew; ) {
       grew = false;
       for (const s of all) if (s.base && family.has(s.base) && !family.has(s.id)) (family.add(s.id), (grew = true));
     }
-    return { systems: all.filter((s) => s.id !== id && family.has(s.id)), worlds: this.listWorlds().filter((w) => family.has(w.systemId)) };
+    const worlds = this.listWorlds().filter((w) => family.has(w.systemId));
+    const under = new Set<Id>([...family, ...worlds.map((w) => w.id)]);
+    return { systems: all.filter((s) => s.id !== id && family.has(s.id)), worlds, modules: this.listModules().filter((m) => under.has(m.baseId)) };
   }
 
-  /** Moves a world to the recycle bin. Its backups and snapshots stay until the bin is emptied. */
+  /** Moves a world to the recycle bin, with the modules built on it. Its backups and snapshots stay until the bin is emptied. */
   deleteWorld(id: Id): Id {
     const w = this.listWorlds().find((x) => x.id === id);
     if (!w) throw new LibraryError("That world isn't in the Worlds folder.");
-    return this.recycle("world", w.name, [w], []);
+    return this.recycle("world", w.name, [w], [], this.listModules().filter((m) => m.baseId === id));
   }
 
-  /** Moves a system to the recycle bin, together with the systems built on it and the worlds that use them. */
+  /** Moves a system to the recycle bin, together with the systems built on it and the worlds and modules that use them. */
   deleteSystem(id: Id): Id {
     const s = this.listSystems().find((x) => x.id === id);
     if (!s) throw new LibraryError("That system isn't in the Systems folder.");
     const dep = this.systemDependents(id);
-    return this.recycle("system", s.name, dep.worlds, [s, ...dep.systems]);
+    return this.recycle("system", s.name, dep.worlds, [s, ...dep.systems], dep.modules);
   }
 
-  private recycle(kind: "world" | "system", name: string, worlds: WorldInfo[], systems: SystemInfo[]): Id {
+  private recycle(kind: "world" | "system" | "module", name: string, worlds: WorldInfo[], systems: SystemInfo[], modules: ModuleInfo[] = []): Id {
     const id = newId();
     const dir = join(this.dir("Recycle bin"), id);
     mkdirSync(dir, { recursive: true });
-    const info: RecycledInfo = { id, kind, name, time: this.now(), worlds: worlds.map((w) => ({ id: w.id, name: w.name })), systems: systems.map((s) => ({ id: s.id, name: s.name })) };
+    const info: RecycledInfo = { id, kind, name, time: this.now(), worlds: worlds.map((w) => ({ id: w.id, name: w.name })), systems: systems.map((s) => ({ id: s.id, name: s.name })), modules: modules.map((m) => ({ id: m.id, name: m.name })) };
     // The list is written first, so a crash part-way through still shows what went in.
     atomicWrite(join(dir, "entry.json"), JSON.stringify(info));
-    for (const f of [...worlds, ...systems]) {
+    for (const f of [...worlds, ...systems, ...modules]) {
       renameSync(f.path, join(dir, basename(f.path)));
       const lock = f.path + LOCK_SUFFIX;
       const held = new WorldLock(f.path, this.me, this.now).read();
@@ -452,8 +581,16 @@ export class Library {
     };
     for (const s of entry.systems) back(join(dir, basename(this.systemPath(s.id))), this.systemPath(s.id));
     for (const w of entry.worlds) back(join(dir, basename(this.worldPath(w.id))), this.worldPath(w.id));
+    for (const m of entry.modules ?? []) back(join(dir, basename(this.modulePath(m.id))), this.modulePath(m.id));
     rmSync(dir, { recursive: true, force: true });
     const restored = [entry];
+    // A module whose world or system is also in the bin brings it back too.
+    for (const m of entry.modules ?? []) {
+      const base = this.listModules().find((x) => x.id === m.id)?.baseId;
+      if (!base || existsSync(this.worldPath(base)) || existsSync(this.systemPath(base))) continue;
+      const other = this.listRecycleBin().find((e) => e.worlds.some((w) => w.id === base) || e.systems.some((x) => x.id === base));
+      if (other) restored.push(...this.restoreFromBin(other.id));
+    }
     for (const w of entry.worlds) {
       const systemId = this.listWorlds().find((x) => x.id === w.id)?.systemId;
       if (!systemId || existsSync(this.systemPath(systemId))) continue;
@@ -467,7 +604,7 @@ export class Library {
   emptyRecycleBin(entryIds?: Id[]) {
     for (const e of this.listRecycleBin()) {
       if (entryIds && !entryIds.includes(e.id)) continue;
-      for (const w of e.worlds) {
+      for (const w of [...e.worlds, ...(e.modules ?? [])]) {
         rmSync(this.backupDir(w.id), { recursive: true, force: true });
         rmSync(this.snapshotDir(w.id), { recursive: true, force: true });
       }
@@ -635,7 +772,7 @@ export class Library {
     const day = dateKey(this.now());
     const path = join(dir, `${day}.json`);
     if (existsSync(path) || !existsSync(open.path)) return false;
-    const { data } = readArchive(open.path, "world.json", this, false);
+    const { data } = readArchive(open.path, this.placeFile(open), this, false);
     atomicWrite(path, JSON.stringify(data));
     this.pruneBackups(open.worldId);
     return true;
