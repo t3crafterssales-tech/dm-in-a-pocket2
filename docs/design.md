@@ -1015,6 +1015,26 @@ the game:
 - **How common (Jeff, October 21, 2026):** each row is Common, Uncommon or Rare (or a number), and
   the app works out the ranges on the die. Typing ranges by hand still works.
 
+### Timers and the in-world clock (Jeff, October 21, 2026)
+
+- **Kinds of timer:** rounds ("the ritual finishes in 3 rounds", ticks with initiative); world time
+  ("the torch burns for 1 hour", ticks with the clock); repeating ("every 10 minutes underground,
+  roll Wandering Monsters", which rolls the table when it fires); and **real time** (a countdown on
+  everyone's screen for a puzzle or a collapsing bridge, with a sound at the end; the DM can pause
+  it).
+- **The in-world clock:** date and time in the world, day or night, with advance buttons (+1 round,
+  +10 minutes, +1 hour, Short rest, Long rest, a day of travel). Moving the clock moves everything
+  tied to it: torches burn down, conditions run out, resources come back on rests, repeating
+  timers fire.
+- **Lighting a torch** (a tracker on the sheet) starts its timer by itself, which matters in games
+  like The Ashen Vigil where light is life.
+- **A simple custom calendar (Jeff):** name the months and weekdays, set how many days each has, add
+  holidays. Defaults to a plain numbered calendar. Made in the system or world like anything else.
+- **Moons, seasons and weather (Jeff):** one or more moons with their own cycles (werewolves care);
+  seasons that change with the calendar; weather rolled each day from a weather roll table that
+  depends on the season.
+- Who sees which timers and the clock is the DM's choice.
+
 ### Open questions for version 2
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
