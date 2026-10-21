@@ -342,8 +342,8 @@ Initiative column in the grid, not a design decision.
 ### Themes
 
 - **Play it:** a character builder (race, class, background, point buy and Choices boxes walk a
-  player through it, printable sheet out), an encounter builder ("a hard fight for four level 3
-  heroes", using the same averages as the balance flags).
+  player through it, printable sheet out), an encounter builder (now the module's encounters and
+  the Codex's ready-made encounters; no difficulty rating, the DM judges).
 - **Test it:** a playtest simulator that plays a fight out a thousand times ("the party wins 82%
   of the time, usually with one hero down") and shows how a change moves that number.
 - **Make it look like a book:** a drag-and-drop page designer, sheets you lay out yourself, app
@@ -526,7 +526,7 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
 - **Everything is an encounter (Jeff, October 21, 2026).** A tavern full of role-playing, an
   ambush outside the gates, an investigation, a dungeon: each is an encounter, one kind of card.
   Each encounter holds read-aloud text, "What's really going on" notes, monsters dragged from the
-  Codex (with how hard the fight is), descriptions, pictures, maps, treasure and handouts.
+  Codex, descriptions, pictures, maps, treasure and handouts.
 - **Encounters inside encounters, any depth.** The goblin ambush outside the gates holds the well
   beside the road; going down the well is its own encounter, inside the ambush. The cave holds
   Room 1, Room 2, Room 3... each a full encounter with its own notes, monsters and pictures.
@@ -556,6 +556,15 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
 - **The booklet:** the module prints as an adventure book (cover, introduction, encounters with
   boxed read-aloud text, then automatic appendices of every monster's stat block and the
   handouts), built like the rulebook.
+- **New module (Jeff, October 21, 2026):** a pop-up like New world: name, cover picture, then
+  "What is it built on?", a world (world module) or just a system (setting-free). It opens
+  straight away.
+- **Encounters in the Codex (Jeff, October 21, 2026):** an Encounters section holds ready-made
+  encounters ("Tavern brawl", "Bandit ambush", "Collapsed bridge") made in the system or world.
+  Drag one into a module's tree and it becomes that module's own copy, everything inside it
+  included, to change freely. Any encounter can be saved to the Codex for reuse.
+- **No difficulty rating (Jeff, October 21, 2026).** Encounters don't judge how hard a fight is;
+  the DM does. (The playtest simulator, later, is where a DM can test a fight if they want to.)
 - **The booklet uses the same export screen as the rulebook** (one more book type, "Adventure",
   beside the Player's guide and the Monster book), so it is learned once. One extra choice there:
   **encounter numbers** full (2.1.1), top level only (2), or off (Jeff, October 21, 2026). With
