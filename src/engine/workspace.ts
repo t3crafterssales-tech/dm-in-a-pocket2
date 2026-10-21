@@ -95,11 +95,17 @@ export class Workspace {
 
   // ---------- Layers ----------
 
-  /** Creates a system (optionally a variant of another system) or a world on a system. */
+  /**
+   * Creates a system (optionally a variant of another system), a world on a system, or a module
+   * on a world or straight on a system. Nothing is built on a module.
+   */
   addLayer(type: LayerType, name: string, base: Id | null = null, author: string | null = null): Id {
     if (type === "world" && !base) throw new EngineError("A world needs a system.");
+    if (type === "module" && !base) throw new EngineError("A module needs a world or a system.");
     if (base && !this.layers.has(base)) throw new EngineError("That system doesn't exist.");
-    if (base && this.layers.get(base)!.type === "world") throw new EngineError("Only a system can be built on.");
+    const below = base ? this.layers.get(base)!.type : null;
+    if (below === "module") throw new EngineError("Nothing can be built on a module.");
+    if (below === "world" && type !== "module") throw new EngineError("Only a module can be built on a world.");
     const id = newId();
     this.layers.set(id, { id, type, name, author, base, nodes: {}, changes: {}, hidden: [] });
     return id;

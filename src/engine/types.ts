@@ -31,6 +31,7 @@ export type NodeKind =
   | "item"
   | "lore"
   | "table"
+  | "encounter"
   | "category";
 
 export type Source = "template" | "mine" | "others";
@@ -120,7 +121,8 @@ export interface NodeChange {
   attachments?: Attachment[];
 }
 
-export type LayerType = "system" | "world";
+/** A module (version 2) is an adventure, built on a world or straight on a system. */
+export type LayerType = "system" | "world" | "module";
 
 export interface Layer {
   id: Id;
