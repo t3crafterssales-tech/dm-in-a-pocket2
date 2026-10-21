@@ -85,6 +85,11 @@ textarea{width:100%;resize:vertical;min-height:70px}
 .oneline{width:100%;border:1px solid transparent;background:transparent;padding:4px 6px;margin-left:-6px;color:var(--muted);font-style:italic}
 .oneline:hover,.oneline:focus{border-color:var(--line);background:var(--card);font-style:normal;color:var(--ink)}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.std{margin-top:4px;padding:8px 10px;border-radius:10px;background:var(--chip);border:1px dashed var(--line)}
+.std p{margin:2px 0 4px;font-style:italic}
+.stdtag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.stdline{margin:4px 0 0;color:var(--muted);font-style:italic}
+textarea.oneline{min-height:0;resize:vertical;font-style:normal;color:var(--ink);border-color:var(--line);background:var(--card);margin-left:0}
 .tag{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--chip);color:var(--muted)}
 .tag.acc{background:var(--accent-soft);color:var(--accent)}
 .quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
@@ -157,14 +162,16 @@ details.more .inner{padding:0 14px 14px;display:flex;flex-direction:column;gap:1
 .dot.y{background:var(--yellow)}.dot.r{background:var(--red)}.dot.g{background:var(--green)}
 
 /* Modal + toast */
-.scrim{position:fixed;inset:0;background:rgba(20,12,6,.45);display:grid;place-items:center;z-index:50;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.modal{background:var(--paper);border:1px solid var(--line);border-radius:14px;width:min(520px,100%);max-height:100%;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.scrim{position:fixed;inset:0;background:rgba(20,12,6,.38);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);animation:fade .18s ease-out;display:grid;place-items:center;z-index:50;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal{background:var(--paper);border:1px solid var(--line);border-radius:16px;width:min(520px,100%);max-height:100%;display:flex;flex-direction:column;box-shadow:0 1px 0 rgba(255,255,255,.35) inset,0 2px 4px rgba(40,22,8,.10),0 10px 20px rgba(40,22,8,.16),0 28px 60px rgba(40,22,8,.28);transform-origin:50% 40%;animation:lift .22s cubic-bezier(.2,.8,.25,1)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes lift{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 .modal header{padding:16px 18px 6px;font-family:var(--display);font-size:22px}
 .modal .mb{padding:6px 18px 12px;overflow:auto;display:flex;flex-direction:column;gap:10px}
 .modal footer{padding:10px 18px 16px;display:flex;justify-content:flex-end;gap:8px}
 .flagrow{display:flex;gap:10px;padding:10px;border:1px solid var(--line);border-left-width:4px;border-radius:8px;background:var(--card)}
 .flagrow.y{border-left-color:var(--yellow)}.flagrow.r{border-left-color:var(--red)}.flagrow.g{border-left-color:var(--green)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;z-index:60;font-size:14px;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;z-index:60;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 4px 10px rgba(40,22,8,.18),0 16px 36px rgba(40,22,8,.28)}
 .note{background:var(--accent-soft);border:1px solid var(--accent);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14px}
 
 @media (max-width:860px){
@@ -190,7 +197,7 @@ details.more .inner{padding:0 14px 14px;display:flex;flex-direction:column;gap:1
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9);
-const KEY="dmip-feel-mockup-1";
+const KEY="dmip-feel-mockup-2";
 
 /* ---------- Starter content (the Codex) ---------- */
 const SECTIONS=[
@@ -232,6 +239,27 @@ const START=[
   {id:uid(),sec:"classes",kind:"class",name:"Fighter",ic:"⚔️",src:"starter",f:{},line:""},
   {id:uid(),sec:"classes",kind:"class",name:"Cleric",ic:"✝️",src:"starter",f:{},line:""}
 ];
+const DESC={
+  "Battleaxe":"A broad, single-bladed axe on a stout haft. Heavy enough to split a shield, balanced enough to swing one-handed.",
+  "Greataxe":"A huge two-handed axe with a crescent blade. Slow to swing, terrible when it lands.",
+  "Handaxe":"A small, light axe that is as handy for chopping kindling as for throwing at a charging foe.",
+  "Longsword":"A straight, double-edged blade about three feet long, with a cross-guard. The classic knight's sword.",
+  "Shortsword":"A short, quick blade made for close quarters, favoured by scouts and skirmishers.",
+  "Dagger":"A simple double-edged knife. Easy to hide, easy to throw, and never far from hand.",
+  "Club":"A length of hardwood, thicker at one end. Crude, cheap and effective.",
+  "Warhammer":"A hammer with a heavy iron head, built to crush armour rather than cut it.",
+  "Quarterstaff":"A long, sturdy pole of hardwood, used for walking and for fighting alike.",
+  "Shortbow":"A small bow of bent wood and sinew, light enough to shoot from horseback.",
+  "Leather Armour":"A breastplate and shoulder guards of leather stiffened by boiling in oil, with softer leather beneath.",
+  "Chain Mail":"Interlocking metal rings worn over a padded coat. Heavy and noisy, but it turns most blades.",
+  "Shield":"A round shield of wood and leather, carried on the off arm to turn aside blows.",
+  "Torch":"A wooden stick wrapped in pitch-soaked cloth. Lights the way and keeps the dark at bay, for a while.",
+  "Rope (50 ft)":"Fifty feet of strong hempen rope. Every adventurer's best friend.",
+  "Orc":"A fierce, tusked raider that lives for battle and plunder.",
+  "Wolf":"A lean grey hunter that runs in packs and drags down prey that strays from the group.",
+  "Ogre":"A hulking, dim-witted brute that eats anything it can catch."
+};
+START.forEach(x=>{ if(!x.line&&DESC[x.name]) x.line=DESC[x.name]; });
 const DICE=["1d4","1d6","1d8","1d10","1d12","2d6","2d8"];
 const DTYPES=["slashing","piercing","bludgeoning","fire","cold","lightning","acid","poison","necrotic","radiant","force","thunder","psychic"];
 const HANDS=["One-handed","Two-handed","Versatile"];
@@ -268,7 +296,7 @@ function prints(it){
     if(f.light) lines.push("Bright light for "+f.light+" ft and dim light for "+f.dim+" ft more. Burns for "+f.burn+" hour"+(f.burn==1?"":"s")+" on "+f.fuel.toLowerCase()+".");
   }
   (it.ench||[]).forEach(e=>lines.push(e.name+". "+enchSentence(e)));
-  if(it.line) lines.unshift(it.line);
+  const d=it.line==null?it.std:it.line; if(d) lines.unshift(d);
   return {stat, lines};
 }
 
@@ -336,12 +364,17 @@ function stepper(field,val,step){ return '<div class="stepper"><button data-act=
 function costBox(f){ return '<div class="numunit">'+stepper("cost",f.cost,1)+'<select id="cur" data-sel="cur" aria-label="Currency">'+CURS.map(c=>'<option'+(c===f.cur?" selected":"")+'>'+c+'</option>').join("")+'</select></div>'; }
 function weightBox(f){ const shown=S.units==="kg"?Math.round(f.wt*0.4536*10)/10:f.wt; return '<div class="numunit">'+stepper("wt",shown,1)+'<span class="unitswitch"><button class="'+(S.units==="lb"?"on":"")+'" data-act="units" data-v="lb">lb</button><button class="'+(S.units==="kg"?"on":"")+'" data-act="units" data-v="kg">kg</button></span></div>'; }
 function matBox(f){ return '<select id="mat" data-sel="mat" aria-label="Material">'+S.mats.map(m=>'<option'+(m===f.mat?" selected":"")+'>'+esc(m)+'</option>').join("")+'<option value="__add">+ Add a material…</option></select>'; }
+function descBlock(it){
+  if(it.src==="starter") return '<p class="stdline">'+esc(it.line||"")+'</p>';
+  if(it.line==null&&it.std) return '<div class="std"><span class="stdtag">Standard description</span><p>'+esc(it.std)+'</p><div class="row"><button class="link" data-act="ownDesc">Write my own</button><span class="muted" style="font-size:12px">or leave it. This is what prints.</span></div></div>';
+  return '<textarea class="oneline" id="ln" data-txt="line" rows="2" placeholder="A few words about it: what it looks like, where it comes from…" aria-label="Description">'+esc(it.line||"")+'</textarea>'+(it.std?'<button class="link" style="font-size:13px" data-act="stdDesc">Back to the standard description</button>':'');
+}
 function sheet(it){
   const f=it.f, s=secOf(it.sec), from=it.from&&byId(it.from);
   let h='<div class="sheet">';
   h+='<div class="head"><label class="portrait" title="Add a picture">'+(it.pic?'<img alt="" src="'+esc(it.pic)+'">':'<span><span class="big">'+it.ic+'</span>Add picture</span>')+'<input type="file" accept="image/*" id="pic" hidden></label><div style="min-width:0">'+
     '<input class="name" id="nm" data-txt="name" value="'+esc(it.name)+'" aria-label="Name">'+
-    '<input class="oneline" id="ln" data-txt="line" value="'+esc(it.line||"")+'" placeholder="Add a line about it: what it looks like, where it comes from…" aria-label="One line description">'+
+    descBlock(it)+
     '<div class="tags"><span class="tag acc">'+s[2]+' '+s[1]+'</span>'+(from?'<span class="tag">Started from '+esc(from.name)+'</span>':'')+(it.src==="mine"?'<span class="tag">Made by you</span>':'<span class="tag">From the starter</span>')+'</div></div></div>';
   h+='<div class="quick">';
   if(it.kind==="weapon"){
@@ -416,7 +449,8 @@ function modal(flags){
 function openSheet(id){ S.view="sheet"; S.openId=id; UI.mpane="sheet"; UI.moreOpen=false; }
 function makeCopy(src){
   const c=JSON.parse(JSON.stringify(src)); c.id=uid(); c.src="mine"; c.from=src.id;
-  c.name=src.src==="starter"?"My "+src.name:src.name+" (copy)"; S.codex.push(c); S.recent=[c.id].concat(S.recent.filter(x=>x!==c.id)); openSheet(c.id);
+  c.name=src.src==="starter"?"My "+src.name:src.name+" (copy)";
+  if(src.src==="starter"){ c.std=src.line||""; c.line=null; } S.codex.push(c); S.recent=[c.id].concat(S.recent.filter(x=>x!==c.id)); openSheet(c.id);
   toast("Made your own "+src.name+". Change anything you like."); setTimeout(()=>{const n=$("#nm"); if(n){n.focus(); n.select();}},30);
 }
 function blank(sec){
@@ -443,6 +477,8 @@ const A={
   toggle(el){ const it=byId(S.openId); if(!guard(it)) return; const a=it.f[el.dataset.f]; const v=el.dataset.v; const i=a.indexOf(v); if(i>=0) a.splice(i,1); else a.push(v); },
   step(el){ const it=byId(S.openId); if(!guard(it)) return; const f=el.dataset.f, d=+el.dataset.d; if(f==="wt"&&S.units==="kg"){ it.f.wt=Math.max(0,Math.round((it.f.wt+d/0.4536)*10)/10); } else it.f[f]=Math.max(0,Math.round(((+it.f[f]||0)+d)*10)/10); },
   units(el){ S.units=el.dataset.v; },
+  ownDesc(){ const it=byId(S.openId); it.line=it.std||""; setTimeout(()=>{const t=$("#ln"); if(t){t.focus(); t.setSelectionRange(t.value.length,t.value.length);}},30); },
+  stdDesc(){ const it=byId(S.openId); it.line=null; toast("Back to the standard description."); },
   settings(){ UI.modal={type:"settings"}; },
   flags(){ UI.modal={type:"flags"}; },
   close(){ UI.modal=null; },
