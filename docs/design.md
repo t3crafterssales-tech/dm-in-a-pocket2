@@ -1114,6 +1114,9 @@ Kept deliberately simple: groups you drag around, not a full page designer.
   class, spell slots used, spells, gold and coins, experience, ammunition and torches,
   conditions, Inspiration and the inventory list.
 - **Save the layout, then print or export it** (PDF), over as many pages as it needs.
+- **The same layout on screen (Jeff, October 21, 2026).** A player looking at their character sees
+  this layout: the default one until they rearrange it, then their own. Screen and paper always
+  match. (The print ticks only affect paper; on screen every value still shows.)
 - **Suggested by Claude:** the system's designer saves the default layout for everyone; a player can
   adjust the layout of their own sheet, which stays theirs (the usual pencil mark and "Use the
   system's" to go back).
