@@ -527,6 +527,11 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
   (the first encounter can become the ninth), drop onto an encounter to put it inside. Shift and
   Ctrl select several to move together, and the numbers (1, 1.1, 2...) update by themselves. Each
   move is one undo step.
+- **Deleting an encounter never deletes what's inside it (Jeff, October 21, 2026).** The
+  encounters inside move up one level into its place, in the same order, and are renumbered (delete
+  2. The cave, and Room 1 to Room 5 become encounters 2 to 6). Same idea as deleting a parent
+  promotes its variants. The deleted encounter goes to the recycle bin remembering what was inside
+  it, so restoring it (or Ctrl+Z) puts them back inside.
 - **The map view** shows encounters as boxes with "Leads to" as arrows, for seeing how the
   adventure branches.
 - **The booklet:** the module prints as an adventure book (cover, introduction, encounters with
