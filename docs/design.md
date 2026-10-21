@@ -392,14 +392,27 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
   nobody clicks into each character or player. Example: Ken (assistant DM) can change the notes
   but initiative is hidden from him.
 - **Share with…** on any one page or handout shares just that, without touching the grid.
+- **Joining with a PIN, no account (Jeff's idea, October 21, 2026).** The DM's app hosts the
+  session. Each player gets their own random 5-digit PIN from the Party section; the PIN is both
+  the key and who you are, so Ken's PIN opens Ken's view with Ken's permissions. PINs end with
+  the session (or carry over if the DM chooses), can be re-rolled or revoked in one click, and
+  lock after a few wrong tries. Players join in a web browser (laptop, tablet or phone, nothing to
+  install) or a QR code on the DM's screen. Each player sees their own desktop: their character,
+  the initiative as the DM allows, the journal pages and handouts shared with them.
+- **Hidden monsters.** Monsters join initiative hidden; the DM reveals each one when it appears
+  (or all at once). Players see monster health as words ("unhurt", "bloodied", "nearly down")
+  unless the DM shares numbers. Hidden rolls stay on the DM's screen.
+- **At home versus far away.** On the same home network, the DM's computer is reached directly and
+  costs nothing. Players in other houses need a small relay in the middle, because home routers
+  block incoming connections; the relay only matches a PIN to a session and passes messages, with
+  no accounts. Running it has a small monthly cost, so remote play may be an optional extra.
 
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
   points)?
-- How players connect without accounts (Promise 1): an invite code on the same home network, or a
-  link the DM sends. Permissions only matter once players connect, and this is the first step
-  toward the virtual tabletop.
+- Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
+  extra), or start with same-network play only?
 - The order of the themes, and which ones make version 2 rather than version 3.
 
 ## Idea parking lot
