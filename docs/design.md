@@ -1124,6 +1124,23 @@ Kept deliberately simple: groups you drag around, not a full page designer.
   adjust the layout of their own sheet, which stays theirs (the usual pencil mark and "Use the
   system's" to go back).
 
+### The book designer (Jeff, October 21, 2026)
+
+Kept simple in version 2: **one layout**. Several layouts, fonts, graphics, borders and dividers to
+drag in and resize come in a later version.
+
+- **Books are picked from the Codex.** Presets as today (Player's guide, Monster book, Adventure
+  booklet...): a monster manual picks the core rules for running monsters and the monster list.
+- **Choose exactly what goes in:** a tick list like the journal's, with **Select all** and
+  **Unselect all**, by section, category or single thing. A book of only Giants: unselect all
+  monsters, tick the giants, and it's a monster manual of the giants in your world. A search box
+  and the Codex filters help pick.
+- **Front pages built from blocks** (like a journal page): a cover page, a credits or copyright
+  page (the SRD credit line is still added automatically when needed), a foreword. Each has a
+  **priority** that sets its place: the cover is 1, credits 2, and so on.
+- **An index and contents are made automatically**; a tick decides whether they print.
+- Book selections and front pages can be saved to the Codex and reused, like anything else.
+
 ### Open questions for version 2
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
