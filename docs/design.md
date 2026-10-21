@@ -994,6 +994,23 @@ Wi-Fi hotspot, and players join with their PINs.
 access behind one storage layer, and give every hover or shortcut a tap alternative, so the
 Android version is a new shell, not a rewrite.
 
+### Roll tables (Jeff, October 21, 2026)
+
+Version 1 already has roll tables (Lore tab): a die (d6, 2d6, d100...), rows with ranges (1-3, 4-5,
+6), text, and a result that can link to anything in the Codex. Version 2 makes them a big part of
+the game:
+
+- **Made in the system (or a world or module, like everything else)** from what's in the Codex;
+  they flow down into every world and module, which can change their own copy.
+- **A Roll tables section in the Codex:** pin, star, change, share, copy, and **drag straight into
+  modules and encounters** ("Wandering monsters" inside 2. The cave).
+- **Rolled live in the dice tray:** the result goes to the chat, with the usual who-sees-it choice.
+- **Results can do things:** a monster result offers "Add to initiative" (with How many?), an item
+  result offers "Give to..." a character, any result can be shown to players.
+- **A row can roll on another table** ("roll on Treasure"), so tables chain.
+- **Make a table from the Codex in one go:** pick a section and a filter (every challenge 1/4
+  monster, every potion) and the rows fill themselves, evenly spread over the die; adjust after.
+
 ### Open questions for version 2
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
