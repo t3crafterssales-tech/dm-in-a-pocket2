@@ -921,6 +921,15 @@ format is the same everywhere, so a world made on the PC opens on the phone and 
 - The Claude key goes in the phone's own protected storage (Android Keystore).
 - Publishing on Google Play.
 
+**It may not do everything.** The phone version might only cover what version 1 does (building and
+reading a world, rolling, Table mode) while the PC grows on; that's still DM in a Pocket, in a
+pocket, which is where the name came from.
+
+**The name (open question).** "DM in a Pocket" is instantly understood, but "DM" is the D&D word;
+"GM in a Pocket" fits every system; "World in a Pocket" is broader but less clear. Check for
+trademarks and existing apps before publishing (a quick search on October 21, 2026 found no
+"DM in a Pocket" app, but similar ones such as Pocket GM and Pocket Campaigns).
+
 **A nice bonus:** at a campsite with no internet, the phone can still host a session on its own
 Wi-Fi hotspot, and players join with their PINs.
 
