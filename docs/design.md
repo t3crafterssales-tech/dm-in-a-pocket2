@@ -521,8 +521,14 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
 - **Printing follows the nesting:** 1. Goblin ambush, 1.1 The well; 2. The cave, 2.1 Room 1, 2.2
   Room 2... An encounter prints with everything inside it, and "Leads to" prints as "see 2. The
   cave".
-- **Two views:** the outline (nesting, in book order, drag to reorder or to move one inside
-  another) and a map view of encounters as boxes, with "Leads to" as arrows.
+- **The tree view, like File Explorer (Jeff, October 21, 2026).** The module's encounters show as a
+  folder tree: the module at the top, its encounters under it, and a little arrow to open any
+  encounter and see what's inside. Drag to rearrange: drop between two encounters to move it there
+  (the first encounter can become the ninth), drop onto an encounter to put it inside. Shift and
+  Ctrl select several to move together, and the numbers (1, 1.1, 2...) update by themselves. Each
+  move is one undo step.
+- **The map view** shows encounters as boxes with "Leads to" as arrows, for seeing how the
+  adventure branches.
 - **The booklet:** the module prints as an adventure book (cover, introduction, encounters with
   boxed read-aloud text, then automatic appendices of every monster's stat block and the
   handouts), built like the rulebook.
