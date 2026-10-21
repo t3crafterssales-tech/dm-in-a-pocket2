@@ -440,7 +440,20 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
 - **Who moves it on:** anyone with permission on the tracker (the DM, an assistant GM, an
   initiative keeper, or every player). It's live for everyone: whoever clicks first, all screens
   update. A table rule "advance it yourself when your turn is done" is everyone having permission;
-  each player then sees an **End my turn** button only on their own turn.
+  each player then sees an **End my turn** button only on their own turn. (Jeff's own table: the
+  tracker is open to everyone and players advance it themselves, so the DM is free to prepare
+  speeches, role-play and think about tactics. Multitasking is the hardest part of DMing.)
+- **Styles (each a setting, more from mods later):**
+  - **List:** cards in a column at the side (the default).
+  - **Carousel:** character portraits across the top; whoever's turn it is sits in the middle,
+    large; on Next turn it slides aside and shrinks, and the next portrait slides in and grows.
+  - **Pop up my sheet on my turn:** a player's character sheet opens on their screen when their
+    turn comes.
+- **A little information beside each name, chosen by the DM:** hit points, armour class, a Dexterity
+  or saving throw bonus, anything from the sheet. Each can be switched on or off, for a quick
+  glance ("what's its armour class again? 15"). What players see of monsters still follows
+  permissions.
+- **Show character names or player names** (a setting).
 
 ### The journal
 
