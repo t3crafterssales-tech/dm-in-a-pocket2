@@ -899,6 +899,35 @@ printing at real size for miniatures is not needed (maps print in the booklet an
   chosen) or a picture (PNG). Ticks for what goes on it: the grid, pins, labels, kept table marks,
   and DM-only notes (off by default, so a player copy never gives away secrets).
 
+### DM in a Pocket on a phone (Jeff, October 21, 2026; a later version)
+
+The original dream: DM in a Pocket on an Android phone, taken camping, into the woods or to a
+friend's house, with your worlds inside it, running with no computer and no internet (only the AI
+needs internet). This will be done after version 2.
+
+**Why it's possible:** the app is built with web technology (HTML, CSS, TypeScript), the same kind
+that runs inside Android apps through a wrapper such as Capacitor. The engine (nodes, layers,
+undo, flags, the rulebook) is plain TypeScript with no Windows or Electron in it. The world file
+format is the same everywhere, so a world made on the PC opens on the phone and back again
+(through a shared folder like Dropbox or OneDrive, or by sending the file).
+
+**What has to change for the phone:**
+- The few places that touch files (saving, the picture store, backups, the lock file, ids) go
+  through one small "storage" layer, with a computer version and a phone version.
+- A phone layout: one column at a time, with the Codex as its own tab (as the feel-pass mockup
+  already did on narrow screens); everything big enough for a finger.
+- Every hover and keyboard action needs a tap version: long-press instead of hover, a Copy menu
+  instead of Ctrl+D, drag by holding.
+- The Claude key goes in the phone's own protected storage (Android Keystore).
+- Publishing on Google Play.
+
+**A nice bonus:** at a campsite with no internet, the phone can still host a session on its own
+Wi-Fi hotspot, and players join with their PINs.
+
+**Phone-ready from now on (proposed rule):** keep the engine free of anything Windows-only, keep file
+access behind one storage layer, and give every hover or shortcut a tap alternative, so the
+Android version is a new shell, not a rewrite.
+
 ### Open questions for version 2
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
