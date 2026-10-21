@@ -540,6 +540,10 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
 - **The booklet:** the module prints as an adventure book (cover, introduction, encounters with
   boxed read-aloud text, then automatic appendices of every monster's stat block and the
   handouts), built like the rulebook.
+- **The booklet uses the same export screen as the rulebook** (one more book type, "Adventure",
+  beside the Player's guide and the Monster book), so it is learned once. One extra choice there:
+  **encounter numbers** full (2.1.1), top level only (2), or off (Jeff, October 21, 2026). With
+  numbers off, links read by name and page instead ("the tracks lead to The Cave, page 14").
 - **A module booklet is a DM book** (decided by Jeff, October 21, 2026), so "What's really going
   on" belongs in it. At the table, the permissions keep secret parts off players' screens.
 - **Running it:** the tabletop shows the current encounter, its read-aloud text and what's inside
