@@ -55,6 +55,7 @@ function entryBlock(e: Entry, data: BookData, depth: number): HTMLElement[] {
     img.alt = "";
     b.appendChild(img);
   }
+  if (e.readAloud) for (const [i, p] of e.readAloud.split(/\n+/).filter((x) => x.trim()).entries()) b.appendChild(el("p", `read-aloud${i ? " more" : ""}`, p.trim()));
   if (e.stats) b.appendChild(el("div", "stats", e.stats));
   for (const p of e.paragraphs) b.appendChild(el("p", "", p));
   // Only things printed in this book get a page reference.

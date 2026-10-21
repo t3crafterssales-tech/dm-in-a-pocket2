@@ -22,6 +22,8 @@ import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
 import { createLore, loreList, rollTable } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
 import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
+import { buildAdventureBook } from "./adventure-book.ts";
+import type { EncounterNumbering } from "./adventure-book.ts";
 import { addToEncounter, createEncounter, deleteEncounter, encounterTree, moveEncounters, placeEncounter, saveEncounterToCodex } from "./encounters.ts";
 import type { EncounterNode } from "./encounters.ts";
 import { CODEX_SECTIONS, addChoice, addChoiceOptions, codexSections, makeOwnCopy, makeVariant, moveToSection as moveCodex, newInSection, quickView } from "./codex.ts";
@@ -128,7 +130,10 @@ export interface HistoryView {
 }
 
 export interface BookRequest {
-  type: BookType;
+  /** "adventure" is a module's booklet: its encounters in order, with appendices. */
+  type: BookType | "adventure";
+  /** Adventure booklets: encounter numbers in full (2.1.3), top level only, or off. */
+  encounterNumbers?: EncounterNumbering;
   /** Chapters to include, in order; leave out for the book type's usual chapters. */
   chapters?: ChapterId[];
   variants?: "differences" | "full";
@@ -324,7 +329,12 @@ export class Editing {
 
   /** The book's content for the chosen book type, plus the names its page references need. */
   book(opts: BookRequest): BookData {
-    const type = BOOK_TYPES.includes(opts.type) ? opts.type : "everything";
+    const pageSize = opts.pageSize === "A4" ? "A4" : "Letter";
+    if (opts.type === "adventure" && this.ws.layer(this.layer).type === "module") {
+      const numbering = opts.encounterNumbers === "top" || opts.encounterNumbers === "off" ? opts.encounterNumbers : "full";
+      return { ...buildAdventureBook(this.ws, this.layer, { numbering, author: opts.author?.trim() || null }), pageSize };
+    }
+    const type = BOOK_TYPES.includes(opts.type as BookType) ? (opts.type as BookType) : "everything";
     const chapters = Array.isArray(opts.chapters) ? opts.chapters.filter((c): c is ChapterId => c in CHAPTER_TITLES) : undefined;
     const book = buildBook(this.ws, this.layer, { type, chapters, variants: opts.variants === "full" ? "full" : "differences", monstersByChallenge: !!opts.monstersByChallenge, author: opts.author?.trim() || null });
     const names: Record<Id, string> = {};
@@ -336,7 +346,7 @@ export class Editing {
       e.variants.forEach(walk);
     };
     book.chapters.forEach((c) => c.entries.forEach(walk));
-    return { book, names, pageSize: opts.pageSize === "A4" ? "A4" : "Letter" };
+    return { book, names, pageSize };
   }
 
   // ---------- History ----------

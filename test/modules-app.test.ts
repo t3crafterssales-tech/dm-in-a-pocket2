@@ -67,3 +67,25 @@ test("building a module: the encounter tree, ready-made encounters from the Code
   backend.undo();
   assert.equal(backend.encounterTree().length, 1);
 });
+
+test("a module's Rulebook tab offers the adventure booklet first, and it saves as a Word file too", () => {
+  const { backend, world } = setup();
+  const mill = backend.createModule({ name: "The Mill on Ash Creek", picture: null, baseId: world });
+  backend.open({ type: "module", id: mill });
+  assert.equal(backend.bookChoices().types[0]!.id, "adventure");
+  const ready = backend.codex().find((s) => s.key === "encounters")!;
+  backend.placeEncounter(ready.entries.find((e) => e.name === "Wolves at dusk")!.id, null);
+  const data = backend.book({ type: "adventure", encounterNumbers: "full" });
+  assert.deepEqual(data.book.chapters.map((c) => c.title), ["Introduction", "The adventure", "Appendix: Creatures"]);
+  assert.equal(data.book.chapters[1]!.entries[0]!.title, "1 Wolves at dusk");
+  assert.ok(data.book.credits.some((c) => c.includes("SRD 5.2")), "SRD wolves bring the SRD credit");
+  const dest = join(mkdtempSync(join(tmpdir(), "dmip-advword-")), "mill.docx");
+  return backend.bookWord({ type: "adventure" }, dest).then((p) => assert.equal(p, dest));
+});
+
+test("worlds and systems don't offer the adventure booklet", () => {
+  const { backend, world } = setup();
+  backend.open({ type: "world", id: world });
+  assert.ok(!backend.bookChoices().types.some((t) => t.id === "adventure"));
+  assert.equal(backend.book({ type: "adventure" }).book.subtitle, "Complete Rulebook", "asking anyway gives the full rulebook");
+});

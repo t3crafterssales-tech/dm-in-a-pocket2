@@ -31,6 +31,10 @@ p { margin: 0 0 5pt; text-align: justify; hyphens: auto; }
 .entry.variant { margin-left: 14pt; }
 .stats { margin: 2pt 0 5pt; padding: 4pt 8pt; background: var(--box); border-top: 2px solid var(--accent); border-bottom: 2px solid var(--accent); font-size: 9.5pt; font-family: "Segoe UI", system-ui, sans-serif; }
 .portrait { float: right; width: 1.3in; height: 1.3in; object-fit: cover; margin: 0 0 6pt 10pt; border: 1px solid var(--rule); }
+/* Read-aloud text in an adventure: a shaded box, as in the old published modules. */
+.read-aloud { margin: 4pt 0 6pt; padding: 5pt 9pt; background: var(--box); border-left: 3px solid var(--accent); font-style: italic; }
+.read-aloud:has(+ .read-aloud) { margin-bottom: 0; padding-bottom: 2pt; }
+.read-aloud + .read-aloud { margin-top: 0; padding-top: 2pt; }
 .see { font-size: 9pt; color: var(--muted); font-style: italic; }
 .clear { clear: both; }
 

@@ -72,10 +72,12 @@ export interface Entry {
   /** For variants printed as differences: the entry they are "as". */
   asParent: string | null;
   picture: Id | null;
+  /** An adventure's read-aloud text, printed in a box before the rest. */
+  readAloud?: string | null;
 }
 
 export interface Chapter {
-  id: ChapterId | `page:${string}`;
+  id: ChapterId | `page:${string}` | `adv:${string}`;
   title: string;
   /** Free text for book pages (foreword, How to play). */
   text: string | null;

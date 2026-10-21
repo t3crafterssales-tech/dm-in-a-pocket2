@@ -19,7 +19,9 @@ window.addEventListener("message", (e) => {
 export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement; editor: HTMLElement }> {
   const choices = await attempt(() => api.bookChoices());
   const types = choices?.types ?? [];
-  const req = choicesByPlace.get(ctx.view.id) ?? { type: "players", variants: "differences", monstersByChallenge: false, author: "", pageSize: "Letter" };
+  const isModule = ctx.view.type === "module";
+  const req = choicesByPlace.get(ctx.view.id) ?? { type: isModule ? "adventure" : "players", variants: "differences", monstersByChallenge: false, author: "", pageSize: "Letter", encounterNumbers: "full" };
+  const adventure = req.type === "adventure";
   choicesByPlace.set(ctx.view.id, req);
   const typeInfo = types.find((t) => t.id === req.type) ?? types[0];
   const ticked = new Set<string>(req.chapters ?? typeInfo?.chapters ?? []);
@@ -50,6 +52,14 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
   byCr.addEventListener("change", () => update({ monstersByChallenge: byCr.checked }));
   const author = h("input", { class: "text-input", value: req.author ?? "", placeholder: "Your name (optional)", maxlength: 120 });
   author.addEventListener("change", () => update({ author: author.value }));
+  const numbers = h(
+    "select",
+    { class: "text-input", "aria-label": "Encounter numbers" },
+    h("option", { value: "full", selected: (req.encounterNumbers ?? "full") === "full" }, "All numbers (1, 1.1, 1.1.2)"),
+    h("option", { value: "top", selected: req.encounterNumbers === "top" }, "Top level only (1, 2, 3)"),
+    h("option", { value: "off", selected: req.encounterNumbers === "off" }, "No numbers"),
+  );
+  numbers.addEventListener("change", () => update({ encounterNumbers: numbers.value as BookRequest["encounterNumbers"] }));
   const size = h("select", { class: "text-input" }, h("option", { value: "Letter", selected: req.pageSize !== "A4" }, "Letter (8.5 × 11 in)"), h("option", { value: "A4", selected: req.pageSize === "A4" }, "A4"));
   size.addEventListener("change", () => update({ pageSize: size.value as "Letter" | "A4" }));
 
@@ -83,13 +93,21 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
       { class: "pad" },
       h("label", { class: "field-label" }, "Book"),
       typeSelect,
-      h("label", { class: "field-label spaced" }, "Chapters"),
-      chapterList,
-      h("p", { class: "muted small" }, "Chapters with nothing in them are left out. Templates and world rules never print."),
-      h("label", { class: "field-label spaced" }, "Options"),
-      h("label", { class: "check" }, full, "Print variants in full"),
-      h("p", { class: "muted small" }, "Otherwise a variant lists only what differs: \"As Goblin, plus…\"."),
-      h("label", { class: "check" }, byCr, "Monsters in order of challenge"),
+      ...(adventure
+        ? [
+            h("p", { class: "muted small" }, "The front page, then every encounter in the order of the tree, with read-aloud text in a box. The creatures, treasure and handouts it uses are printed at the back."),
+            h("label", { class: "field-label spaced" }, "Encounter numbers"),
+            numbers,
+          ]
+        : [
+            h("label", { class: "field-label spaced" }, "Chapters"),
+            chapterList,
+            h("p", { class: "muted small" }, "Chapters with nothing in them are left out. Templates and world rules never print."),
+            h("label", { class: "field-label spaced" }, "Options"),
+            h("label", { class: "check" }, full, "Print variants in full"),
+            h("p", { class: "muted small" }, "Otherwise a variant lists only what differs: \"As Goblin, plus…\"."),
+            h("label", { class: "check" }, byCr, "Monsters in order of challenge"),
+          ]),
       h("label", { class: "field-label spaced" }, "Created by"),
       author,
       h("label", { class: "field-label spaced" }, "Page size"),
@@ -108,7 +126,7 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
     "section",
     { class: "panel editor book-preview" },
     h("div", { class: "panel-head" }, "Preview", pagesNote, h("span", { class: "muted small head-count" }, "Exactly what prints. Every change to the world shows here.")),
-    data && !data.book.chapters.length ? h("p", { class: "muted pad" }, "There's nothing to print in this book yet. Add rules, beings or items, or tick more chapters.") : null,
+    data && !data.book.chapters.length ? h("p", { class: "muted pad" }, adventure ? "There's nothing to print yet. Add encounters on the Adventure tab." : "There's nothing to print in this book yet. Add rules, beings or items, or tick more chapters.") : null,
     frame,
   );
   return { list, editor };

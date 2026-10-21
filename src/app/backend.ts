@@ -1200,8 +1200,11 @@ export class Backend {
   }
   /** The book types and chapters to choose from, with each type's usual chapters. */
   bookChoices() {
+    const types: { id: string; title: string; chapters: string[] }[] = Object.entries(BOOK_TITLES).map(([id, title]) => ({ id, title, chapters: BOOK_CHAPTERS[id as keyof typeof BOOK_CHAPTERS] }));
+    // A module prints its adventure booklet first; the rulebooks of its world and system are still there.
+    if (this.session?.type === "module") types.unshift({ id: "adventure", title: "Adventure booklet", chapters: [] });
     return {
-      types: Object.entries(BOOK_TITLES).map(([id, title]) => ({ id, title, chapters: BOOK_CHAPTERS[id as keyof typeof BOOK_CHAPTERS] })),
+      types,
       chapters: Object.entries(CHAPTER_TITLES).map(([id, title]) => ({ id, title })),
     };
   }

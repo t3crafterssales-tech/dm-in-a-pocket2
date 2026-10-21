@@ -95,6 +95,7 @@ export function bookDocx(data: BookData, readPicture: (id: string) => Buffer | n
   const entry = (e: Entry, depth: number): string => {
     let out = para(depth ? "Heading3" : "Heading2", bookmark(anchor(e.node), run(e.title)), `<w:keepNext/>`);
     if (e.picture) out += picture(e.picture);
+    if (e.readAloud) for (const p of e.readAloud.split(/\n+/).filter((x) => x.trim())) out += para("ReadAloud", run(p.trim()));
     if (e.stats) out += para("Stats", run(e.stats));
     for (const p of e.paragraphs) out += para(null, run(p));
     const seen = e.mentions.filter((m) => data.names[m] && m !== e.node && printed.has(m));
@@ -164,6 +165,7 @@ ${heading("Heading3", "heading 3", 24, 2, 200, `<w:i/>`)}
 <w:style w:type="paragraph" w:styleId="TOC1"><w:name w:val="toc 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9710"/></w:tabs><w:spacing w:after="60"/></w:pPr><w:rPr><w:b/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="TOC2"><w:name w:val="toc 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9710"/></w:tabs><w:spacing w:after="40"/><w:ind w:left="240"/></w:pPr></w:style>
 <w:style w:type="paragraph" w:styleId="Stats"><w:name w:val="Stat line"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:space="2" w:color="7A1F1F"/><w:bottom w:val="single" w:sz="6" w:space="2" w:color="7A1F1F"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="F4ECDD"/></w:pPr><w:rPr><w:b/><w:sz w:val="19"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="ReadAloud"><w:name w:val="Read aloud"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:pBdr><w:left w:val="single" w:sz="18" w:space="6" w:color="7A1F1F"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="F4ECDD"/><w:spacing w:after="0"/><w:ind w:left="160"/></w:pPr><w:rPr><w:i/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="See"><w:name w:val="See also"/><w:basedOn w:val="Normal"/><w:rPr><w:i/><w:sz w:val="19"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="IndexLine"><w:name w:val="Index line"/><w:basedOn w:val="Normal"/><w:pPr><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9710"/></w:tabs><w:spacing w:after="20"/></w:pPr></w:style>
 <w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="000000"/></w:rPr></w:style>

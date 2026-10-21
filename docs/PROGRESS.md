@@ -30,8 +30,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
   Claude API key is needed only to try it for real.
 - **Built, waiting for Jeff to test:** Milestone 11, the feel pass (branch `claude/feel-pass`,
   built on milestone 9 so both are tested together). See "Milestone 11: what Jeff can test".
-- **Next:** what Jeff finds when he installs it, then the smaller AI helpers listed under
-  Milestone 9 below.
+- **Built, waiting for Jeff to test:** Version 2.1, modules and encounters (branch
+  `claude/v2-modules`, built on the feel pass). See "Version 2.1: what Jeff can test".
+- **Next:** what Jeff finds when he installs it; then version 2.2, the character builder.
 
 ## Milestones to first playable
 
@@ -58,6 +59,40 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 | 10 | The full SRD 5.2, Table mode and Word export | Run a game from the app |
 
 ## Log
+
+### Version 2.1: what Jeff can test
+- Home screen: a new **Modules** shelf. **New module** asks for a name, a picture and what it's
+  built on: one of your worlds, or a system alone (a setting-free module).
+- Open a module: it opens on the new **Adventure** tab. The front page has levels, party size,
+  sessions and the hook.
+- **+ Encounter** adds an encounter. Select one and **Add inside** to nest it (the cave, then its
+  rooms). Numbers (1, 1.1, 1.2.1) update by themselves.
+- Drag encounters in the tree: onto another to put it inside, or between two to reorder.
+  Ctrl-click and Shift-click select several. Delete moves what was inside up a level; Ctrl+Z
+  puts it back.
+- In an encounter: read-aloud text, "What's really going on", and drag monsters, items, lore
+  pages or other encounters in from the Codex (switch at the top of the right column). Creature
+  counts have + and − buttons.
+- The Codex has an **Encounters** section with four ready-made ones (Bandit ambush, Tavern brawl,
+  Wolves at dusk, The rat cellar). Drag one into the tree; the module gets its own copy.
+  **Save to the Codex** turns one of yours into a ready-made one.
+- **Rulebook** tab in a module: **Adventure booklet** is the first choice. Front page, every
+  encounter in order with read-aloud text in a shaded box, "See Wolf (page 5)", and appendices
+  for the creatures, treasure and handouts used. Encounter numbers: all, top level only, or off.
+  Saves as PDF or Word like the rulebook.
+- Deleting a world warns which modules go with it; the recycle bin brings them back together.
+  Share a module and import it on another computer: its world and system come with it.
+- Not in this build yet: "Place in a world" for setting-free modules, and Edit parent from inside
+  a module.
+
+### 2026-10-21 (version 2.1: modules and encounters)
+- Engine: the `module` layer and the `encounter` kind, with the rules for what can sit on what.
+- Storage: the Modules folder and `.dmmod` files, which carry their world and system.
+- `src/app/encounters.ts`: the tree, numbering, moving, deleting with promotion, dropping things in,
+  ready-made encounters.
+- `src/ui/adventure-tab.ts`: the Adventure tab. `src/app/adventure-book.ts`: the booklet.
+- The browser preview (`scripts/preview/server.ts`) now serves the book page too.
+- 236 automatic tests pass.
 
 ### Milestone 11: what Jeff can test
 
@@ -810,3 +845,8 @@ One plain line each. Jeff can overrule any of these at a milestone.
   Version 2 is built on branch `claude/v2-modules`, made from `claude/feel-pass`.
 - 2026-10-21: An encounter's monsters, treasure and handouts are ordinary link fields, not
   attachments, because attachments are bricks on a sheet; links still give red flags and Used by.
+- 2026-10-21: The adventure booklet is built in `src/app/adventure-book.ts` on the rulebook's own
+  pages, so preview, PDF and Word file all work alike; entries gain an optional `readAloud` box.
+- 2026-10-21: In the booklet, creatures are written "Wolf ×3" so no name needs a plural.
+- 2026-10-21: The booklet's appendices print each creature, treasure and handout once, by name;
+  the SRD credit is added when any of them is SRD content.

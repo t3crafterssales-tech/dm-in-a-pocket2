@@ -19,6 +19,7 @@ mkdirSync(out, { recursive: true });
 
 async function bundle() {
   await build({ entryPoints: ["src/ui/renderer.ts"], outfile: join(out, "renderer.js"), bundle: true, platform: "browser", format: "iife", target: "chrome130", logLevel: "warning" });
+  await build({ entryPoints: ["src/book/book-view.ts"], outfile: join(out, "book.js"), bundle: true, platform: "browser", format: "iife", target: "chrome130", logLevel: "warning" });
 }
 await bundle();
 
@@ -79,7 +80,14 @@ createServer(async (req, res) => {
     res.setHeader("content-type", "text/html");
     return res.end(html);
   }
-  const file = url.pathname === "/renderer.js" ? join(out, "renderer.js") : join("src/ui", url.pathname.replace(/^\/+/, ""));
+  if (url.pathname === "/book.html") {
+    // The book page, with pictures from the preview's own address.
+    const html = readFileSync("src/book/book.html", "utf8").replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, "");
+    res.setHeader("content-type", "text/html");
+    return res.end(html);
+  }
+  const name = url.pathname.replace(/^\/+/, "");
+  const file = name === "renderer.js" || name === "book.js" ? join(out, name) : name === "book.css" ? "src/book/book.css" : join("src/ui", name);
   if (!existsSync(file)) { res.statusCode = 404; return res.end(); }
   res.setHeader("content-type", MIME[extname(file)] ?? "application/octet-stream");
   res.end(readFileSync(file));
