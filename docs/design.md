@@ -1010,6 +1010,10 @@ the game:
 - **A row can roll on another table** ("roll on Treasure"), so tables chain.
 - **Make a table from the Codex in one go:** pick a section and a filter (every challenge 1/4
   monster, every potion) and the rows fill themselves, evenly spread over the die; adjust after.
+- **Only once (Jeff, October 21, 2026):** a tick on a row; once rolled it's crossed out until the DM
+  resets the table (a unique treasure, a one-time event).
+- **How common (Jeff, October 21, 2026):** each row is Common, Uncommon or Rare (or a number), and
+  the app works out the ranges on the die. Typing ranges by hand still works.
 
 ### Open questions for version 2
 
