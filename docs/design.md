@@ -482,6 +482,11 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
 - **Pages like a notebook (October 21, 2026),** in the usual tree: a Sessions group with one page per
   night made automatically, plus the DM's own pages ("Plot threads", "NPC voices", "Things the
   party owes").
+- **Adding pages and categories (Jeff, October 21, 2026).** A new journal opens with **+ Add page**.
+  Each page has a category drop-down in its top right corner (Session, Party notes, Lore,
+  Treasure, Plot threads, NPCs, Quests, Rumours, Places...), ending with **+ New category**, and
+  pages are grouped by category in the journal's tree. Moving a page is just changing its category
+  (or dragging it to another group). Same pattern as categories everywhere else in the app.
 - **A session page has two parts:** the DM's notes on top, and the table's log underneath.
 - **The log keeps only what matters (Jeff):** fights started and ended, characters dropping,
   rewards, conditions, things shown and to whom, chat lines pinned. Not every dice roll. Each kind
