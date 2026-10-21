@@ -336,7 +336,7 @@ be decided. Nothing here is built yet, and nothing here changes the hard rules w
   and maybe 3D files (a mini's base with its name and armour on the rim). Could tie in with
   T3 Crafters ("buy the minis for this world").
 - **Worlds that feel alive:** a map maker with pins that open places, factions and lore pages; an
-  adventure planner whose scenes link to the world's things; timelines and family trees; more
+  adventure planner whose encounters link to the world's things; timelines and family trees; more
   roll tables (rumours, loot, weather) that roll on each other.
 - **More starting points and connections:** old-school and d6 starters, Foundry VTT export,
   importing a handbook you already wrote (PDF or Word).
@@ -476,8 +476,8 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
   module.
 - **Only order matters, nothing blocks.** A module needs a world, as a world needs a system. The
   app never judges whether the world is "built enough" (Promise 4).
-- **What a module adds:** chapters and scenes in story order, read-aloud boxed text, encounters
-  placed in scenes, handouts and maps tied to scenes, NPCs and monsters of its own, and its own
+- **What a module adds:** encounters (nested, in story order) with read-aloud boxed text,
+  monsters, handouts and maps tied to them, NPCs and monsters of its own, and its own
   printed adventure booklet.
 - **Sessions run in a module.** A play session is a layer on top of the module, so playing never
   changes it; another group can run it fresh.
