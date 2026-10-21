@@ -363,6 +363,8 @@ Initiative column in the grid, not a design decision.
   roll tables (rumours, loot, weather) that roll on each other.
 - **More starting points and connections:** old-school and d6 starters, Foundry VTT export,
   importing a handbook you already wrote (PDF or Word).
+- **The print shop is on the back burner (Jeff, October 21, 2026: "version 20").** Standees,
+  tokens, cards and 3D bases stay in the parking lot until much later.
 - **The far shelf:** the marketplace with accounts, and a full virtual tabletop.
 
 ### The DM's table
@@ -1034,6 +1036,28 @@ the game:
   seasons that change with the calendar; weather rolled each day from a weather roll table that
   depends on the season.
 - Who sees which timers and the clock is the DM's choice.
+
+### Conditions at a glance (Jeff, October 21, 2026)
+
+Like coloured rings under miniatures on a real table: anyone can see at a glance who is stunned,
+poisoned, paralysed, frozen or mind-controlled.
+
+- **Each condition has a look**, set in the Rules tab with the condition itself: a colour and a
+  small symbol (green drop for Poisoned, ice-blue snowflake for Frozen, purple swirl for Charmed).
+  The starters come with looks for their conditions; a homemade condition picks its own.
+- **Badges everywhere the character appears:** a coloured ring or badge on their initiative card,
+  their character sheet, their portrait, and later their pin on a map, each with what's left
+  ("2 rounds", "3 doses").
+- **Durations:** rounds, minutes or hours of world time (so the clock counts them down), "until
+  they save" (at the end of each turn the save macro pops up for that character, and a success
+  removes it), or "until removed".
+- **Counters:** a condition can have a number, such as a poison counter of 3 or Exhaustion 2; click
+  plus or minus on the badge.
+- **Putting one on:** drag a condition from the Codex onto a card or portrait, or click the card's +
+  and pick it. Shift and Ctrl select several characters to give them all the same condition at
+  once (the dragon's fear hits the whole party).
+- **Hover a badge** to read the condition's rule and where it came from ("Paralysed by the ghoul,
+  2 rounds left"). It drops off by itself when it runs out, with a note in the chat.
 
 ### Open questions for version 2
 
