@@ -323,6 +323,15 @@ Version 1 builds a game. Version 2 takes it to the table: make a character, buil
 the fight, run it, and print the pieces. Jeff wants all of the themes below; the order is still to
 be decided. Nothing here is built yet, and nothing here changes the hard rules without Jeff's OK.
 
+### Version 2 build order (agreed by Jeff, October 21, 2026)
+
+1. Modules and encounters (the third layer, the encounter tree, the adventure booklet).
+2. The character builder (the roster in the world, built from the system's rules).
+3. Maps (pictures, pins, maps inside maps, drawing tools, export).
+4. The DM's table on one screen (sessions, dice tray, initiative, timers, roll tables, journal).
+5. Players join on their own screens (PINs, permissions, chat and whispers, live maps and marks).
+6. Later: the print shop, the playtest simulator, the book and sheet designers, mods.
+
 ### The DM decides who sees what (rule, decided by Jeff, October 21, 2026)
 
 Any question of the kind "should the assistant DM (or a player, or a watcher) see this?" is never
@@ -695,7 +704,6 @@ printing at real size for miniatures is not needed (maps print in the booklet an
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
   extra), or start with same-network play only?
-- The order of the themes, and which ones make version 2 rather than version 3.
 
 ## Idea parking lot
 
