@@ -492,7 +492,8 @@ DM's table), so they are there next time.
   own, because players dragging Potions of Healing and magic items onto their own sheets is a real
   problem (seen in Foundry). New player: off. Player: off. Trusted player: on. Whatever the
   setting, the DM is told quietly when a player adds something to their own sheet (a blue note in
-  the session log: "Joe added Potion of Healing"), never blocking anything.
+  the session log: "Joe added Potion of Healing"), never blocking anything. Telling the DM is
+  itself a DM setting ("Tell me when players add things"), on by default.
 - **Table jobs (Jeff, October 21, 2026).** The DM can hand a tool to anyone at the table, assistant
   GM or player, so the DM can focus on monsters and maps: "Fred runs initiative" (he clicks Next
   turn, and now it's Johnny's turn), "Johnny keeps the journal", "Fred tracks the party's gold".
