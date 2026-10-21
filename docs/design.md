@@ -363,8 +363,11 @@ Initiative column in the grid, not a design decision.
   roll tables (rumours, loot, weather) that roll on each other.
 - **More starting points and connections:** old-school and d6 starters, Foundry VTT export,
   importing a handbook you already wrote (PDF or Word).
-- **The print shop is on the back burner (Jeff, October 21, 2026: "version 20").** Standees,
-  tokens, cards and 3D bases stay in the parking lot until much later.
+- **The print shop, without selling (Jeff, October 21, 2026).** Jeff likes printing what's made in
+  the app: fold-over standees, tokens, cards (spell, item, monster, condition, initiative), maps
+  and the journal (already designed to export), and down the road **sticker stock**: high-quality
+  pictures laid out for sticker sheets, to peel off and put on cardboard or 3D-printed signs. The
+  T3 Crafters shop link is not wanted for now.
 - **The far shelf:** the marketplace with accounts, and a full virtual tabletop.
 
 ### The DM's table
@@ -1058,6 +1061,8 @@ poisoned, paralysed, frozen or mind-controlled.
   once (the dragon's fear hits the whole party).
 - **Hover a badge** to read the condition's rule and where it came from ("Paralysed by the ghoul,
   2 rounds left"). It drops off by itself when it runs out, with a note in the chat.
+- Whether players can put conditions on their own characters (marking themselves Hidden) is the
+  DM's choice, a column in the permissions grid.
 
 ### Open questions for version 2
 
