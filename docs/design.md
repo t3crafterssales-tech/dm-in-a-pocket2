@@ -402,6 +402,20 @@ table reads the system.** Nobody builds a tracker; the trackers come from the ru
 - **A Codex section or category can be bookmarked as a little table**, such as every potion with
   its price, so a price list is always one glance away.
 
+### Pin anything to the screen (Jeff, October 21, 2026)
+
+Anything in the app can be pinned to the screen: a rule, a lore page, a monster, a price list, a
+help page or the hotkey list. A pin is a small card that floats over everything, can be dragged
+anywhere, collapsed to a little tab and opened again, and **stays put while you move between
+tabs, screens and tools**, until you close it. Closing a pin never touches the original; a pin is
+only a link, so it always shows the latest version. Pins are remembered with the world (and the
+DM's table), so they are there next time.
+
+- **How to pin:** a pin button appears on hover, and a shortcut. Ctrl+P is Print in every Windows
+  program, so the shortcut should be another one (suggested: Ctrl+Shift+P).
+- **Pins and bookmarks are different:** bookmarks are a tidy list in one tool; pins float on top of
+  whatever you're doing. This is the "floating, pinnable windows" idea parked in the feel pass.
+
 ### The journal
 
 - Write as you play, with links: typing a name links to that sheet.
