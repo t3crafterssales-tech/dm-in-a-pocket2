@@ -479,6 +479,21 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
     the defeated monsters toward the night's experience. All of it adjustable in the settings.
 
 ### The journal
+- **Pages like a notebook (October 21, 2026),** in the usual tree: a Sessions group with one page per
+  night made automatically, plus the DM's own pages ("Plot threads", "NPC voices", "Things the
+  party owes").
+- **A session page has two parts:** the DM's notes on top, and the table's log underneath.
+- **The log keeps only what matters (Jeff):** fights started and ended, characters dropping,
+  rewards, conditions, things shown and to whom, chat lines pinned. Not every dice roll. Each kind
+  of entry can be switched on or off.
+- **Links:** typing a name links to its page, and that page shows "Mentioned in: Session 3,
+  Session 7". Ctrl+F searches every page.
+- **Simple formatting and pictures (Jeff):** bold, italics, headings, lists, and pictures dropped
+  in, like a simple word processor.
+- **Players keep their own private journal (Jeff).** The DM can see it (the DM always has
+  everything); a player can share a page with others.
+- **Export as a campaign diary (Jeff):** PDF or Word through the same export screen as the
+  rulebook, the story so far, session by session (DM-only pages left out unless ticked).
 
 - Write as you play, with links: typing a name links to that sheet.
 - The table writes entries too: "Round 3: Mira dropped to 0 hit points", "Rolled on Rumours: the
