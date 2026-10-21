@@ -487,6 +487,18 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   Treasure, Plot threads, NPCs, Quests, Rumours, Places...), ending with **+ New category**, and
   pages are grouped by category in the journal's tree. Moving a page is just changing its category
   (or dragging it to another group). Same pattern as categories everywhere else in the app.
+- **Priority (Jeff, October 21, 2026).** Each page can have a priority number (1, 2, 3... as many as
+  you like). Within a category, priority 1 pages stay at the top, then 2, and so on. Once a page
+  is done with, give it priority 30 and it sinks to the bottom. Pages can also be starred as
+  favourites and pinned to any screen, like anything else.
+- **Building a page from blocks (Jeff, October 21, 2026).** A new page is blank, with **+ Add**:
+  - **Image:** opens a file browser, or just drop a picture onto the page. It can be resized to
+    the page or any size.
+  - **Text:** a text box appears and you type straight away. A few fonts, a few sizes and a few
+    colours to start.
+  Every block can be moved anywhere on the page and resized, like a scrapbook or OneNote: a
+  picture of the town with notes underneath, or beside it. (On a phone, blocks stack in order.)
+  This replaces "simple formatting" above. Exports and prints follow the page's layout.
 - **A page can be just a picture (Jeff, October 21, 2026).** Drop a JPEG in and that's the page:
   the town, the mayor, the tavern. A run of picture pages works like a slideshow the DM walks the
   players through. Pages can be shared all at once on the honour system ("don't look ahead, you'll
@@ -498,8 +510,6 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
   of entry can be switched on or off.
 - **Links:** typing a name links to its page, and that page shows "Mentioned in: Session 3,
   Session 7". Ctrl+F searches every page.
-- **Simple formatting and pictures (Jeff):** bold, italics, headings, lists, and pictures dropped
-  in, like a simple word processor.
 - **Players keep their own private journal (Jeff).** The DM can see it (the DM always has
   everything); a player can share a page with others.
 - **Export as a campaign diary (Jeff):** PDF or Word through the same export screen as the
