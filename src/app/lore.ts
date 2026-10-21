@@ -42,6 +42,8 @@ export function loreList(ws: Workspace, layerId: Id): LoreSection[] {
   const out = LORE_KINDS.map((k) => ({ kind: k.id, title: k.plural, entries: [] as LoreSection["entries"] }));
   for (const n of ws.list(layerId).sort((a, b) => a.name.localeCompare(b.name))) {
     if (n.template) continue;
+    // A module's front page belongs to the Adventure tab, not the Lore tab.
+    if (ws.resolve(layerId, n.id)!.fields.modulePage === true) continue;
     const kind = loreKindOf(n, ws.resolve(layerId, n.id)!.fields);
     if (kind) out.find((s) => s.kind === kind)!.entries.push({ id: n.id, name: n.name, fromBelow: !!below && ws.owner(layerId, n.id) !== layerId });
   }

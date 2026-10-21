@@ -1,7 +1,7 @@
 // The app window: the home screen with its two shelves, the New system and New world pop-ups,
 // the recycle bin and settings. The open world or system is in place.ts.
 
-import type { HomeData, RecycledInfo, SystemCard, WorldCard } from "../app/backend.ts";
+import type { HomeData, ModuleCard, RecycledInfo, SystemCard, WorldCard } from "../app/backend.ts";
 import { count, whenLabel } from "../app/words.ts";
 import { api, pictureUrl } from "./api.ts";
 import { app, attempt, brand, iconButton, nav, pulseLogo, typingIn } from "./common.ts";
@@ -67,7 +67,17 @@ function renderHome(home: HomeData, highlight?: string) {
     canCreateWorld ? "No worlds yet. Make one with New world." : "No worlds yet. Create a system first, then make a world with it.",
   );
 
-  app.replaceChildren(top, h("main", { class: "home" }, systems, worlds), h("footer", { class: "home-footer" }, "Main folder: ", h("button", { class: "link", title: "Show in File Explorer", onClick: () => void window.dm.showFolder() }, home.folder)));
+  const canCreateModule = home.systems.length > 0;
+  const newModuleButton = h("button", { class: "button primary", disabled: !canCreateModule, onClick: () => void newModule(home) }, svg(ICONS.plus), "New module");
+  const modules = shelf(
+    "Modules",
+    "The adventures: encounters, read-aloud text, monsters and maps, ready to run.",
+    h("span", { class: "hint-wrap", title: canCreateModule ? "" : "Create a system first." }, newModuleButton),
+    home.modules.map((m) => moduleCard(m, m.id === highlight)),
+    canCreateModule ? "No modules yet. Make an adventure with New module." : "No modules yet. Create a system first; a module is built on a world or a system.",
+  );
+
+  app.replaceChildren(top, h("main", { class: "home" }, systems, worlds, modules), h("footer", { class: "home-footer" }, "Main folder: ", h("button", { class: "link", title: "Show in File Explorer", onClick: () => void window.dm.showFolder() }, home.folder)));
   if (highlight) (app.querySelector(`[data-id="${CSS.escape(highlight)}"]`) as HTMLElement | null)?.focus();
 }
 
@@ -80,12 +90,12 @@ function shelf(title: string, blurb: string, action: HTMLElement, cards: HTMLEle
   );
 }
 
-function picture(id: string | null, name: string, kind: "system" | "world") {
+function picture(id: string | null, name: string, kind: "system" | "world" | "module") {
   if (id) return h("div", { class: "card-picture" }, h("img", { src: pictureUrl(id), alt: "", draggable: false }));
-  return h("div", { class: `card-picture placeholder ${kind}` }, svg(kind === "system" ? ICONS.book : ICONS.globe), h("span", { class: "initial" }, name.slice(0, 1).toUpperCase()));
+  return h("div", { class: `card-picture placeholder ${kind}` }, svg(kind === "system" ? ICONS.book : kind === "module" ? ICONS.scroll : ICONS.globe), h("span", { class: "initial" }, name.slice(0, 1).toUpperCase()));
 }
 
-function card(opts: { id: string; name: string; kind: "system" | "world"; picture: HTMLElement; meta: (HTMLElement | string)[]; highlight: boolean; onOpen: () => void; onDelete: () => void }) {
+function card(opts: { id: string; name: string; kind: "system" | "world" | "module"; picture: HTMLElement; meta: (HTMLElement | string)[]; highlight: boolean; onOpen: () => void; onDelete: () => void }) {
   const el = h(
     "div",
     {
@@ -137,6 +147,12 @@ function worldCard(w: WorldCard, highlight: boolean) {
     pic.appendChild(h("span", { class: "flag-badge", title: "Flags to look at inside this world" }, parts));
   }
   return card({ id: w.id, name: w.name, kind: "world", picture: pic, meta: [], highlight, onOpen: () => void openPlace({ type: "world", id: w.id }, "normal", w.name), onDelete: () => void deleteWorld(w) });
+}
+
+function moduleCard(m: ModuleCard, highlight: boolean) {
+  const pic = picture(m.picture, m.name, "module");
+  pic.appendChild(h("span", { class: "system-chip" }, m.builtOn));
+  return card({ id: m.id, name: m.name, kind: "module", picture: pic, meta: [h("span", { class: "muted" }, m.baseType === "world" ? "World module" : "Setting-free module")], highlight, onOpen: () => void openPlace({ type: "module", id: m.id }, "normal", m.name), onDelete: () => void deleteModule(m) });
 }
 
 // ---------- New system and New world (short, strictly linear pop-ups) ----------
@@ -306,10 +322,66 @@ async function newWorld(home: HomeData) {
   );
 }
 
+/** New module: name, picture, then what it is built on (a world, or just a system). */
+async function newModule(home: HomeData) {
+  const state = { name: "", picture: null as string | null, baseId: "" };
+  const d = wizard(
+    "New module",
+    [
+      nameStep(state, "What is the adventure called?", "For example: The Mill on Ash Creek"),
+      pictureStep(state),
+      {
+        title: "Built on",
+        render: () => {
+          const select = h(
+            "select",
+            { class: "text-input", "aria-label": "Built on" },
+            h("option", { value: "", disabled: true, selected: !state.baseId }, "Choose a world, or just a system…"),
+            home.worlds.length ? h("optgroup", { label: "A world (uses its places, people and history)" }, home.worlds.map((w) => h("option", { value: w.id, selected: state.baseId === w.id }, `${w.name} (${w.systemName})`))) : null,
+            h("optgroup", { label: "Just a system (setting-free: fits any world)" }, home.systems.map((s) => h("option", { value: s.id, selected: state.baseId === s.id }, s.name))),
+          );
+          select.addEventListener("change", () => (state.baseId = select.value));
+          return {
+            body: [
+              h("label", { class: "field-label" }, "What is it built on?"),
+              select,
+              h("p", { class: "muted small" }, "A world module can use that world's towns, villains and history. A setting-free module uses only the system's rules and monsters, so it fits any world, and can be placed in one later. This can't be changed once the module is made."),
+            ],
+            valid: () => !!state.baseId,
+            focus: select,
+          };
+        },
+      },
+    ],
+    "Create module",
+    async () => {
+      const id = await attempt(() => api.createModule({ name: state.name, picture: state.picture, baseId: state.baseId }));
+      if (!id) return false;
+      d.close();
+      notice(`${state.name.trim()} is on the Modules shelf.`, "green");
+      await openPlace({ type: "module", id }, "normal", state.name.trim());
+      return true;
+    },
+  );
+}
+
+async function deleteModule(m: ModuleCard) {
+  const ok = await ask(`Delete ${m.name}?`, [`${m.name} goes to the recycle bin. You can restore it from there until you empty the bin. Its world and system are not touched.`], [
+    { label: "Cancel", value: false },
+    { label: "Move to recycle bin", value: true, kind: "danger" },
+  ]);
+  if (!ok) return;
+  const entry = await attempt(() => api.deleteModule(m.id));
+  if (entry) deleted(entry);
+}
+
 // ---------- Deleting, the recycle bin and undo ----------
 
 async function deleteWorld(w: WorldCard) {
-  const ok = await ask(`Delete ${w.name}?`, [`${w.name} goes to the recycle bin. You can restore it from there until you empty the bin.`], [
+  const mods = (await attempt(() => api.worldModules(w.id))) ?? [];
+  const lines: (string | Node)[] = [`${w.name} goes to the recycle bin. You can restore it from there until you empty the bin.`];
+  if (mods.length) lines.push(h("p", null, h("strong", null, `${count(mods.length, "module")} ${mods.length === 1 ? "is" : "are"} built on it and ${mods.length === 1 ? "goes" : "go"} with it: `), mods.join(", ")));
+  const ok = await ask(`Delete ${w.name}?`, lines, [
     { label: "Cancel", value: false },
     { label: "Move to recycle bin", value: true, kind: "danger" },
   ]);
@@ -322,7 +394,7 @@ async function deleteSystem(s: SystemCard) {
   const dep = await attempt(() => api.systemDependents(s.id));
   if (!dep) return;
   let ok: boolean | null;
-  if (!dep.worlds.length && !dep.systems.length) {
+  if (!dep.worlds.length && !dep.systems.length && !dep.modules.length) {
     ok = await ask(`Delete ${s.name}?`, [`${s.name} goes to the recycle bin. You can restore it from there until you empty the bin.`], [
       { label: "Cancel", value: false },
       { label: "Move to recycle bin", value: true, kind: "danger" },
@@ -331,6 +403,7 @@ async function deleteSystem(s: SystemCard) {
     const lines: (string | Node)[] = [];
     if (dep.worlds.length) lines.push(h("p", null, h("strong", null, `${count(dep.worlds.length, "world")} ${dep.worlds.length === 1 ? "uses" : "use"} this system: `), dep.worlds.join(", ")));
     if (dep.systems.length) lines.push(h("p", null, h("strong", null, `${count(dep.systems.length, "system")} ${dep.systems.length === 1 ? "is" : "are"} built on it: `), dep.systems.join(", ")));
+    if (dep.modules.length) lines.push(h("p", null, h("strong", null, `${count(dep.modules.length, "module")} ${dep.modules.length === 1 ? "is" : "are"} built on them: `), dep.modules.join(", ")));
     lines.push("Deleting them too sends everything to the recycle bin together, and restoring brings them back together.");
     ok = await ask(`Delete ${s.name}?`, lines, [
       { label: "Cancel", value: false },
@@ -345,8 +418,10 @@ async function deleteSystem(s: SystemCard) {
 
 function deleted(entry: RecycledInfo) {
   lastDeleted = entry;
-  const extra = entry.kind === "system" && entry.worlds.length ? ` and ${count(entry.worlds.length, "world")}` : "";
-  notice(`${entry.name}${extra} moved to the recycle bin.`, "blue", { label: "Undo", run: () => void undoDelete() });
+  const mods = entry.kind !== "module" ? (entry.modules?.length ?? 0) : 0;
+  const extra = [entry.kind === "system" && entry.worlds.length ? count(entry.worlds.length, "world") : "", mods ? count(mods, "module") : ""].filter(Boolean).join(" and ");
+  const extraText = extra ? ` and ${extra}` : "";
+  notice(`${entry.name}${extraText} moved to the recycle bin.`, "blue", { label: "Undo", run: () => void undoDelete() });
   void showHome();
 }
 
@@ -373,17 +448,18 @@ async function showRecycleBin() {
     }
     const now = Date.now();
     d.body.replaceChildren(
-      h("p", { class: "muted" }, "Deleted worlds and systems stay here until you empty the bin. Restoring puts them back on the shelf with everything they had."),
+      h("p", { class: "muted" }, "Deleted worlds, modules and systems stay here until you empty the bin. Restoring puts them back on the shelf with everything they had."),
       h(
         "ul",
         { class: "bin-list" },
         entries.map((e) => {
-          const what = e.kind === "world" ? "World" : e.worlds.length ? `System, with ${count(e.worlds.length, "world")}` : "System";
-          const also = [...e.systems.filter((s) => e.kind !== "system" || s.name !== e.name).map((s) => s.name), ...(e.kind === "system" ? e.worlds.map((w) => w.name) : [])];
+          const mods = e.kind === "module" ? [] : (e.modules ?? []);
+          const what = e.kind === "module" ? "Module" : e.kind === "world" ? (mods.length ? `World, with ${count(mods.length, "module")}` : "World") : e.worlds.length ? `System, with ${count(e.worlds.length, "world")}` : "System";
+          const also = [...e.systems.filter((s) => e.kind !== "system" || s.name !== e.name).map((s) => s.name), ...(e.kind === "system" ? e.worlds.map((w) => w.name) : []), ...mods.map((m) => m.name)];
           return h(
             "li",
             null,
-            svg(e.kind === "world" ? ICONS.globe : ICONS.book),
+            svg(e.kind === "world" ? ICONS.globe : e.kind === "module" ? ICONS.scroll : ICONS.book),
             h("div", { class: "bin-text" }, h("div", { class: "bin-name" }, e.name), h("div", { class: "muted small" }, `${what} · deleted ${whenLabel(e.time, now).toLowerCase()}`, also.length ? ` · ${also.join(", ")}` : "")),
             h(
               "button",

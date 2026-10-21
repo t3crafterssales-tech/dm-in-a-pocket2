@@ -149,7 +149,8 @@ export function chapterOf(ws: Workspace, layerId: Id, n: NodeRecord): ChapterId 
     case "item":
       return "items";
     case "lore":
-      return f[F.bookPage] === true ? null : "lore";
+      // Book pages and a module's front page print in their own places.
+      return f[F.bookPage] === true || f.modulePage === true ? null : "lore";
     case "table":
       return "lore";
     case "brick":

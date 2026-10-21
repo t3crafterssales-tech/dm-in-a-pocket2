@@ -163,6 +163,7 @@ button { font: inherit; color: inherit; }
 .card-picture.placeholder { display: grid; place-items: center; color: rgba(255, 250, 243, 0.9); }
 .card-picture.placeholder.system { background: linear-gradient(135deg, #6c5a46, #3f342a); }
 .card-picture.placeholder.world { background: linear-gradient(135deg, #5d7a6a, #2f4a40); }
+.card-picture.placeholder.module { background: linear-gradient(135deg, #7a5d3e, #4a2f2a); }
 .card-picture.placeholder .icon { position: absolute; top: 12px; left: 12px; width: 22px; height: 22px; opacity: 0.6; }
 .card-picture .initial { font: 600 54px var(--serif); text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
 .system-chip, .flag-badge {

@@ -33,6 +33,11 @@ test("the home screen has a Modules shelf; a module opens straight into its worl
   assert.equal(r.view.type, "module");
   assert.equal(r.view.worldName, "Greyhollow");
   assert.equal(r.view.systemName, "d20 Basic");
+  // Every module starts with a front page, kept out of the Lore tab, and nothing to undo.
+  const page = backend.modulePage()!;
+  assert.equal(backend.node(page).fields.partySize, 4);
+  assert.ok(!backend.loreList().some((s) => s.entries.some((e) => e.id === page)));
+  assert.equal(backend.undo(), null);
   // The world deletes with its modules, after a warning that names them.
   backend.goHome();
   assert.deepEqual(backend.worldModules(world), ["The Mill on Ash Creek"]);

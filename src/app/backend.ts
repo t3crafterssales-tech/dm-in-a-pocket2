@@ -283,6 +283,7 @@ export const BACKEND_METHODS = [
   "newInSection",
   "addChoice",
   "encounterTree",
+  "modulePage",
   "addEncounter",
   "moveEncounters",
   "deleteEncounter",
@@ -475,6 +476,16 @@ export class Backend {
     const name = cleanName(input.name);
     if (!input.baseId) throw new LibraryError("Choose what the module is built on: a world, or just a system.");
     const id = this.lib.createModule(name, input.baseId, this.settingsFile.data.author);
+    // Every module starts with its front page (level range, party size, the hook). It is the
+    // starting point, not a change, so it isn't an undo step.
+    const open = this.lib.openModule(id);
+    try {
+      open.ws.transact("Front page", () => open.ws.create(id, "lore", name, { fields: { modulePage: true, levels: "", partySize: 4, sessions: 1 } }));
+      open.ws.history = [];
+      this.lib.saveWorld(open);
+    } finally {
+      this.lib.close(open);
+    }
     if (input.picture) this.lib.setPicture("module", id, input.picture);
     this.markOpened(id);
     return id;
@@ -972,6 +983,9 @@ export class Backend {
   }
   encounterTree(): EncounterNode[] {
     return this.editing.encounterTree();
+  }
+  modulePage(): Id | null {
+    return this.editing.modulePage();
   }
   addEncounter(name: string, inside: Id | null = null): Id {
     return this.editing.addEncounter(name, inside);

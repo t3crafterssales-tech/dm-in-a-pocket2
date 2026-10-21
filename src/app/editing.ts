@@ -773,6 +773,11 @@ export class Editing {
     return encounterTree(this.ws, this.layer);
   }
 
+  /** The module's front page (a lore node marked modulePage), or null if there isn't one. */
+  modulePage(): Id | null {
+    return this.ws.list(this.layer, "lore").find((n) => this.ws.resolve(this.layer, n.id)!.fields.modulePage === true)?.id ?? null;
+  }
+
   addEncounter(name: string, inside: Id | null = null): Id {
     const n = cleanName(name);
     return this.run(() => this.ws.transact(`Added the encounter ${n}`, () => createEncounter(this.ws, this.layer, n, inside)));
