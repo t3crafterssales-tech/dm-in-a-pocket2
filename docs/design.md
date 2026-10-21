@@ -22,6 +22,13 @@ These five rules do not change. Every design decision is checked against them.
 4. **Any order, any time.** Unfinished is a normal state, not an error. Monsters can exist before a system does; a map can exist before any lore.
 5. **Nothing is truly destroyed.** Erasing switches things off rather than deleting them. Removed parts can come back with their rules intact, and every change can be undone.
 
+**As deep as you want it to be (Jeff, October 21, 2026).** The app is never too simple and never
+forces depth. Build a complicated system if you want one, or a simple custom system in five
+minutes with the fewest clicks. Not artsy? Everything comes with default art. Never use maps,
+the journal or the tabletop if you'd rather keep notes on paper beside you. Play with 5 people
+today, 14 next time and 2 after that, switching modules each time. Every feature is optional and
+stays out of the way until wanted; the defaults always work on their own.
+
 ## Architecture: hub and spokes
 
 One shared world file is the single source of truth, and every tool is a separate program that reads and writes it.
@@ -411,8 +418,9 @@ tabs, screens and tools**, until you close it. Closing a pin never touches the o
 only a link, so it always shows the latest version. Pins are remembered with the world (and the
 DM's table), so they are there next time.
 
-- **How to pin:** a pin button appears on hover, and a shortcut. Ctrl+P is Print in every Windows
-  program, so the shortcut should be another one (suggested: Ctrl+Shift+P).
+- **How to pin (decided by Jeff, October 21, 2026):** a pin button appears on hover, or press
+  **Ctrl+Shift+P** (Ctrl+P stays Print, as in every Windows program). A small **X** closes a pin;
+  **double-click** opens the pinned thing in full.
 - **Pins and bookmarks are different:** bookmarks are a tidy list in one tool; pins float on top of
   whatever you're doing. This is the "floating, pinnable windows" idea parked in the feel pass.
 
