@@ -450,6 +450,15 @@ DM's table), so they are there next time.
   nobody clicks into each character or player. Example: Ken (assistant DM) can change the notes
   but initiative is hidden from him.
 - **Share with…** on any one page or handout shares just that, without touching the grid.
+- **Permission templates (Jeff, October 21, 2026).** Nobody sets permissions every session. Each
+  person's permissions are remembered with the party. At the top of the permissions screen are
+  saved templates the DM has named, and **+ New template** saves the current setup:
+  - **Person templates** ("Assistant GM", "New player", "Trusted player"): pick one for a person
+    and their whole row is set in one click.
+  - **Table templates** ("Thursday group", "Convention one-shot"): the whole grid for a group,
+    applied in one click.
+  Templates can be edited, renamed and deleted (to the recycle bin), and changing one asks whether
+  to update the people already using it, like the checklist for changes flowing down.
 - **Joining with a PIN, no account (Jeff's idea, October 21, 2026).** The DM's app hosts the
   session. Each player gets their own random 5-digit PIN from the Party section; the PIN is both
   the key and who you are, so Ken's PIN opens Ken's view with Ken's permissions. PINs end with
