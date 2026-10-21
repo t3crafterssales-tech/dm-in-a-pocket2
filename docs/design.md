@@ -597,6 +597,17 @@ A tool on the tabletop screen only. A dice button opens a small tray that slides
   click rolls it and adds the bonus. Better still, the table reads the system: a character's
   attacks already know their dice and the Strength bonus, so their saved rolls make themselves
   from the sheet, and the player can add their own.
+- **Macros: rolls that follow whoever they're for (Jeff, October 21, 2026).** A saved roll can use
+  a stat instead of a number: "Constitution save against DC 13" is d20 + [Constitution save bonus]
+  against 13, built from blocks like the formulas in the Rules tab (never typed). Then choose who
+  it rolls for:
+  - **Whoever's turn it is:** on Jacob's turn it uses Jacob's Constitution bonus; click Next turn
+    and the same button uses the next character's.
+  - **Everyone at once:** the whole party rolls together (a gauntlet of Dexterity-save traps).
+  - **Who I pick:** click names.
+  The chat shows each result with Pass or Fail against the DC. A macro is a button that can be
+  bookmarked, pinned, or kept on the tracker; it works in any system, since the stat is a link to
+  that system's own ability.
 - **Who sees it:** Public (everyone), Private (just me), DM only, or Blind (only the DM sees the
   result).
 - **The chat keeps the history:** "Rob rolled 14", with the breakdown (d20 showed 10, + 4) a click
