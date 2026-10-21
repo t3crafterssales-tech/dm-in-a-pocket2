@@ -77,6 +77,8 @@ export function brickCard(view: NodeView, a: AttachmentView, ctx: PlaceCtx) {
     {
       class: `brick-card clickable${a.missing ? " broken" : ""}${own ? "" : " inherited"}`,
       "data-key": `card-${a.aid}`,
+      // Ctrl+D over a brick on a sheet makes a variant of the brick itself.
+      "data-node": a.brickId && !a.missing ? a.brickId : null,
       tabindex: 0,
       title: own ? "Click to change it on this sheet only. Drop a brick here to put it inside." : `Comes from ${a.from!.name}`,
       onClick: (ev: MouseEvent) => {

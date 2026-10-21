@@ -81,7 +81,7 @@ function pickScreen(s: CodexSection, ctx: PlaceCtx): HTMLElement {
   const all = s.entries.filter((e) => !q || e.name.toLowerCase().includes(q));
   const starters = all.filter((e) => e.source !== "mine");
   const mine = all.filter((e) => e.source === "mine");
-  const shown = [...starters, ...mine].slice(0, 60);
+  const shown = [...starters, ...mine].slice(0, 400);
   const box = h("input", { class: "text-input start-find", type: "search", placeholder: `Find a ${tile.title.toLowerCase()} to start from…`, value: find, "data-key": "start-find", "aria-label": "Find" });
   box.addEventListener("input", () => ((find = box.value), void ctx.refresh()));
   return h(

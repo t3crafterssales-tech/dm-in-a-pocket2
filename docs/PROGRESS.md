@@ -28,6 +28,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
   October 20, 2026, when he asked to build milestone 9; merged into `main`).
 - **Built, waiting for Jeff to test:** Milestone 9, the AI. Tested with a pretend AI; Jeff's own
   Claude API key is needed only to try it for real.
+- **Built, waiting for Jeff to test:** Milestone 11, the feel pass (branch `claude/feel-pass`,
+  built on milestone 9 so both are tested together). See "Milestone 11: what Jeff can test".
 - **Next:** what Jeff finds when he installs it, then the smaller AI helpers listed under
   Milestone 9 below.
 
@@ -56,6 +58,41 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 | 10 | The full SRD 5.2, Table mode and Word export | Run a game from the app |
 
 ## Log
+
+### Milestone 11: what Jeff can test
+
+Download the installer from the latest "Windows installer" run on the `claude/feel-pass` branch.
+Make a **new** system from Generic d20 (the standard descriptions, materials and enchantments are in
+the starter, so older systems don't have them), then a world on it. It opens straight away.
+
+- **+ New → Weapon → Battleaxe.** Your own copy opens with its name selected: type a name. Click a
+  damage chip, choose how it's held and a material (or + Add a material), step the weight and cost,
+  switch lb/kg. Watch "How it prints in the rulebook" change as you go.
+- **Add Flaming:** Codex → Enchantments, drag Flaming onto the axe. It lands under More → Enchantments.
+- **A lantern:** + New → Gear, find "lantern", pick it. **A monster:** + New → Monster → Goblin Warrior.
+- The Codex on the right: open a section, sort, Show "Made by me", drag something onto another
+  section to move it (or hover and use Move to).
+- Flags are the small strip under the Codex; click it for all of them.
+- Ctrl+D with the mouse over something makes a variant; press ? for every shortcut.
+- A class: hit die chips, + Add a choice, then drag options onto the Choices box.
+- Rules → a new core check has standard wording; change "How a check works" and it follows.
+
+### 2026-10-21 (milestone 11: the feel pass)
+
+Built from `docs/FEEL-PASS.md` and the approved mockup, on branch `claude/feel-pass`.
+
+- Part A: two columns (sheet, then the Codex with the flag strip), the Codex with sections, find,
+  sort, show filter, drag to refile and Move to; floating pop-ups with a lifted shadow and blur.
+- Part B: + New with "What do you want to make?" tiles and Start from / Start blank; the item sheet
+  with standard descriptions, pickers, How it prints and More; Make my own copy for starter content.
+- Part C: the same pattern for beings, spells and other bricks; hit die chips, Choices boxes with
+  + Add a choice, races and classes filed under Race and Class, standard wording for core checks.
+- Part D: the duplicates in Test World 1 came from Quick start run on a system that already had
+  those rules. It now reuses them.
+- Part E: Ctrl+D, Ctrl+N, Ctrl+Z/Y, Ctrl+F, ? for the list; Ctrl+C/V are left to the system.
+- Also fixed: backups were labelled a day old in time zones behind UTC ("Yesterday" for today's).
+- A browser preview of the real window (`scripts/preview/server.ts`) lets Claude look at screens
+  in sessions that can't run Electron.
 
 ### 2026-10-20 (before Jeff's Ashen Vigil test: level tables, point buy, search)
 
@@ -746,3 +783,22 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-20: Search ranks exact names, then names that start with the words (shorter first),
   then everything whose text or values mention them, at most 40 shown with a count of the rest.
   The box is kept across redraws so typing is never interrupted.
+- 2026-10-21: Milestone 11 is built on the milestone 9 branch with main merged in, so the AI and
+  the feel pass are tested together.
+- 2026-10-21: "Make my own copy" of starter content makes an independent copy (not a variant), so
+  every picker works on it; it keeps the starter's description as `standardText` to go back to.
+  Ctrl+D makes a variant, whose inherited attack is changed through Edit parent as before.
+- 2026-10-21: Picker lists (materials, coins, damage types) are drawn from what the game already
+  uses plus a starter list, so "+ Add" needs no separate list to store: a new material appears in
+  every list as soon as one thing uses it.
+- 2026-10-21: Weight units are an app setting on this computer (lb or kg); each weight is saved with
+  its unit, so the rulebook prints exactly what was entered.
+- 2026-10-21: An unchanged copy of starter content isn't flagged by the balance and price checks,
+  since normal is measured against the system's own content.
+- 2026-10-21: Races and classes are filed under new Race and Class top categories; the filing check
+  accepts beings under Creature, Race, Class or Character.
+- 2026-10-21: Starter equipment descriptions and the six enchantments are written for DM in a
+  Pocket (not SRD text), in `src/app/starters/descriptions.ts` and `d20.ts`.
+- 2026-10-21: Backup days are read as noon UTC so "Today" is today in every time zone.
+- 2026-10-21: The window imports shared lists from `src/app/codex-lists.ts`, which has no imports,
+  so nothing from the back end is bundled into the window.

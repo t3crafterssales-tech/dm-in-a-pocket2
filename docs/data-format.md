@@ -45,6 +45,12 @@ These are ordinary fields, so older files without them still open.
 
 A node's `text` may hold several lines; each line prints as its own paragraph.
 
+Items may also carry `material` (what it is made of, such as "Steel"), `handling` ("One-handed",
+"Two-handed" or "Versatile") and `standardText` (the starter's description a copy can go back to,
+milestone 11). Cost and weight stay text with their unit ("10 gp", "4 lb." or "1.8 kg"). Categories
+may have the roles `race` and `class` as well as the five above, so races and classes are filed
+apart from creatures. These are ordinary fields; older files without them still open.
+
 A class (a being with `beingKind` "class") may have `maxLevel` (20 if not set) and one
 `level_<attachment id>` number per feature, the level it is gained at. A rule with `method`
 "pointBuy" is point buy for ability scores, with `points`, `scoreStart`, `scoreMax`, `scoreMin`
