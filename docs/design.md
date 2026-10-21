@@ -1090,6 +1090,25 @@ poisoned, paralysed, frozen or mind-controlled.
 - **The first system, the user's choice, explained (Jeff):** two big cards, "Start from a ready game
   (d20)" and "Build my own with Quick start", each with one line on who it suits.
 
+### The sheet designer (Jeff, October 21, 2026)
+
+Kept deliberately simple: groups you drag around, not a full page designer.
+
+- **A sheet is made of groups**, sorted behind the scenes: Name (character and player), Portrait,
+  Abilities, Saving throws, Skills, Combat (hit points, armour, speed), Attacks, Spells, Inventory,
+  Trackers, Features, Appearance, Notes. Each thing on a character belongs to one group, so related
+  things always stay together. A system's own additions (Scars, Sanity) join a group or make one.
+- **A default layout is made for you** from what the system has.
+- **Drag a group to move it** (inventory at the top if you like) and drag its edge to make it wider
+  or narrower. Text reflows to fit, like a web page, down to a sensible minimum width; the other
+  groups slide out of the way.
+- **Empty groups and lines disappear** (the empty-fields rule); character and player name always
+  show.
+- **Save the layout, then print or export it** (PDF), over as many pages as it needs.
+- **Suggested by Claude:** the system's designer saves the default layout for everyone; a player can
+  adjust the layout of their own sheet, which stays theirs (the usual pencil mark and "Use the
+  system's" to go back).
+
 ### Open questions for version 2
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
