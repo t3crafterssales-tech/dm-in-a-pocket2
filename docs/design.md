@@ -608,6 +608,19 @@ A tool on the tabletop screen only. A dice button opens a small tray that slides
   The chat shows each result with Pass or Fail against the DC. A macro is a button that can be
   bookmarked, pinned, or kept on the tracker; it works in any system, since the stat is a link to
   that system's own ability.
+- **The macro builder (Jeff, October 21, 2026).** Macros are things like any other, kept in a
+  Macros section of the Codex, and shared like anything else (Show to players, or permissions:
+  "can use" or "can change"). A macro is a short recipe made of **blocks**, never code, like a
+  phone's Shortcuts app. The blocks are the same fixed list of named actions the AI uses (Part 7),
+  so every macro goes through undo and history, and a macro press is one undo step. Built in
+  stages:
+  1. **Roll macros** (first): dice, stats, who it's for, pass or fail against a number.
+  2. **Action macros** (later): change a tracker ("use a torch": torches carried minus 1), change
+     hit points ("short rest": everyone rolls their hit die and heals), add or remove a condition,
+     post a message to the chat, show something to players.
+  3. **If blocks** (later still): "if the save fails, add Poisoned".
+  Ready-made macros come with the starters (Short rest, Long rest, Use a torch), so most people
+  never open the builder.
 - **Who sees it:** Public (everyone), Private (just me), DM only, or Blind (only the DM sees the
   result).
 - **The chat keeps the history:** "Rob rolled 14", with the breakdown (d20 showed 10, + 4) a click
