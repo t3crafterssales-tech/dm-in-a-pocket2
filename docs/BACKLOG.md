@@ -20,6 +20,24 @@ parts first (picture, name, a few words) and fold the mechanics away until asked
 lists and libraries show only what fits. Pause new features (milestone 9, the AI) until this is
 settled.
 
+### Feel pass: Jeff's direction (2026-10-21)
+
+- **Fix one example end to end, then apply it everywhere.** Pick one thing (a new battle axe or
+  a new lantern), make creating it feel right, and use that as the pattern for every other area.
+  It's one philosophy, not a hundred separate fixes.
+- **Learn once, works everywhere** (like Foundry VTT: complicated at first, but once one part made
+  sense, every other part worked the same way). Within a couple of minutes of looking at a
+  screen, it should be clear what to do.
+- **Flexible by picking, not typing.** Fewer click-in-a-box, type, press-Enter moments. Material
+  is a common-materials list (wood, iron, steel, gold, bone, leather ...) plus Add; weight follows
+  a pounds or kilograms setting; currencies are picked. Every drop-down keeps an Add or Other.
+- **The Library becomes a Codex**, like Foundry's compendiums, on the right-hand side. It has
+  sections: Spells live in Spells, Items in Items, Monsters in Monsters, and so on. Click a section
+  to open it, then choose how to view it (alphabetical, by challenge rating, homemade or
+  pre-made, or everything). Drag from the Codex onto the open sheet. Drag something from one Codex
+  section into another to refile it (drop a weapon into Monsters, and now it's filed under
+  Monsters).
+
 ## Items
 
 | # | Date | Type | What Jeff said | Notes | Status |
