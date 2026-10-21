@@ -502,6 +502,34 @@ Jeff calls adventures **modules**, as in the 80s. A module is a third layer:
   note can be copied up to the world journal on purpose ("Add to the world journal"), never
   automatically, the same way Copy rule works.
 
+### The module builder (October 21, 2026)
+
+- A module opens like a world (same Codex, same tabs) with one new tab first: **Adventure**.
+- **Front page:** title, cover picture, level range, party size, about how many sessions, and the
+  hook (what's going on and why the heroes get involved).
+- **Chapters and scenes** as a drag-to-reorder outline. Each scene card holds: read-aloud boxed
+  text; "What's really going on" for the DM; encounters (monsters dragged from the Codex, with how
+  hard the fight is for the party); treasure; handouts; and "Where it leads" links to other scenes.
+- **Two views:** the outline (book order) and a map view of scenes as boxes with arrows, for
+  branching adventures and dungeons (numbered rooms, doors as arrows). Working default: one kind
+  of scene card with an optional room number; separate "location" and "event" cards only if Jeff
+  wants them.
+- **The booklet:** the module prints as an adventure book (cover, introduction, chapters with
+  boxed read-aloud text, then automatic appendices of every monster's stat block and the
+  handouts), built like the rulebook.
+- **A module booklet is a DM book** (decided by Jeff, October 21, 2026), so "What's really going
+  on" belongs in it. At the table, the permissions keep secret parts off players' screens.
+- **Running it:** the tabletop shows the current scene, its read-aloud text and its encounters;
+  clicking an encounter drops its monsters into initiative, hidden until revealed.
+
+### Showing things to players (October 21, 2026)
+
+Every handout, picture, map, note or journal page has a permission. **Show to players** opens a
+small list of the party, all ticked; untick anyone who shouldn't see it and press Show. It pops up
+on the screens of everyone ticked (and goes into their journal to look at again), and nobody else's.
+Show to all is one click. Example: the party finds a note, but one player found it alone, so it is
+shown to that player only; or everyone sees the map except the player whose character is blind.
+
 ### Open questions for version 2
 
 - Ken and initiative: hidden completely, or seen but not run (no monster rolls, no monster hit
