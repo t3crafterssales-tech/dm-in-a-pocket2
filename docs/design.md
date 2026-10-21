@@ -652,6 +652,15 @@ new, so the same five characters start a different module. All of that must just
   slots, ki, hit points) appear as trackers by themselves; a player can also add their own custom
   tracker for anything (torches carried, arrows, rations, favours owed), choosing its name, its
   maximum, how it looks (boxes to tick, a number, a bar) and whether a rest refills it.
+- **Inspiration and other awards (Jeff, October 21, 2026).** Many games let the DM reward good
+  role-play with a point the player spends later: Inspiration in D&D (only one at a time, spent
+  for advantage), Hero Points, Bennies, Fate points. This belongs in the **game system**, as a
+  resource in the Rules tab: its name, its maximum (1 for Inspiration), that it starts empty, that
+  it comes back only when the DM awards it, and what spending it does, in the system's own words.
+  Version 1 can already make most of this; version 2 adds "the DM awards it" as a way a resource
+  comes back. If the system has one, it appears on every character sheet as a tracker by itself,
+  and the DM's table gets an Award button (one click gives Randy Inspiration; the chat says so).
+  The d20 starter should include Heroic Inspiration.
 - **Empty means it doesn't print (rule, Jeff, October 21, 2026).** The character sheet is laid out
   as if everything is filled in, and anything left empty disappears: no "Hair:" with a blank after
   it, the line just isn't there, so the sheet is sparser but never shows empty labels. The only
