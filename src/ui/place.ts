@@ -17,14 +17,19 @@ import { lorePanels } from "./lore-tab.ts";
 import { adventurePanels } from "./adventure-tab.ts";
 import { partyPanels } from "./party-tab.ts";
 import { mapsPanels } from "./maps-tab.ts";
+import { journalPanels } from "./journal-tab.ts";
+import { drawDesk, leaveDesk } from "./desk.ts";
+import { forgetReference } from "./tools/reference.ts";
+import { clearPins, drawPins, pinThing } from "./floating-pins.ts";
+import { macroBuilder } from "./tools/dice.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
-import { drawTableMode, focusTableSearch, forgetTableData } from "./table-mode.ts";
+import { focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
 
-const TABS = ["Adventure", "Party", "Maps", "Rules", "Beings", "Items", "Lore", "Rulebook"] as const;
+const TABS = ["Adventure", "Party", "Maps", "Rules", "Beings", "Items", "Lore", "Journal", "Rulebook"] as const;
 type Tab = (typeof TABS)[number];
 
 /** The tabs a place shows: a module (version 2) starts with its Adventure tab. */
@@ -57,6 +62,7 @@ function tabFor(kind: string): Tab {
   if (kind === "brick") return tab === "Beings" || tab === "Items" ? tab : "Items";
   if (kind === "lore" || kind === "table") return "Lore";
   if (kind === "map") return "Maps";
+  if (kind === "journal") return "Journal";
   if (kind === "encounter") return current?.type === "module" ? "Adventure" : "Beings";
   return "Rules";
 }
@@ -67,6 +73,11 @@ let focusName = false;
 async function openNode(id: string, opts: { focusName?: boolean } = {}) {
   const n = await attempt(() => api.node(id));
   if (!n || !current) return;
+  // A macro opens in its builder; a game night opens its journal page.
+  if (n.kind === "macro") {
+    const m = (await attempt(() => api.macros()))?.find((x) => x.id === id) ?? null;
+    return void macroBuilder(null, m);
+  }
   tab = n.kind === "being" && n.fields.beingKind === "character" && !n.template ? "Party" : tabFor(n.kind);
   selected[tab] = id;
   focusName = !!opts.focusName;
@@ -145,7 +156,7 @@ export async function renderPlace(): Promise<void> {
 async function draw() {
   const view = current;
   if (!view) return;
-  if (tableMode) return drawTableMode(view, () => ((tableMode = false), forgetTableData(), void renderPlace()), () => void goHome());
+  if (tableMode) return drawDesk(view, () => ((tableMode = false), leaveDesk(), forgetTableData(), forgetReference(), void renderPlace()), () => void goHome());
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key ?? null;
   const caret = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement ? document.activeElement.selectionStart : null;
   const scroll = [...document.querySelectorAll<HTMLElement>("[data-scroll]")].map((el) => [el.dataset.scroll!, el.scrollTop] as const);
@@ -177,7 +188,7 @@ async function draw() {
       "nav",
       { class: "top-actions" },
       view.readOnly ? null : h("button", { class: "button primary new-button", title: "Make something new: a weapon, a monster, a spell…", onClick: () => newThing() }, svg(ICONS.plus), "New"),
-      iconButton(ICONS.dice, "Table mode", () => ((tableMode = true), void renderPlace()), { title: "Table mode: read and roll while you run a game, with nothing to change by accident" }),
+      iconButton(ICONS.dice, "DM's table", () => ((tableMode = true), void renderPlace()), { title: "The DM's table: run a game night with initiative, dice, the clock, the journal and more" }),
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
       iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
@@ -193,6 +204,7 @@ async function draw() {
   if (tab === "Adventure") ({ list, editor } = await adventurePanels(ctx));
   else if (tab === "Party") ({ list, editor } = await partyPanels(ctx));
   else if (tab === "Maps") ({ list, editor } = await mapsPanels(ctx));
+  else if (tab === "Journal") ({ list, editor } = await journalPanels(ctx));
   else if (tab === "Rules") ({ list, editor } = await rulesPanels(ctx));
   else if (tab === "Beings") ({ list, editor } = await sheetPanels(ctx, "beings"));
   else if (tab === "Items") ({ list, editor } = await sheetPanels(ctx, "items"));
@@ -209,6 +221,7 @@ async function draw() {
   list.classList.add("side-list");
   const workspace = h("div", { class: "workspace two" }, editor, h("aside", { class: "side" }, list, flags));
   app.replaceChildren(top, ...(banner ? [banner] : []), workspace, ai);
+  void drawPins(view, { open: (x) => void openNode(x) });
 
   for (const [key, top] of scroll) {
     const el = document.querySelector<HTMLElement>(`[data-scroll="${CSS.escape(key)}"]`);
@@ -232,6 +245,7 @@ function comingSoon(t: Tab, view: PlaceView) {
     Adventure: "",
     Party: "",
     Maps: "",
+    Journal: "",
     Rules: "",
     Beings: "",
     Items: "",
@@ -353,8 +367,12 @@ document.addEventListener("keydown", (e) => {
   if (!(e.ctrlKey || e.metaKey)) return;
   const k = e.key.toLowerCase();
   if (tableMode) {
-    // Nothing to undo in a read-only view; Ctrl+F finds things.
+    // At the DM's table: Ctrl+Z undoes the last table step; Ctrl+F finds things in the reference.
     if (k === "f" && focusTableSearch()) e.preventDefault();
+    if (k === "z" && !typingIn(e) && !current.readOnly) {
+      e.preventDefault();
+      void attempt(() => api.undo()).then(() => renderPlace());
+    }
     return;
   }
   if (k === "f") {
@@ -367,6 +385,14 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (typingIn(e)) return;
+  if (k === "p" && e.shiftKey) {
+    // Pin what the mouse is over (or the open sheet) to the screen. Ctrl+P stays Print.
+    e.preventDefault();
+    const id = hovered ?? selected[tab] ?? null;
+    if (id) void pinThing(id);
+    else notice("Point at something in the Codex, or open it, then press Ctrl+Shift+P to pin it to the screen.", "blue", undefined, 5000);
+    return;
+  }
   if (k === "d" && !current.readOnly) {
     // Like Blender: Ctrl+D is a connected copy (a variant that keeps following the original);
     // Ctrl+Shift+D is a separate copy (your own copy that goes its own way).
@@ -393,7 +419,8 @@ function showShortcuts() {
   const rows: [string, string][] = [
     ["Ctrl+N", "Make something new"],
     ["Ctrl+D", "Connected copy: a variant of what the mouse is over (or the open sheet) that keeps following it"],
-    ["Ctrl+Shift+D", "Separate copy: your own copy that goes its own way"],
+    ["Ctrl+Shift+D", "Separate copy: your own copy that goes its own way (on a map: a pin's look without its link)"],
+    ["Ctrl+Shift+P", "Pin what the mouse is over to the screen, as a card that stays while you work"],
     ["Ctrl+Z", "Undo"],
     ["Ctrl+Y", "Redo (Ctrl+Shift+Z works too)"],
     ["Ctrl+F", "Search everything"],
@@ -412,6 +439,9 @@ function showShortcuts() {
 
 async function goHome() {
   const id = current?.id;
+  clearPins();
+  leaveDesk();
+  tableMode = false;
   await attempt(() => api.goHome());
   current = null;
   await nav.home(id);
@@ -432,12 +462,14 @@ async function placeSettings(view: PlaceView) {
     const history = h("input", { type: "checkbox" });
     const snaps = h("input", { type: "checkbox" });
     const chat = h("input", { type: "checkbox" });
+    const journal = h("input", { type: "checkbox" });
     parts.push(
       h("h3", null, `Share this ${word}`),
       h("p", { class: "muted" }, view.type === "module" ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the module, its world and system, and its pictures; never your settings or your API key." : isWorld ? "Saves one file to email, put on a USB stick or send any way you like. It always carries the world, its system, its pictures and its World Notes; never your settings or your API key." : "Saves one file with this system (and any system it is built on) to send to someone."),
       h("label", { class: "check" }, history, "Include undo history"),
       isWorld ? h("label", { class: "check" }, snaps, "Include snapshots") : h("span"),
       h("label", { class: "check" }, chat, "Include the AI chat"),
+      isWorld ? h("label", { class: "check" }, journal, "Include my journal and game nights (private unless ticked)") : h("span"),
       h(
         "div",
         { class: "row" },
@@ -446,7 +478,7 @@ async function placeSettings(view: PlaceView) {
           {
             class: "button plain",
             onClick: async () => {
-              const path = await attempt(() => api.share({ history: history.checked, snapshots: snaps.checked, chat: chat.checked }));
+              const path = await attempt(() => api.share({ history: history.checked, snapshots: snaps.checked, chat: chat.checked, journal: journal.checked }));
               if (path) notice(`Saved ${path.split(/[\\/]/).pop()}. Send it to anyone with DM in a Pocket; they use Import on their home screen.`, "green", undefined, 10000);
             },
           },

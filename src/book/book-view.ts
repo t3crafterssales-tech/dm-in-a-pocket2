@@ -105,6 +105,35 @@ export async function renderBook(data: BookData, opts: { preview?: boolean; zoom
   pages.replaceChildren();
   const book = data.book;
 
+  // A handout (version 2): one journal page, drawn from its blocks, with an old-paper look if asked.
+  if (data.handout) {
+    const ho = data.handout;
+    const page = newPage(`handout look-${ho.style}${ho.hand ? " handwriting" : ""}`);
+    const sheet = el("div", "handout-sheet");
+    const tall = Math.max(400, ...ho.blocks.map((b) => b.y + b.h + 20));
+    sheet.style.setProperty("--page-h", String(tall));
+    for (const b of ho.blocks) {
+      const box = el("div", `hblock type-${b.type}`);
+      box.style.cssText = `--x:${b.x};--y:${b.y};--w:${b.w};--h:${b.h}`;
+      if (b.type === "image" && b.picture) {
+        const img = el("img");
+        img.src = `dmpic://pic/${encodeURIComponent(b.picture)}`;
+        box.appendChild(img);
+      } else {
+        box.style.fontFamily = ho.hand ? "" : b.font;
+        box.style.fontSize = `calc(${b.size}px * var(--k))`;
+        box.style.color = ho.style === "plain" ? "#000" : b.color;
+        box.textContent = b.text;
+      }
+      sheet.appendChild(box);
+    }
+    body.appendChild(sheet);
+    if (ho.seal) body.appendChild(el("div", "wax-seal", "✦"));
+    void page;
+    await Promise.all([...document.images].map((img) => (img.complete ? null : new Promise((r) => ((img.onload = r), (img.onerror = r))))));
+    return 1;
+  }
+
   // Cover.
   newPage("cover");
   body.append(el("h1", "", book.title), el("div", "flourish"), el("div", "subtitle", book.subtitle));

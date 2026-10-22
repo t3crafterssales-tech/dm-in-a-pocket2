@@ -32,7 +32,9 @@ Newest first. Every session reads this after `CLAUDE.md`.
   built on milestone 9 so both are tested together). See "Milestone 11: what Jeff can test".
 - **Built, waiting for Jeff to test:** Version 2.1, modules and encounters (branch
   `claude/v2-modules`, built on the feel pass). See "Version 2.1: what Jeff can test".
-- **Next:** what Jeff finds when he installs it; then version 2.2, the character builder.
+- **Built, waiting for Jeff to test:** Versions 2.2 (characters), 2.3 (maps) and 2.4 (the DM's
+  table), on `claude/v2-modules`. Every push there updates "Latest test version" on Releases.
+- **Next:** version 2.5, players join; then 2.6, designers, print shop and the welcome tour.
 
 ## Milestones to first playable
 
@@ -115,6 +117,34 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 - **Export…**: PNG or PDF, with ticks for grid, pins, labels, drawings and DM-only notes (off).
 - The adventure booklet prints the module's maps with pins numbered like the encounters, and an
   encounter shows "On the map".
+
+### Version 2.4: what Jeff can test
+- A **DM's table** button at the top. **Begin session** picks who is at the table tonight and opens
+  the table: tools in areas you can rearrange by dragging their title bars, with **+ Tool** and an
+  arrangement menu (save, use, forget, reset).
+- **Initiative**: Start fight rolls everyone, hidden monsters stay grey until revealed, damage box,
+  conditions with rounds, Next turn, drag to reorder, events ("lair action at 20").
+- **Dice**: any dice, advantage and disadvantage, saved rolls and macros, attacks, a deck of cards.
+  Rolls go into the **Log and chat** (type /r 2d6+3 there too).
+- **Clock**: game time with advance buttons, short and long rests for the party, timers (game time
+  or real time with a chime), your own calendar from the gear.
+- **Tables** (roll tables with "once only" rows and weights), **Journal** (tonight's page opens by
+  itself), **Bookmarks**, **Party**, **Map** (point, draw and note marks), **Reference** and the
+  **Codex**.
+- **Wrap up** gives experience (absent players get a share you choose), "Everyone levels up", and
+  asks whether to keep or remove things you made tonight.
+- A new **Journal** tab: pages by category, text and picture blocks you drag and size, links,
+  "Mentioned in", Make it a lore page or NPC, Print handout (plain, parchment or border), and a
+  Campaign diary as PDF or Word. The journal stays private: Share leaves it out unless you tick it.
+- **Pins**: Ctrl+Shift+P (or the pin button in the Codex) floats anything on screen; drag it,
+  fold it, close it; double-click to open.
+
+### 2026-10-22 (version 2.4: the DM's table)
+- `src/app/table.ts` (sessions, initiative, conditions, clock, calendar, experience),
+  `src/app/macros.ts`, `src/app/journal.ts`, `src/app/tablemeta.ts`.
+- `src/ui/desk.ts` and the tools in `src/ui/tools/`; `src/ui/journal-editor.ts`,
+  `src/ui/journal-tab.ts`, `src/ui/floating-pins.ts`.
+- 265 automatic tests pass.
 
 ### 2026-10-21 (version 2.3: maps)
 - `src/app/maps.ts` (pins, drawings, the map tree, measuring), `src/ui/map-render.ts` (one SVG
@@ -909,3 +939,9 @@ One plain line each. Jeff can overrule any of these at a milestone.
   back end writes PNG, or a PDF with the picture as a JPEG (a small PDF writer, no installs).
 - 2026-10-21: Fill colours or textures a room or closed shape; on empty space it fills the whole
   map (a texture) or sets its background colour (a colour). There is no flood fill of drawings.
+- 2026-10-22: Table things that aren't the game (chat, tool layout, bookmarks, pins, journal
+  categories) are kept in the file's meta like the AI chat, so they never fill undo history.
+- 2026-10-22: A game night is a node of kind "session" holding combat, timers, the log and the
+  clock; monster damage lives there, while characters keep their own hit points and conditions.
+- 2026-10-22: Each game night gets a journal page made with it, starting with an empty text block.
+- 2026-10-22: Sharing leaves journal pages and game nights out unless "Include my journal" is ticked.

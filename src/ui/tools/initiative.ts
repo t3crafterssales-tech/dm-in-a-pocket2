@@ -16,6 +16,8 @@ import { rollAndPost } from "./dice.ts";
 
 const CARD_DRAG = "application/x-dm-card";
 const picked = new Set<string>();
+/** Whose turn it was at the last redraw: the squeeze-in plays only when the turn moves on. */
+let lastNow: string | null = null;
 
 function setting<T>(ctx: DeskCtx, key: string, d: T): T {
   const v = ctx.settings("initiative")[key];
@@ -30,8 +32,8 @@ export async function initiativeTool(ctx: DeskCtx): Promise<HTMLElement> {
   for (const id of [...picked]) if (!order.some((c) => c.id === id)) picked.delete(id);
   const live = order.filter((c) => !c.delayed);
   const current = s.combat.active ? live[s.combat.turn] : null;
-  const style = setting(ctx, "style", "list");
-  const showPlayer = setting(ctx, "names", "character") === "player";
+  const style = setting<string>(ctx, "style", "list");
+  const showPlayer = setting<string>(ctx, "names", "character") === "player";
 
   const head = h(
     "div",
@@ -58,7 +60,9 @@ export async function initiativeTool(ctx: DeskCtx): Promise<HTMLElement> {
       )
     : null;
 
-  const cards = order.length ? order.map((c, i) => card(c, c === current, i, ctx, showPlayer)) : [h("p", { class: "muted small pad" }, "Nobody in the order yet. Start fight, or drag monsters in from the Codex.")];
+  const arrived = current && current.id !== lastNow ? current.id : null;
+  lastNow = current?.id ?? null;
+  const cards = order.length ? order.map((c, i) => card(c, c === current, i, ctx, showPlayer, c.id === arrived)) : [h("p", { class: "muted small pad" }, "Nobody in the order yet. Start fight, or drag monsters in from the Codex.")];
   const list = h("div", { class: `init-list${style === "carousel" ? " carousel" : ""}` }, cards);
   const body = h("div", { class: "init-tool" }, head, tools, list);
 
@@ -91,7 +95,7 @@ function hpWords(hp: number | null, max: number | null): string {
   return r >= 1 ? "unhurt" : r > 0.5 ? "hurt" : r > 0.25 ? "bloodied" : "nearly down";
 }
 
-function card(c: CardView, now: boolean, index: number, ctx: DeskCtx, showPlayer: boolean): HTMLElement {
+function card(c: CardView, now: boolean, index: number, ctx: DeskCtx, showPlayer: boolean, arrived = false): HTMLElement {
   const ro = ctx.view.readOnly;
   const glance = setting<string[]>(ctx, "glance", ["hp", "ac"]);
   const allDown = c.kind === "monster" && c.members.length > 0 && c.members.every((m) => m.defeated);
@@ -102,7 +106,7 @@ function card(c: CardView, now: boolean, index: number, ctx: DeskCtx, showPlayer
   const el = h(
     "div",
     {
-      class: `init-card kind-${c.kind}${now ? " now" : ""}${c.hidden ? " hidden-card" : ""}${allDown ? " defeated" : ""}${c.delayed ? " delayed" : ""}${picked.has(c.id) ? " picked" : ""}`,
+      class: `init-card kind-${c.kind}${now ? " now" : ""}${arrived ? " arrived" : ""}${c.hidden ? " hidden-card" : ""}${allDown ? " defeated" : ""}${c.delayed ? " delayed" : ""}${picked.has(c.id) ? " picked" : ""}`,
       draggable: ro ? "false" : "true",
       "data-card": c.id,
       onClick: (e: MouseEvent) => {

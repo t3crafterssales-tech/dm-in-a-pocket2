@@ -9,6 +9,7 @@ import { notice } from "./dialogs.ts";
 import { h } from "./dom.ts";
 import { DRAG_TYPE } from "./library-panel.ts";
 import type { PlaceCtx } from "./place.ts";
+import { pinThing } from "./floating-pins.ts";
 
 /** Dragging things themselves (to refile them), as opposed to bricks to attach. */
 export const NODE_DRAG = "application/x-dm-nodes";
@@ -188,6 +189,7 @@ function entry(e: CodexEntry, s: CodexSection, sections: CodexSection[], visible
       h("b", null, e.name, e.source === "mine" ? h("span", { class: "mine-tag" }, "Yours") : e.source === "others" ? h("span", { class: "mine-tag others" }, "From others") : null),
       e.sub ? h("small", null, e.sub) : null,
     ),
+    h("button", { class: "codex-pin", title: "Pin it to the screen (Ctrl+Shift+P)", "aria-label": `Pin ${e.name}`, onClick: (ev: MouseEvent) => (ev.stopPropagation(), void pinThing(e.id)) }, "📌"),
     move,
   );
 }

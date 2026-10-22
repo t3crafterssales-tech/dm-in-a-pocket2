@@ -236,7 +236,9 @@ export function beginSession(ws: Workspace, layerId: Id, input: BeginInput, now:
       made: [],
     },
   });
-  ws.create(layerId, "journal", title, { fields: { category: "Session", priority: 1, blocks: [], session: link(id), owner: null, shared: [], revealed: false } });
+  // The night's page starts with a text box for the DM's notes; the table's log goes underneath.
+  const notes = { id: newId(), type: "text", x: 20, y: 20, w: 760, h: 200, text: "", font: "Georgia", size: 16, color: "#2b2620", picture: null };
+  ws.create(layerId, "journal", title, { fields: { category: "Session", priority: 1, blocks: [notes], session: link(id), owner: null, shared: [], revealed: false } });
   return id;
 }
 

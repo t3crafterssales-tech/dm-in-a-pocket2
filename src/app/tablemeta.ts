@@ -65,6 +65,7 @@ export const DEFAULT_ARRANGEMENT: ToolPlace[] = [
   { tool: "dice", area: "right", order: 0 },
   { tool: "clock", area: "right", order: 1 },
   { tool: "log", area: "right", order: 2 },
+  { tool: "codex", area: "left", order: 1 },
 ];
 
 export const TOOL_NAMES: Record<string, string> = {
@@ -79,6 +80,7 @@ export const TOOL_NAMES: Record<string, string> = {
   map: "Map",
   log: "Chat and log",
   reference: "Rules reference",
+  codex: "Codex",
 };
 
 export function tableMetaFrom(v: unknown): TableMeta {

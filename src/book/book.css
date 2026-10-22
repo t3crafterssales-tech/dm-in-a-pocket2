@@ -53,3 +53,14 @@ body.preview #pages { zoom: var(--zoom, 0.7); }
 /* A map in the adventure booklet, fitted to the page width. */
 .book-map { margin: 6pt 0 8pt; }
 .book-map svg { width: 100%; height: auto; max-height: 7in; display: block; border: 1px solid var(--rule); }
+
+/* A handout (version 2): a journal page's blocks on one sheet, 800 units wide. */
+.handout .page-body { overflow: hidden; }
+.handout-sheet { position: relative; width: 100%; --k: calc(var(--page-w) / 800 - 0.17); height: calc(var(--page-h) * 1px * 0.72); }
+.hblock { position: absolute; left: calc(var(--x) / 800 * 100%); top: calc(var(--y) / 800 * 100% * 1.0); width: calc(var(--w) / 800 * 100%); white-space: pre-wrap; line-height: 1.35; }
+.hblock img { width: 100%; height: auto; display: block; }
+.handout.look-parchment { background: radial-gradient(ellipse at 30% 20%, #f6ead0 0%, #e9d6aa 55%, #d9bf86 100%); }
+.handout.look-parchment .page-body { box-shadow: inset 0 0 40px rgba(110, 70, 20, 0.35); border-radius: 6px; padding: 18pt; clip-path: polygon(0 1%, 4% 0, 12% 1.5%, 25% 0.4%, 40% 1.2%, 55% 0, 70% 1%, 85% 0.3%, 100% 1%, 99% 20%, 100% 45%, 99.2% 70%, 100% 99%, 85% 100%, 62% 98.8%, 40% 100%, 20% 99%, 0 100%, 0.8% 75%, 0 50%, 1% 25%); }
+.handout.look-border .page-body { border: 6pt double #6b4a2a; padding: 16pt; }
+.handout.handwriting .hblock { font-family: "Segoe Script", "Bradley Hand", "Brush Script MT", cursive; }
+.wax-seal { position: absolute; right: 0.9in; bottom: 0.9in; width: 0.9in; height: 0.9in; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #d6453a, #8e1a14 70%); color: #f3c4bd; display: grid; place-items: center; font-size: 26pt; box-shadow: 0 2px 4px rgba(0,0,0,.4); }

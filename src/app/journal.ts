@@ -8,9 +8,8 @@ import { isLink, link, newId } from "../engine/index.ts";
 import type { Id, NodeRecord, Value, Workspace } from "../engine/index.ts";
 import { sessionOf } from "./table.ts";
 
-export const DEFAULT_CATEGORIES = ["Session", "Party notes", "Lore", "Treasure", "Plot threads", "NPCs", "Quests", "Rumours", "Places", "Notes"];
-export const PAGE_WIDTH = 800;
-export const FONTS = ["Georgia", "Segoe UI", "Palatino Linotype", "Courier New", "Comic Sans MS"];
+import { DEFAULT_CATEGORIES, PAGE_WIDTH } from "./journal-lists.ts";
+export { DEFAULT_CATEGORIES, FONTS, PAGE_WIDTH } from "./journal-lists.ts";
 
 export interface Block {
   id: Id;

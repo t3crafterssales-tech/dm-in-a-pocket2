@@ -141,8 +141,14 @@ export interface HistoryView {
 }
 
 export interface BookRequest {
-  /** "adventure" is a module's booklet: its encounters in order, with appendices. */
-  type: BookType | "adventure";
+  /** "adventure" is a module's booklet: its encounters in order, with appendices. "diary" is the
+   * campaign diary from the journal; "handout" prints one journal page. */
+  type: BookType | "adventure" | "diary" | "handout";
+  /** Handouts: the journal page, and its look. */
+  page?: Id;
+  handout?: { style: string; seal: boolean; hand: boolean };
+  /** Diary: put the DM's own pages in too (left out unless ticked). */
+  diaryDmPages?: boolean;
   /** Adventure booklets: encounter numbers in full (2.1.3), top level only, or off. */
   encounterNumbers?: EncounterNumbering;
   /** Chapters to include, in order; leave out for the book type's usual chapters. */
@@ -156,6 +162,8 @@ export interface BookRequest {
 
 export interface BookData {
   book: Book;
+  /** A single journal page printed as a handout (version 2), drawn from its blocks. */
+  handout?: { title: string; style: string; seal: boolean; hand: boolean; blocks: Block[] };
   /** Names of everything the entries mention, for "see Poisoned, page 42". */
   names: Record<Id, string>;
   pageSize: "Letter" | "A4";
@@ -341,6 +349,21 @@ export class Editing {
   /** The book's content for the chosen book type, plus the names its page references need. */
   book(opts: BookRequest): BookData {
     const pageSize = opts.pageSize === "A4" ? "A4" : "Letter";
+    if (opts.type === "handout") {
+      const p = pageView(this.ws, this.layer, String(opts.page ?? ""));
+      const h = opts.handout ?? { style: "plain", seal: false, hand: false };
+      return { book: { title: p.name, subtitle: "Handout", chapters: [], index: [], credits: [] }, names: {}, pageSize, handout: { title: p.name, style: String(h.style), seal: !!h.seal, hand: !!h.hand, blocks: p.blocks } };
+    }
+    if (opts.type === "diary") {
+      const nights = diary(this.ws, this.layer, { dmPages: !!opts.diaryDmPages });
+      const chapters = nights.map((n, i) => ({
+        id: `adv:diary-${i}` as const,
+        title: n.title,
+        text: n.notes.join("\n\n"),
+        entries: n.log.length || n.pictures.length ? [{ node: `diary-${i}`, title: n.log.length ? "From the table" : "", stats: null, paragraphs: n.log, mentions: [], variants: [], asParent: null, picture: n.pictures[0] ?? null }] : [],
+      }));
+      return { book: { title: this.ws.layer(this.layer).name, subtitle: "Campaign diary", chapters, index: [], credits: opts.author?.trim() ? [`Created by ${opts.author.trim()}.`] : [] }, names: {}, pageSize };
+    }
     if (opts.type === "adventure" && this.ws.layer(this.layer).type === "module") {
       const numbering = opts.encounterNumbers === "top" || opts.encounterNumbers === "off" ? opts.encounterNumbers : "full";
       return { ...buildAdventureBook(this.ws, this.layer, { numbering, author: opts.author?.trim() || null }), pageSize };
@@ -685,6 +708,22 @@ export class Editing {
       .list(this.layer)
       .filter((n) => n.created >= since && this.ws.owner(this.layer, n.id) === this.layer && (n.kind === "item" || n.kind === "lore" || (n.kind === "being" && this.ws.resolve(this.layer, n.id)!.fields.beingKind !== "character")))
       .map((n) => ({ id: n.id, name: n.name, what: what(n) }));
+  }
+
+  /** The calendar: a rule in this place (made in the Time section if there isn't one yet). */
+  setCalendar(cal: Value): true {
+    const existing = this.ws.list(this.layer, "rule").find((n) => {
+      const c = this.ws.resolve(this.layer, n.id)!.fields.calendar;
+      return !!c && typeof c === "object" && !Array.isArray(c);
+    });
+    this.run(() =>
+      this.ws.transact("Changed the calendar", () => {
+        if (existing) return this.ws.setField(this.layer, existing.id, "calendar", cal);
+        const time = this.ws.list(this.layer, "category").find((c) => c.fields.section === "time");
+        this.ws.create(this.layer, "rule", "Calendar", { category: time ? link(time.id) : null, text: "The world's months, days, holidays, moons and seasons. The DM's table counts time with it.", fields: { calendar: cal } });
+      }),
+    );
+    return true;
   }
 
   // ---------- Macros ----------

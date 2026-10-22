@@ -374,6 +374,7 @@ export const BACKEND_METHODS = [
   "setBlock",
   "pageToNode",
   "tableMeta",
+  "setCalendar",
   "madeSince",
   "setTableMeta",
   "postChat",
@@ -1213,6 +1214,9 @@ export class Backend {
   pageToNode(id: Id, kind: "lore" | "npc"): Id {
     return this.editing.pageToNode(id, kind);
   }
+  setCalendar(cal: Value): true {
+    return this.editing.setCalendar(cal);
+  }
   madeSince(since: number): { id: Id; name: string; what: string }[] {
     return this.editing.madeSince(since);
   }
@@ -1611,7 +1615,7 @@ export class Backend {
   addLore(name: string, template: string): Id {
     return this.editing.addLore(name, template);
   }
-  rollTable(id: Id): { roll: number; text: string; result: { id: Id; name: string } | null } {
+  rollTable(id: Id): ReturnType<Editing["rollTable"]> {
     return this.editing.rollTable(id);
   }
   /** Table mode: the world as a read-only reading view for running a game. */

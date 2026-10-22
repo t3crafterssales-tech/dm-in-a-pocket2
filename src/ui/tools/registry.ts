@@ -3,6 +3,7 @@
 
 import type { PlaceView, TableMeta, TableView } from "../../app/backend.ts";
 import { bookmarksTool } from "./bookmarks.ts";
+import { codexTool } from "./codex-tool.ts";
 import { clockTool, clockGear } from "./clock.ts";
 import { diceTool, diceGear } from "./dice.ts";
 import { encounterTool } from "./encounter.ts";
@@ -45,4 +46,5 @@ export const TOOLS: Record<string, Tool> = {
   map: { render: mapTool },
   log: { render: logTool, gear: logGear },
   reference: { render: referenceTool },
+  codex: { render: codexTool },
 };
