@@ -12,6 +12,7 @@ import type { DeskCtx } from "./registry.ts";
 let view: "chat" | "log" = "chat";
 let ic = false;
 let draft = "";
+let whisper = "";
 
 const LOG_KINDS: [string, string][] = [
   ["fight", "Fights started and ended"],
@@ -81,18 +82,22 @@ export async function logTool(ctx: DeskCtx): Promise<HTMLElement> {
     const roll = /^\/r(?:oll)?\s+(.+)$/i.exec(text);
     const who = (ctx.settings("dice").name as string | undefined) ?? "DM";
     const color = (ctx.settings("dice").color as string | undefined) ?? "#b93a2e";
-    const ok = roll ? await attempt(() => api.rollDice({ formula: roll[1]!, who, color, see: "public" })) : await attempt(() => api.postChat({ kind: "chat", who, color, see: "public", to: [], text, roll: null, ic }));
+    const ok = roll
+      ? await attempt(() => api.rollDice({ formula: roll[1]!, who, color, see: whisper ? "dm" : "public" }))
+      : await attempt(() => api.postChat({ kind: whisper ? "whisper" : "chat", who, color, see: "public", to: whisper ? [whisper] : [], text, roll: null, ic }));
     if (ok) {
       draft = "";
       await ctx.refresh();
     }
   };
   box.addEventListener("keydown", (e) => e.key === "Enter" && void send());
+  const to = h("select", { class: "text-input select small-select", "aria-label": "To", title: "Whisper to one player (you see every whisper; players are told so)" }, h("option", { value: "" }, "To everyone"), ctx.meta.people.map((p) => h("option", { value: p.name, selected: p.name === whisper }, `Whisper to ${p.name}`)));
+  to.addEventListener("change", () => ((whisper = to.value), void ctx.refresh()));
   const icTick = h("input", { type: "checkbox", checked: ic });
   icTick.addEventListener("change", () => ((ic = icTick.checked), void ctx.refresh()));
   const list = h("ol", { class: "chat-lines", "data-scroll": "chat-lines" }, chat.length ? chat.map(chatLine) : [h("li", { class: "muted small" }, "Rolls and messages show here. Type /r 2d6+3 to roll.")]);
   requestAnimationFrame(() => (list.scrollTop = list.scrollHeight));
-  return h("div", { class: "log-tool" }, switcher, list, h("div", { class: "inline" }, box, h("button", { class: "button primary small-button", onClick: () => void send() }, "Send")), h("label", { class: "check small" }, icTick, "In character"));
+  return h("div", { class: "log-tool" }, switcher, list, h("div", { class: "inline" }, box, h("button", { class: "button primary small-button", onClick: () => void send() }, "Send")), h("div", { class: "inline" }, ctx.meta.people.length ? to : null, h("label", { class: "check small" }, icTick, "In character")));
 }
 
 export async function logGear(ctx: DeskCtx) {

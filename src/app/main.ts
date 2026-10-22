@@ -93,6 +93,7 @@ void app.whenReady().then(() => {
     defaultFolder: join(app.getPath("documents"), "DM in a Pocket"),
     machine: hostname(),
     emit: send,
+    playerFile: (name) => (["player.html", "player.js", "player.css"].includes(name) && existsSync(join(__dirname, name)) ? readFileSync(join(__dirname, name)) : null),
     pickPicture: async () => {
       const r = await dialog.showOpenDialog(win!, { title: "Choose a picture", properties: ["openFile"], filters: [{ name: "Pictures", extensions: PICTURE_TYPES.map((x) => x.slice(1)) }] });
       return r.canceled ? null : (r.filePaths[0] ?? null);

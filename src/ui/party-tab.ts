@@ -14,6 +14,7 @@ import { NODE_DRAG, codexPanel } from "./codex-panel.ts";
 import { askText, stepper } from "./pickers.ts";
 import { openBuilder } from "./character-builder.ts";
 import type { PlaceCtx } from "./place.ts";
+import { playersSection } from "./players-panel.ts";
 
 let side: "party" | "codex" = "party";
 /** Characters whose Appearance is folded open. */
@@ -23,7 +24,7 @@ export async function partyPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement; e
   const list = (await attempt(() => api.roster())) ?? [];
   let view: CharacterView | null = null;
   if (ctx.selected && list.some((c) => c.id === ctx.selected)) view = (await attempt(() => api.characterView(ctx.selected!))) ?? null;
-  const editor = view ? sheet(view, ctx) : overview(list, ctx);
+  const editor = view ? sheet(view, ctx) : await overview(list, ctx);
   const switcher = h(
     "div",
     { class: "switch", role: "tablist", "aria-label": "Show" },
@@ -76,8 +77,9 @@ function rosterPanel(list: RosterEntry[], switcher: HTMLElement, ctx: PlaceCtx):
   );
 }
 
-function overview(list: RosterEntry[], ctx: PlaceCtx): HTMLElement {
+async function overview(list: RosterEntry[], ctx: PlaceCtx): Promise<HTMLElement> {
   const ro = ctx.view.readOnly;
+  const players = ctx.view.type === "system" ? null : await playersSection({ readOnly: ro, refresh: ctx.refresh, roster: list.map((c) => ({ id: c.id, name: c.name, player: c.player })) });
   return h(
     "section",
     { class: "panel editor" },
@@ -104,6 +106,7 @@ function overview(list: RosterEntry[], ctx: PlaceCtx): HTMLElement {
           )
         : null,
       ro ? null : h("div", { class: "sheet-actions" }, h("button", { class: "button primary", onClick: () => void newCharacter(ctx) }, svg(ICONS.plus), "New character")),
+      players,
     ),
   );
 }

@@ -134,6 +134,13 @@ let rendering: Promise<void> | null = null;
 let again = false;
 
 /** Redraws the whole open world or system, keeping the cursor where it was. */
+/** Players did something: redraw the table (or the Party tab, for the green dots), never a sheet mid-edit. */
+export function redrawForPlayers(what: "table" | "players") {
+  if (!current) return;
+  const typing = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
+  if (tableMode || (what === "players" && tab === "Party" && !typing)) void renderPlace();
+}
+
 export async function renderPlace(): Promise<void> {
   // Several changes in a row redraw once, in order.
   if (rendering) {

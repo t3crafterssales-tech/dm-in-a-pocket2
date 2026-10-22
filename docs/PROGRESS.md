@@ -34,7 +34,8 @@ Newest first. Every session reads this after `CLAUDE.md`.
   `claude/v2-modules`, built on the feel pass). See "Version 2.1: what Jeff can test".
 - **Built, waiting for Jeff to test:** Versions 2.2 (characters), 2.3 (maps) and 2.4 (the DM's
   table), on `claude/v2-modules`. Every push there updates "Latest test version" on Releases.
-- **Next:** version 2.5, players join; then 2.6, designers, print shop and the welcome tour.
+- **Built, waiting for Jeff to test:** Version 2.5, players join on their own screens.
+- **Next:** version 2.6, the sheet and book designers, print shop and the welcome tour.
 
 ## Milestones to first playable
 
@@ -117,6 +118,33 @@ free, no-AI work first, since the AI needs Jeff's API key and costs money on it;
 - **Export…**: PNG or PDF, with ticks for grid, pins, labels, drawings and DM-only notes (off).
 - The adventure booklet prints the module's maps with pins numbered like the encounters, and an
   encounter shows "On the map".
+
+### Version 2.5: what Jeff can test
+- **Party tab → The whole party**: **Add everyone from the roster** (or + Player) gives each
+  player their own five-digit PIN. Pick their character and level (New player, Player, Trusted
+  player, Assistant GM). **Permissions…** is the grid: click a square to change it, Deny all on a
+  column or row, save person or table templates ("Thursday group").
+- **Open the table to players**: shows the address and a QR code. On a phone or laptop on the same
+  Wi-Fi, open the address in a browser and type the PIN (or press **QR** by a name: scanning it
+  joins with the PIN already in). The first time, Windows asks to let DM in a Pocket use the
+  network: choose Allow (private networks).
+- On the phone: **Table** (Last time…, initiative with hidden monsters left out until their turn,
+  monsters' health as words, dice with advantage and Only the DM or Blind rolls, roll tables if
+  allowed), **Sheet** (hit points − and +, abilities to tap and roll, trackers), **Chat** (to
+  Everyone or a whisper to anyone; /r 1d20+3 rolls), **Map**, **Journal** (what the DM showed
+  them, and their own notes), **Party** and **Rules**.
+- At the DM's table: a **Players** tool with green dots for who joined; whispers in the chat
+  (To: a player); the 👁 on any pin and **Show to players…** on journal pages pop things up on
+  players' screens; the Map tool's **Show to players…** puts the map live, with your marks and
+  pointer pulses on their screens.
+- Initiative gear: **Players move the turn on themselves** (each sees **End my turn** on their own
+  turn), **Monsters always hidden**, and **Pop up the sheet** also opens the player's sheet.
+
+### 2026-10-22 (version 2.5: players join)
+- `src/app/players.ts` (levels, the grid, PINs, whispers, each player's screen, what they may
+  do), `src/app/lan.ts` (the small web server on the home network), `src/engine/qr.ts`.
+- `src/player/` is the player's page; `src/ui/players-panel.ts` and the Players tool.
+- 272 automatic tests pass.
 
 ### Version 2.4: what Jeff can test
 - A **DM's table** button at the top. **Begin session** picks who is at the table tonight and opens
@@ -945,3 +973,18 @@ One plain line each. Jeff can overrule any of these at a milestone.
   clock; monster damage lives there, while characters keep their own hit points and conditions.
 - 2026-10-22: Each game night gets a journal page made with it, starting with an empty text block.
 - 2026-10-22: Sharing leaves journal pages and game nights out unless "Include my journal" is ticked.
+- 2026-10-22: Players join through a small web server inside the app (Node's own http, port 7310
+  or the next free one), on the home network only. Playing from other houses needs a relay later.
+- 2026-10-22: A PIN is both the key and who you are; five wrong PINs from one device wait five
+  minutes. A re-rolled or revoked PIN closes that person's screens at once.
+- 2026-10-22: The DM is whoever runs the app and always has everything; "Hand over DM" is done by
+  giving the world file to the next DM, so there is never more than one.
+- 2026-10-22: The New player level can see the initiative order (otherwise nothing but their own
+  character), so they know when it's their turn.
+- 2026-10-22: Players' screens fetch their whole state when anything changes (at most ten times a
+  second); each player's state is filtered by their permissions in the DM's app, so hidden things
+  never leave the DM's computer.
+- 2026-10-22: Players' blind rolls show "?" to them; DM-only and blind rolls are never sent to others.
+- 2026-10-22: A shown map leaves out the DM-only layer and the map's own notes.
+- 2026-10-22: The QR code maker is written here (byte mode, medium error correction); checked
+  against the standard's worked example and by reading the codes back with a scanner.

@@ -4,6 +4,7 @@
 // priority (1 stays on top; give a finished page 30 and it sinks). A game night's page has the
 // DM's notes on top and the table's log underneath.
 
+import { showToPlayers } from "./players-panel.ts";
 import type { Block, PageEntry, PageView } from "../app/backend.ts";
 import { DEFAULT_CATEGORIES, FONTS, PAGE_WIDTH } from "../app/journal-lists.ts";
 import { api, pictureUrl } from "./api.ts";
@@ -151,6 +152,7 @@ export function pageEditor(v: PageView, host: JournalHost, opts: { compact?: boo
     : h(
         "div",
         { class: "inline small" },
+        h("button", { class: "link small", title: "Pop it up on players' screens (it stays in their journal)", onClick: () => void showToPlayers(v.id, v.name) }, "Show to players…"),
         h("button", { class: "link small", title: "Print or save this page as a PDF, with an old-paper look if you like", onClick: () => void printPage(v) }, "Print…"),
         h("button", { class: "link small", title: "Make this note a lore page in the world", onClick: async () => ((await attempt(() => api.pageToNode(v.id, "lore"))) && notice(`${v.name} is now a lore page too (Lore tab).`, "green", undefined, 5000)) }, "Make it a lore page"),
         h("button", { class: "link small", title: "The improvised innkeeper becomes a real NPC", onClick: async () => ((await attempt(() => api.pageToNode(v.id, "npc"))) && notice(`${v.name} is now an NPC too (Beings tab).`, "green", undefined, 5000)) }, "Make it an NPC"),

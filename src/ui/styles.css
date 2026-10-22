@@ -1092,3 +1092,40 @@ body.moving-tool .desk-area { outline: 2px dashed var(--line); outline-offset: 2
 .codex-pin { display: none; border: none; background: none; cursor: pointer; font-size: 13px; padding: 2px 4px; }
 .codex-entry:hover .codex-pin { display: inline-block; }
 @media (max-width: 1700px) { .topbar.place .top-actions .top-button[aria-label="DM's table"] span, .topbar.place .top-actions .top-button[aria-label="Build"] span { display: inline; } }
+
+/* ---------- Players join (version 2.5) ---------- */
+.players-section { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
+.players-section.compact { margin: 0; border: 0; padding: 0; }
+.players-section h3 { margin: 14px 0 8px; }
+.door { display: flex; gap: 16px; align-items: flex-start; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.door.open { background: #eef6ee; border-color: #b9d8bd; }
+.door-qr svg { width: 150px; height: 150px; display: block; border-radius: 6px; }
+.door-text { flex: 1; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.door-text p { margin: 0; }
+.door-address { font: 600 18px/1.3 Consolas, "Cascadia Mono", monospace; user-select: text; color: var(--ink); }
+.compact .door { flex-direction: column; }
+.people { display: flex; flex-direction: column; gap: 6px; }
+.person { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.person-name { font-weight: 600; min-width: 70px; }
+.person-actions { display: inline-flex; gap: 10px; margin-left: auto; }
+.presence { width: 10px; height: 10px; border-radius: 50%; background: #cfc6b6; display: inline-block; flex: none; }
+.presence.on { background: var(--green); box-shadow: 0 0 0 3px rgba(60, 138, 74, 0.2); }
+.pin { font: 600 16px Consolas, "Cascadia Mono", monospace; letter-spacing: 0.15em; background: var(--paper-deep); padding: 2px 8px; border-radius: 6px; user-select: text; }
+.pin.none { color: var(--muted); letter-spacing: 0; font: 12.5px var(--sans); }
+.pin.big { font-size: 34px; display: inline-block; margin-top: 4px; }
+.link.danger { color: var(--red); }
+.join-card { display: flex; gap: 18px; align-items: center; }
+.join-card svg { width: 200px; height: 200px; flex: none; }
+.perm-scroll { overflow: auto; max-height: 60vh; }
+.perm-grid { border-collapse: collapse; font-size: 12.5px; }
+.perm-grid th, .perm-grid td { border-bottom: 1px solid var(--line); padding: 4px; text-align: center; vertical-align: middle; }
+.perm-grid thead th { font-weight: 600; position: sticky; top: 0; background: var(--card); min-width: 78px; }
+.perm-who { text-align: left !important; white-space: nowrap; display: flex; flex-direction: column; gap: 4px; }
+.perm { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; cursor: pointer; width: 78px; background: var(--card); }
+.perm-hidden { color: var(--muted); }
+.perm-see { background: #eaf2fb; color: var(--blue); border-color: #bcd3ee; }
+.perm-change { background: #e9f4ea; color: var(--green); border-color: #b9d8bd; }
+.perm.changed { box-shadow: inset 0 0 0 2px var(--yellow); }
+.perm-row-actions { white-space: nowrap; text-align: left !important; }
+.perm-row-actions .link { margin-right: 8px; }
+.dialog.wide:has(.perm-grid) { width: min(1280px, 96vw); max-width: none; }

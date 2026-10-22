@@ -10,6 +10,7 @@ import { attempt } from "./common.ts";
 import { notice } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
+import { showToPlayers } from "./players-panel.ts";
 
 let layer: HTMLElement | null = null;
 let opener: (id: string) => void = () => {};
@@ -58,6 +59,7 @@ async function pinCard(p: FloatingPin, all: FloatingPin[]): Promise<HTMLElement 
     { class: "pin-head", title: "Drag to move. Double-click to open it in full." },
     h("span", { class: "pin-title" }, "📌 ", n.name),
     h("span", { class: "grow" }),
+    h("button", { class: "icon-button tiny", title: "Show to players", onClick: (e: MouseEvent) => (e.stopPropagation(), void showToPlayers(p.node, n.name)) }, "👁"),
     h("button", { class: "icon-button tiny", title: p.collapsed ? "Open the pin" : "Fold it to a tab", onClick: (e: MouseEvent) => (e.stopPropagation(), void toggle()) }, p.collapsed ? "▢" : "–"),
     h("button", { class: "icon-button tiny", title: "Close the pin (the thing itself stays)", onClick: (e: MouseEvent) => (e.stopPropagation(), void close()) }, svg(ICONS.close)),
   );

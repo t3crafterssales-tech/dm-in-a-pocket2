@@ -12,6 +12,7 @@ import { journalTool } from "./journal-tool.ts";
 import { logTool, logGear } from "./log.ts";
 import { mapTool } from "./map-tool.ts";
 import { partyTool } from "./party-tool.ts";
+import { playersTool } from "./players-tool.ts";
 import { referenceTool } from "./reference.ts";
 import { tablesTool } from "./tables-tool.ts";
 
@@ -47,4 +48,5 @@ export const TOOLS: Record<string, Tool> = {
   log: { render: logTool, gear: logGear },
   reference: { render: referenceTool },
   codex: { render: codexTool },
+  players: { render: playersTool },
 };

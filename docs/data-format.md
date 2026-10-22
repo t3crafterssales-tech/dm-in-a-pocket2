@@ -162,6 +162,17 @@ weather (link to a table) }], year }`.
 The table's chat and rolls, the arrangement of the DM's screen, bookmarks and floating pins are
 kept with the file like the AI's chat (`table` in the file's meta), not in undo history.
 
+**Players (version 2.5)** are kept there too, never in undo history:
+- `people`: `{ id, name, pin (five digits, or "" when revoked), character (an id or null), level
+  ("new", "player", "trusted" or "assistant"), grid (exceptions: part → "hidden", "see" or
+  "change"), color, notes (their own journal) }`. The parts are characters, initiative, hidden,
+  monsters, journal, tables, codex, codexAdd, pointer, whispers and share. The DM is whoever runs
+  the app and is not in the list.
+- `templates`: `{ name, kind ("person" or "table"), level, grid, people: [{ name, level, grid }] }`.
+- `shown`: `{ id, node, to (person ids; empty is everyone), time }`, what players were shown.
+- `live`: `{ map (id or null), to, marks }`, the map on players' screens and the marks over it.
+- A chat line gains `from` (the person's id) when a player wrote it.
+
 ## Attachments (a brick on a sheet)
 
 | Field | What it holds |

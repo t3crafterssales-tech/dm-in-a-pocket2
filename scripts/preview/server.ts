@@ -20,6 +20,7 @@ mkdirSync(out, { recursive: true });
 async function bundle() {
   await build({ entryPoints: ["src/ui/renderer.ts"], outfile: join(out, "renderer.js"), bundle: true, platform: "browser", format: "iife", target: "chrome130", logLevel: "warning" });
   await build({ entryPoints: ["src/book/book-view.ts"], outfile: join(out, "book.js"), bundle: true, platform: "browser", format: "iife", target: "chrome130", logLevel: "warning" });
+  await build({ entryPoints: ["src/player/player.ts"], outfile: join(out, "player.js"), bundle: true, platform: "browser", format: "iife", target: "chrome100", logLevel: "warning" });
 }
 await bundle();
 
@@ -31,6 +32,7 @@ const backend = new Backend({
   emit: (e) => listeners.forEach((fn) => fn(e)),
   pickPicture: async () => null,
   pickFolder: async () => null,
+  playerFile: (name) => (name === "player.js" ? readFileSync(join(out, "player.js")) : ["player.html", "player.css"].includes(name) ? readFileSync(join("src/player", name)) : null),
 });
 
 const shim = `<script>

@@ -130,3 +130,25 @@ export function mapSvg(v: MapView, opts: { pictureHref: string | null; show?: Ma
   parts.push(`</svg>`);
   return parts.join("");
 }
+
+// ---------- Table marks (drawn over a map at the table, never part of it) ----------
+
+export interface Mark {
+  kind: "pen" | "note";
+  points: number[];
+  color: string;
+  width: number;
+  opacity: number;
+  text: string;
+}
+
+export function marksSvg(marks: Mark[]): string {
+  return marks
+    .map((m) => {
+      if (m.kind === "note") return `<text x="${m.points[0]}" y="${m.points[1]}" font-family="Segoe UI, sans-serif" font-size="${Math.max(14, m.width * 4)}" fill="${m.color}" stroke="#fffaf0" stroke-width="4" paint-order="stroke">${m.text.replace(/</g, "&lt;")}</text>`;
+      const pts: string[] = [];
+      for (let i = 0; i + 1 < m.points.length; i += 2) pts.push(`${m.points[i]},${m.points[i + 1]}`);
+      return `<polyline points="${pts.join(" ")}" fill="none" stroke="${m.color}" stroke-opacity="${m.opacity}" stroke-width="${m.width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    })
+    .join("");
+}

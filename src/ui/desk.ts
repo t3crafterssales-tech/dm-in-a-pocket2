@@ -300,6 +300,7 @@ async function prepare(ctx: DeskCtx) {
       data.encounters.length ? h("div", null, h("h3", null, "Start at"), where, h("h3", null, "Star the encounters you expect to reach"), h("div", { class: "pick-chips" }, data.encounters.map((e) => h("button", { class: `pick-chip${starred.has(e.id) ? " on" : ""}`, onClick: () => (starred.has(e.id) ? starred.delete(e.id) : starred.add(e.id), draw()) }, `${e.number} ${e.name}`)))) : h("span"),
       h("h3", null, "Last time…"),
       lastTime,
+      h("p", { class: "muted small" }, "Players joining on their own screens? Open the table in the Players tool (their PINs and the QR code are there)."),
     );
   draw();
   const go = h("button", { class: "button primary" }, "Begin");

@@ -37,7 +37,12 @@ import type { BeginInput, ClockStep, ConditionOn, LogLine, TableView, Timer } fr
 import type { Macro, MacroBlock, MacroResult } from "./macros.ts";
 import type { Block, PageView } from "./journal.ts";
 import { tableMetaFrom } from "./tablemeta.ts";
-import type { ChatLine, TableMeta } from "./tablemeta.ts";
+import type { ChatLine, Level, Part, Access, PermissionTemplate, Person, TableMeta } from "./tablemeta.ts";
+import { LanServer, DEFAULT_PORT, lanAddresses } from "./lan.ts";
+import { makePerson, newPin, personByPin, playerState, refuse, applyTemplate as applyPermissionTemplate, LEVELS } from "./players.ts";
+import type { PlayerAction, PlayerState, ShownView } from "./players.ts";
+import { blocksOf } from "./journal.ts";
+import { qrSvg } from "../engine/qr.ts";
 import type { BuilderOptions, CharacterInput, CharacterView } from "./characters.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
@@ -57,7 +62,21 @@ export type { Grid, MapTreeNode, MapView, PinView, Shape } from "./maps.ts";
 export type { BeginInput, CardView, ClockStep, Combatant, ConditionOn, LogLine, Member, SessionState, TableView, Timer, WorldDate, Calendar } from "./table.ts";
 export type { Macro, MacroBlock, MacroResult } from "./macros.ts";
 export type { Block, PageEntry, PageView } from "./journal.ts";
-export type { ChatLine, TableMeta, ToolPlace, Bookmark, FloatingPin } from "./tablemeta.ts";
+export type { ChatLine, TableMeta, ToolPlace, Bookmark, FloatingPin, Person, PermissionTemplate, Level, Part, Access, Shown, LiveMap } from "./tablemeta.ts";
+export type { PlayerState, PlayerCard, ShownView, PlayerAction } from "./players.ts";
+
+/** The door for players, as the DM's screen shows it. */
+export interface PlayersView {
+  open: boolean;
+  port: number;
+  /** Addresses players type in a browser, best first. */
+  addresses: string[];
+  online: Id[];
+  people: Person[];
+  templates: PermissionTemplate[];
+  /** The QR code for the first address, as a picture. */
+  qr: string | null;
+}
 export type { BuilderOptions, CharacterInput, CharacterView, Method, OptionChoice, OptionClass, OptionRace, TrackerView } from "./characters.ts";
 export type RosterEntry = ReturnType<typeof import("./characters.ts").roster>[number];
 export type { ImportResult, RecycledInfo } from "../storage/index.ts";
@@ -186,7 +205,13 @@ export type BackendEvent =
   /** A background AI job didn't finish; nothing from it was applied. */
   | { type: "aiNotice"; message: string }
   /** A new line in the table's chat (a roll, a message). */
-  | { type: "chat"; line: import("./tablemeta.ts").ChatLine };
+  | { type: "chat"; line: import("./tablemeta.ts").ChatLine }
+  /** A player did something at the table (the DM's screen redraws). */
+  | { type: "table" }
+  /** Players joined or left: who is connected now. */
+  | { type: "players"; online: Id[] }
+  /** Someone pointed at the shown map. */
+  | { type: "point"; x: number; y: number; color: string; who: string };
 
 export interface BackendOptions {
   settingsPath: string;
@@ -213,6 +238,8 @@ export interface BackendOptions {
   /** Show an Open dialog for the user's own document (.txt, .md, .docx); resolves to a path or null. */
   pickDocument?: () => Promise<string | null>;
   emit: (event: BackendEvent) => void;
+  /** The player page's files (player.html, player.js, player.css), for players joining. */
+  playerFile?: (name: string) => Buffer | string | null;
   now?: () => number;
   timers?: Timers;
 }
@@ -379,6 +406,24 @@ export const BACKEND_METHODS = [
   "setTableMeta",
   "postChat",
   "rollDice",
+  "players",
+  "openTable",
+  "closeTable",
+  "addPerson",
+  "setPerson",
+  "removePerson",
+  "rerollPin",
+  "revokePin",
+  "saveTemplate",
+  "deleteTemplate",
+  "useTemplate",
+  "showToPlayers",
+  "forgetShown",
+  "showMapLive",
+  "setLiveMarks",
+  "pointAt",
+  "qrCode",
+  "playerPreview",
   "encounterTree",
   "modulePage",
   "addEncounter",
@@ -981,6 +1026,7 @@ export class Backend {
     }
     this.session = session;
     this.watchLive(session);
+    this.doorWatch = session.ws.onChange(() => this.lan?.changed());
     const resumed = this.resumed?.type === place.type && this.resumed.id === place.id;
     this.resumed = null;
     this.markOpened(place.id, place);
@@ -992,6 +1038,9 @@ export class Backend {
 
   /** Back to the home screen: saves anything waiting and lets go of the world. */
   goHome() {
+    this.doorWatch?.();
+    this.doorWatch = null;
+    if (this.lan) void this.closeTable();
     this.liveStop?.();
     this.liveStop = null;
     if (this.liveTimer !== null) this.timers.clear(this.liveTimer);
@@ -1239,6 +1288,7 @@ export class Backend {
     const s = this.need();
     const next = { ...this.tableMetaOf(), ...patch };
     s.setTable(next);
+    this.lan?.changed();
     return next;
   }
   /** A line in the table's chat: a message, a roll, or a note from the table. */
@@ -1249,10 +1299,11 @@ export class Backend {
     meta.chat = [...meta.chat, full].slice(-1000);
     s.setTable(meta);
     this.opts.emit({ type: "chat", line: full });
+    this.lan?.changed();
     return full;
   }
   /** The dice tray: rolls a formula and puts it in the chat ("Rob rolled 14"). */
-  rollDice(input: { formula: string; mode?: "normal" | "advantage" | "disadvantage"; who: string; color: string; see: ChatLine["see"]; label?: string }): ChatLine {
+  rollDice(input: { formula: string; mode?: "normal" | "advantage" | "disadvantage"; who: string; color: string; see: ChatLine["see"]; label?: string; from?: Id }): ChatLine {
     let r: RollResult;
     try {
       r = roll(input.formula, { mode: input.mode ?? "normal" });
@@ -1260,8 +1311,329 @@ export class Backend {
       throw new LibraryError(e instanceof Error ? e.message : String(e));
     }
     const mode = input.mode === "advantage" ? " with advantage" : input.mode === "disadvantage" ? " with disadvantage" : "";
-    return this.postChat({ kind: "roll", who: input.who, color: input.color, see: input.see, to: [], text: `${input.label ? `${input.label}: ` : ""}${r.total}`, roll: { formula: r.formula + mode, total: r.total, breakdown: r.breakdown + (r.other !== null ? ` (the other roll was ${r.other})` : ""), natural: r.natural }, ic: false });
+    return this.postChat({ kind: "roll", who: input.who, color: input.color, see: input.see, to: [], text: `${input.label ? `${input.label}: ` : ""}${r.total}`, roll: { formula: r.formula + mode, total: r.total, breakdown: r.breakdown + (r.other !== null ? ` (the other roll was ${r.other})` : ""), natural: r.natural }, ic: false, ...(input.from ? { from: input.from } : {}) });
   }
+  // ---------- Players join (version 2.5) ----------
+
+  private lan: LanServer | null = null;
+  private doorWatch: (() => void) | null = null;
+  private onlineNow = new Set<Id>();
+
+  private people(): Person[] {
+    return this.tableMetaOf().people;
+  }
+  private setPeople(people: Person[]) {
+    this.setTableMeta({ people });
+  }
+  private personOf(id: Id): Person {
+    const p = this.people().find((x) => x.id === id);
+    if (!p) throw new LibraryError("That player isn't in the party any more.");
+    return p;
+  }
+
+  /** The door for players: open or closed, the addresses, PINs and who is connected. */
+  players(): PlayersView {
+    const meta = this.tableMetaOf();
+    const addresses = this.lan ? lanAddresses().map((a) => `http://${a}:${this.lan!.port}`) : [];
+    return { open: !!this.lan, port: this.lan?.port ?? DEFAULT_PORT, addresses, online: [...this.onlineNow], people: meta.people, templates: meta.templates, qr: addresses[0] ? qrSvg(addresses[0], 220) : null };
+  }
+
+  /** Opens the door: players on the same Wi-Fi can join with their PINs. */
+  async openTable(port?: number): Promise<PlayersView> {
+    const s = this.need();
+    if (s.type === "system") throw new LibraryError("Players join a world or a module, not a system.");
+    if (!this.lan) {
+      const lan = new LanServer({
+        who: (pin) => {
+          if (!this.session) return null;
+          const p = personByPin(this.tableMetaOf(), pin);
+          return p ? { id: p.id, name: p.name } : null;
+        },
+        state: (id) => this.playerStateOf(this.personOf(id)),
+        act: (id, action) => this.playerAct(id, action),
+        picture: (id) => this.picture(id),
+        file: (name) => this.opts.playerFile?.(name) ?? null,
+        presence: (online) => {
+          this.onlineNow = new Set(online);
+          this.opts.emit({ type: "players", online });
+        },
+      }, this.now);
+      await lan.start(port ?? DEFAULT_PORT);
+      this.lan = lan;
+    }
+    return this.players();
+  }
+
+  /** Closes the door; players' screens say the table has closed. */
+  async closeTable(): Promise<true> {
+    const lan = this.lan;
+    this.lan = null;
+    this.onlineNow.clear();
+    if (lan) await lan.stop();
+    return true;
+  }
+
+  addPerson(name: string, character: Id | null = null): Person {
+    const meta = this.tableMetaOf();
+    const p = makePerson(meta, name, character);
+    this.setPeople([...meta.people, p]);
+    return p;
+  }
+
+  setPerson(id: Id, change: { name?: string; character?: Id | null; level?: Level; grid?: Partial<Record<Part, Access>>; color?: string }): Person {
+    const p = { ...this.personOf(id) };
+    if (change.name !== undefined) p.name = change.name.trim() || p.name;
+    if (change.character !== undefined) p.character = change.character;
+    if (change.level !== undefined && LEVELS[change.level]) p.level = change.level;
+    if (change.grid !== undefined) p.grid = { ...change.grid };
+    if (change.color !== undefined) p.color = change.color;
+    this.setPeople(this.people().map((x) => (x.id === id ? p : x)));
+    return p;
+  }
+
+  removePerson(id: Id): true {
+    this.lan?.kick(id);
+    this.setPeople(this.people().filter((x) => x.id !== id));
+    return true;
+  }
+
+  /** A new PIN: the old one stops working at once. */
+  rerollPin(id: Id): string {
+    const meta = this.tableMetaOf();
+    const pin = newPin(meta.people.map((x) => x.pin));
+    this.setPeople(meta.people.map((x) => (x.id === id ? { ...x, pin } : x)));
+    this.lan?.kick(id);
+    return pin;
+  }
+
+  /** No PIN: this person can't join until given a new one. */
+  revokePin(id: Id): true {
+    this.setPeople(this.people().map((x) => (x.id === id ? { ...x, pin: "" } : x)));
+    this.lan?.kick(id);
+    return true;
+  }
+
+  /** Saves a person template (one person's level and exceptions) or a table template (everyone's). */
+  saveTemplate(name: string, kind: "person" | "table", personId?: Id): PermissionTemplate[] {
+    const n = cleanName(name);
+    const meta = this.tableMetaOf();
+    let t: PermissionTemplate;
+    if (kind === "person") {
+      const p = this.personOf(personId ?? "");
+      t = { name: n, kind, level: p.level, grid: { ...p.grid } };
+    } else t = { name: n, kind, people: meta.people.map((p) => ({ name: p.name, level: p.level, grid: { ...p.grid } })) };
+    const templates = [...meta.templates.filter((x) => !(x.name === n && x.kind === kind)), t];
+    this.setTableMeta({ templates });
+    return templates;
+  }
+
+  deleteTemplate(name: string, kind: "person" | "table"): PermissionTemplate[] {
+    const templates = this.tableMetaOf().templates.filter((x) => !(x.name === name && x.kind === kind));
+    this.setTableMeta({ templates });
+    return templates;
+  }
+
+  /** A person template for one person, or a table template for the whole party, in one click. */
+  useTemplate(name: string, kind: "person" | "table", personId?: Id): Person[] {
+    const meta = this.tableMetaOf();
+    const t = meta.templates.find((x) => x.name === name && x.kind === kind);
+    if (!t) throw new LibraryError("That template isn't there any more.");
+    const people = applyPermissionTemplate(meta.people, t, personId);
+    this.setPeople(people);
+    return people;
+  }
+
+  /** Show to players: pops up on the screens of the people picked (everyone if none) and stays in their journal. */
+  showToPlayers(node: Id, to: Id[] = []): true {
+    const s = this.need();
+    const n = s.ws.get(s.id, node);
+    if (!n) throw new LibraryError("That isn't here any more.");
+    const meta = this.tableMetaOf();
+    const shown = [...meta.shown.filter((x) => !(x.node === node && sameSet(x.to, to))), { id: newId(), node, to: [...to], time: this.now() }];
+    this.setTableMeta({ shown });
+    const names = to.length ? to.map((id) => meta.people.find((p) => p.id === id)?.name ?? "someone").join(", ") : "everyone";
+    try {
+      this.editing.addLog("shown", `Showed ${n.name} to ${names}.`);
+    } catch {
+      // No session tonight: showing still works, it just isn't logged.
+    }
+    this.lan?.signal("shown", { node }, to.length ? to : null);
+    return true;
+  }
+
+  /** Takes a shown thing back out of players' journals. */
+  forgetShown(id: Id): true {
+    this.setTableMeta({ shown: this.tableMetaOf().shown.filter((x) => x.id !== id) });
+    return true;
+  }
+
+  /** Puts a map live on players' screens (null takes it off). */
+  showMapLive(map: Id | null, to: Id[] = []): true {
+    const meta = this.tableMetaOf();
+    this.setTableMeta({ live: { map, to: map ? [...to] : [], marks: map === meta.live.map ? meta.live.marks : [] } });
+    if (map) {
+      const n = this.need().ws.get(this.need().id, map);
+      try {
+        this.editing.addLog("shown", `Showed the map ${n?.name ?? ""} to ${to.length ? to.map((id) => meta.people.find((p) => p.id === id)?.name ?? "someone").join(", ") : "everyone"}.`);
+      } catch {
+        // No session tonight.
+      }
+    }
+    return true;
+  }
+
+  /** The table marks over the live map (never the map itself). */
+  setLiveMarks(marks: unknown[]): true {
+    const meta = this.tableMetaOf();
+    this.setTableMeta({ live: { ...meta.live, marks: Array.isArray(marks) ? marks.slice(-500) : [] } });
+    return true;
+  }
+
+  /** A pulse on the live map where the DM clicked. */
+  pointAt(x: number, y: number, color = "#b93a2e"): true {
+    const live = this.tableMetaOf().live;
+    this.lan?.signal("point", { x, y, color, who: "DM" }, live.to.length ? live.to : null);
+    return true;
+  }
+
+  /** A QR code picture for any text (a player's own join link, say). */
+  qrCode(text: string): string {
+    return qrSvg(String(text ?? "").slice(0, 200), 220);
+  }
+
+  /** What one player's screen shows (for the DM to check, and for the player page). */
+  playerPreview(id: Id): PlayerState {
+    return this.playerStateOf(this.personOf(id));
+  }
+
+  private shownContent(id: Id): Omit<ShownView, "id" | "node" | "time"> | null {
+    const s = this.session;
+    if (!s) return null;
+    const n = s.ws.get(s.id, id);
+    if (!n) return null;
+    if (n.kind === "journal") {
+      const blocks = blocksOf(s.ws.resolve(s.id, id)!.fields.blocks);
+      return { title: n.name, kind: "journal", stats: null, paragraphs: blocks.filter((b) => b.type === "text" && b.text.trim()).flatMap((b) => b.text.split(/\n{2,}/)), picture: blocks.find((b) => b.type === "image" && b.picture)?.picture ?? n.picture };
+    }
+    if (n.kind === "map") return { title: n.name, kind: "map", stats: null, paragraphs: [], picture: n.picture };
+    try {
+      const p = this.editing.printPreview(id);
+      return { title: p.title, kind: n.kind, stats: p.stats, paragraphs: p.paragraphs, picture: n.picture };
+    } catch {
+      return { title: n.name, kind: n.kind, stats: null, paragraphs: n.text ? n.text.split(/\n{2,}/) : [], picture: n.picture };
+    }
+  }
+
+  /** A map as a player may see it: the DM-only layer and the DM's notes left out. */
+  playerMap(id: Id): MapView | null {
+    try {
+      const v = this.editing.mapView(id);
+      return { ...v, text: "", shapes: v.shapes.filter((x) => x.layer !== "dm"), readOnly: true };
+    } catch {
+      return null;
+    }
+  }
+
+  private playerStateOf(p: Person): PlayerState & { mapView: MapView | null; shownMaps: Record<Id, MapView> } {
+    const s = this.need();
+    const meta = this.tableMetaOf();
+    const glance = (meta.settings.initiative?.glance as string[] | undefined) ?? ["hp", "ac"];
+    const ed = this.editing;
+    const st = playerState(
+      {
+        table: ed.tableView(glance),
+        meta,
+        place: s.name,
+        character: (id) => {
+          try {
+            return ed.characterView(id);
+          } catch {
+            return null;
+          }
+        },
+        content: (id) => this.shownContent(id),
+        tables: () => ed.codex().find((c) => c.key === "tables")?.entries.map((e) => ({ id: e.id, name: e.name })) ?? [],
+        online: this.onlineNow,
+      },
+      p,
+    );
+    const shownMaps: Record<Id, MapView> = {};
+    for (const x of st.shown) if (x.kind === "map") {
+      const m = this.playerMap(x.node);
+      if (m) shownMaps[x.node] = m;
+    }
+    return { ...st, mapView: st.map ? this.playerMap(st.map.id) : null, shownMaps };
+  }
+
+  /** Something a player did, checked against their permissions first. */
+  private playerAct(personId: Id, raw: unknown): unknown {
+    const s = this.need();
+    const p = this.personOf(personId);
+    const a = (raw && typeof raw === "object" ? raw : {}) as PlayerAction;
+    const meta = this.tableMetaOf();
+    const ed = this.editing;
+    if (a.type === "lookup") {
+      const why = refuse(meta, p, a, { myTurn: false, isShownToMe: () => false });
+      if (why) throw new LibraryError(why);
+      const words = String(a.query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+      if (!words.length) return [];
+      return ed
+        .tableMode()
+        .tabs.flatMap((t) => t.entries)
+        .filter((e) => words.every((w) => [e.title, e.stats ?? "", ...e.paragraphs].join(" ").toLowerCase().includes(w)))
+        .slice(0, 20)
+        .map((e) => ({ title: e.title, group: e.group, stats: e.stats, paragraphs: e.paragraphs }));
+    }
+    const st = this.playerStateOf(p);
+    const why = refuse(meta, p, a, { myTurn: st.initiative?.myTurn ?? false, isShownToMe: (node) => st.shown.some((x) => x.node === node) });
+    if (why) throw new LibraryError(why);
+    const charName = p.character ? (s.ws.get(s.id, p.character)?.name ?? null) : null;
+    let out: unknown = true;
+    switch (a.type) {
+      case "chat": {
+        const to = (a.to ?? []).filter((x) => typeof x === "string" && x.trim());
+        out = this.postChat({ kind: to.length ? "whisper" : "chat", who: a.ic && charName ? charName : p.name, color: p.color, see: "public", to, text: String(a.text).trim().slice(0, 2000), roll: null, ic: !!a.ic, from: p.id });
+        break;
+      }
+      case "roll": {
+        const see = a.see === "dm" || a.see === "blind" || a.see === "private" ? a.see : "public";
+        out = this.rollDice({ formula: String(a.formula).slice(0, 100), mode: a.mode, who: p.name, color: p.color, see, label: a.label ? String(a.label).slice(0, 60) : undefined, from: p.id });
+        break;
+      }
+      case "endTurn":
+        out = ed.nextTurn({ rerollEachRound: meta.settings.initiative?.reroll === true });
+        break;
+      case "hp":
+        if (!Number.isFinite(a.value)) throw new LibraryError("That isn't a number.");
+        ed.setField(p.character!, "hpNow", Math.round(a.value));
+        break;
+      case "tracker":
+        ed.setTracker(p.character!, a.tracker, { value: Math.max(0, Math.round(Number(a.value) || 0)) });
+        break;
+      case "notes":
+        this.setPeople(meta.people.map((x) => (x.id === p.id ? { ...x, notes: String(a.text ?? "").slice(0, 100000) } : x)));
+        break;
+      case "point": {
+        const live = meta.live;
+        this.lan?.signal("point", { x: Number(a.x), y: Number(a.y), color: p.color, who: p.name }, live.to.length ? live.to : null);
+        this.opts.emit({ type: "point", x: Number(a.x), y: Number(a.y), color: p.color, who: p.name });
+        break;
+      }
+      case "rollTable": {
+        const r = ed.rollTable(a.table);
+        const name = s.ws.get(s.id, a.table)?.name ?? "a table";
+        out = this.postChat({ kind: "roll", who: p.name, color: p.color, see: "public", to: [], text: `${name}: ${r.chain || r.text}`, roll: null, ic: false, from: p.id });
+        break;
+      }
+      case "show":
+        this.showToPlayers(a.node, a.to ?? []);
+        break;
+    }
+    this.opts.emit({ type: "table" });
+    this.lan?.changed();
+    return out;
+  }
+
   // ---------- Maps (version 2) ----------
   mapTree(): MapTreeNode[] {
     return this.editing.mapTree();
@@ -1660,3 +2032,5 @@ function cleanName(name: string): string {
   if (n.length > MAX_NAME) throw new LibraryError(`Names can be up to ${MAX_NAME} letters long.`);
   return n;
 }
+
+const sameSet = (a: Id[], b: Id[]) => a.length === b.length && a.every((x) => b.includes(x));

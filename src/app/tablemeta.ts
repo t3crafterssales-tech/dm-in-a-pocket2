@@ -19,6 +19,57 @@ export interface ChatLine {
   roll: { formula: string; total: number; breakdown: string; natural: number | null } | null;
   /** In character (written differently from out of character). */
   ic: boolean;
+  /** The player who wrote it (a person's id); missing for the DM. */
+  from?: Id;
+}
+
+// ---------- Players (version 2.5) ----------
+
+/** The parts of the game in the permissions grid. */
+export type Part = "characters" | "initiative" | "hidden" | "monsters" | "journal" | "tables" | "codex" | "codexAdd" | "pointer" | "whispers" | "share";
+export type Access = "hidden" | "see" | "change";
+/** The ready-made levels, like Foundry's. The DM is whoever runs the app. */
+export type Level = "new" | "player" | "trusted" | "assistant";
+
+export interface Person {
+  id: Id;
+  name: string;
+  /** Five digits: both the key and who you are. Empty when revoked. */
+  pin: string;
+  /** The character they play. */
+  character: Id | null;
+  level: Level;
+  /** Exceptions to their level, square by square. */
+  grid: Partial<Record<Part, Access>>;
+  color: string;
+  /** Their own private notes (their journal). */
+  notes: string;
+}
+
+export interface PermissionTemplate {
+  name: string;
+  kind: "person" | "table";
+  /** A person template: a level and its exceptions. */
+  level?: Level;
+  grid?: Partial<Record<Part, Access>>;
+  /** A table template: each person's level and exceptions, by name. */
+  people?: { name: string; level: Level; grid: Partial<Record<Part, Access>> }[];
+}
+
+/** Something shown to players: it pops up on their screens and stays in their journal. */
+export interface Shown {
+  id: Id;
+  node: Id;
+  /** Person ids; empty means everyone. */
+  to: Id[];
+  time: number;
+}
+
+/** The map showing on players' screens, with the table marks over it. */
+export interface LiveMap {
+  map: Id | null;
+  to: Id[];
+  marks: unknown[];
 }
 
 /** Where a tool sits on the DM's screen: one of five areas, in order. */
@@ -57,6 +108,11 @@ export interface TableMeta {
   settings: Record<string, Record<string, unknown>>;
   /** Saved glance combinations ("Gauntlet: Dex saves"). */
   glances: { name: string; fields: string[] }[];
+  /** The players: names, PINs, levels and exceptions (remembered with the party). */
+  people: Person[];
+  templates: PermissionTemplate[];
+  shown: Shown[];
+  live: LiveMap;
 }
 
 export const DEFAULT_ARRANGEMENT: ToolPlace[] = [
@@ -66,6 +122,7 @@ export const DEFAULT_ARRANGEMENT: ToolPlace[] = [
   { tool: "clock", area: "right", order: 1 },
   { tool: "log", area: "right", order: 2 },
   { tool: "codex", area: "left", order: 1 },
+  { tool: "players", area: "left", order: 2 },
 ];
 
 export const TOOL_NAMES: Record<string, string> = {
@@ -81,6 +138,7 @@ export const TOOL_NAMES: Record<string, string> = {
   log: "Chat and log",
   reference: "Rules reference",
   codex: "Codex",
+  players: "Players",
 };
 
 export function tableMetaFrom(v: unknown): TableMeta {
@@ -94,5 +152,9 @@ export function tableMetaFrom(v: unknown): TableMeta {
     journalCategories: Array.isArray(o.journalCategories) ? o.journalCategories : [],
     settings: o.settings && typeof o.settings === "object" ? o.settings : {},
     glances: Array.isArray(o.glances) ? o.glances : [],
+    people: Array.isArray(o.people) ? o.people : [],
+    templates: Array.isArray(o.templates) ? o.templates : [],
+    shown: Array.isArray(o.shown) ? o.shown : [],
+    live: o.live && typeof o.live === "object" ? { map: o.live.map ?? null, to: Array.isArray(o.live.to) ? o.live.to : [], marks: Array.isArray(o.live.marks) ? o.live.marks : [] } : { map: null, to: [], marks: [] },
   };
 }
