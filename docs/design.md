@@ -1181,6 +1181,26 @@ better-looking workspace, more to choose from (more pictures), and one new featu
 - **Erase all buttons** on the soundboard clears the buttons, never the files, and is undoable with
   Ctrl+Z like everything else.
 
+### The map picture library (Jeff, October 22, 2026)
+
+- **A palette panel** beside the map maker: category tabs (Floors, Walls, Doors and windows, Nature,
+  Water, Furniture, Buildings, Clutter and props, Effects, Symbols), thumbnails, a search box,
+  Favourites and Recently used. Click a picture to pick it up, or drag it onto the map.
+- **Pictures behave by kind**, set by their category: stamps (placed objects; mouse wheel turns,
+  Shift and the wheel resizes), textures (fill an area with Fill or Room), walls and paths (drawn
+  along a line, the picture repeating) and scatter (paint a forest, each tree a little different).
+- **Styles:** every picture also has a style (Gothic, Cartoon, anything the user names), usually
+  from its pack's folder name and changeable one by one. A style filter at the top of the palette
+  shows one style or all; styles can be mixed on one map.
+- **Where they live:** an Assets folder in the main folder; folders dropped in become a style and
+  their subfolders categories. Packs from others, and Jeff's own library, sit in their own folders,
+  like Foundry's modules. A shared world carries only the pictures its maps use, never the library.
+- **House rules for packs:** 256 pixels per map square, transparent backgrounds, top-down with the
+  same light direction, names like tree_oak_01.png (read to sort and label).
+- **The starter set is free (CC0) packs** to begin with; every licence is checked when building
+  (likely Kenney.nl and OpenGameArt's CC0 section; Forgotten Adventures can't be bundled). Nothing
+  shipped is named after another company ("WoW style" is fine as a user's own label).
+
 ## Idea parking lot
 
 Good ideas that aren't for version 1 land here with a rough target version, so nothing gets lost and version 1 stays small.
