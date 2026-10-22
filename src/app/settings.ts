@@ -34,10 +34,18 @@ export interface Settings {
   aiTipShown: boolean;
   /** How the weight pickers count: pounds or kilograms (backlog 12). */
   units: "lb" | "kg";
+  /** The first-time welcome has been seen (version 2.6). */
+  welcomed: boolean;
+  /** Small tips the first time each tool opens; tipsSeen lists the ones already shown. */
+  tips: boolean;
+  tipsSeen: string[];
+  /** The first steps checklist: steps done, and whether it was closed. */
+  stepsDone: string[];
+  stepsClosed: boolean;
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb" };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false };
 }
 
 export class SettingsFile {
@@ -65,6 +73,12 @@ export class SettingsFile {
         aiLive: raw.aiLive === true,
         aiTipShown: raw.aiTipShown === true,
         units: raw.units === "kg" ? "kg" : "lb",
+        // Settings from before version 2.6 belong to someone who has used the app already.
+        welcomed: raw.welcomed === undefined ? true : raw.welcomed === true,
+        tips: raw.tips !== false,
+        tipsSeen: Array.isArray(raw.tipsSeen) ? raw.tipsSeen.filter((x): x is string => typeof x === "string") : [],
+        stepsDone: Array.isArray(raw.stepsDone) ? raw.stepsDone.filter((x): x is string => typeof x === "string") : [],
+        stepsClosed: raw.welcomed === undefined ? true : raw.stepsClosed === true,
       };
     } catch {
       return defaultSettings();

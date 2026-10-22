@@ -1,6 +1,7 @@
 // Inside an open world or system: the tab bar, the list, editor and flag panels, undo and redo,
 // and World settings.
 
+import { drawSteps, showHelp, tipOnce } from "./welcome.ts";
 import type { PlaceView } from "../app/backend.ts";
 import type { SearchHit } from "../app/search.ts";
 import type { Place } from "../app/settings.ts";
@@ -163,6 +164,7 @@ export async function renderPlace(): Promise<void> {
 async function draw() {
   const view = current;
   if (!view) return;
+  if (tableMode) void tipOnce("desk");
   if (tableMode) return drawDesk(view, () => ((tableMode = false), leaveDesk(), forgetTableData(), forgetReference(), void renderPlace()), () => void goHome());
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key ?? null;
   const caret = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement ? document.activeElement.selectionStart : null;
@@ -200,6 +202,7 @@ async function draw() {
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
       iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
       iconButton(ICONS.bin, "Recycle bin", () => void showNodeBin(ctx), { iconOnly: true, title: "Recycle bin: restore deleted things" }),
+      iconButton(ICONS.help, "Help", () => void showHelp(), { iconOnly: true, title: "Help: the tour, the sample, tips and first steps" }),
       iconButton(ICONS.home, "Home", () => void goHome()),
       iconButton(ICONS.gear, view.type === "module" ? "Module settings" : isWorld ? "World settings" : "System settings", () => void placeSettings(view)),
     ),
@@ -229,6 +232,8 @@ async function draw() {
   const workspace = h("div", { class: "workspace two" }, editor, h("aside", { class: "side" }, list, flags));
   app.replaceChildren(top, ...(banner ? [banner] : []), workspace, ai);
   void drawPins(view, { open: (x) => void openNode(x) });
+  void drawSteps();
+  void tipOnce(tab);
 
   for (const [key, top] of scroll) {
     const el = document.querySelector<HTMLElement>(`[data-scroll="${CSS.escape(key)}"]`);

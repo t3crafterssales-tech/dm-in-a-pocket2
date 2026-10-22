@@ -43,6 +43,7 @@ import { makePerson, newPin, personByPin, playerState, refuse, applyTemplate as 
 import type { PlayerAction, PlayerState, ShownView } from "./players.ts";
 import { blocksOf } from "./journal.ts";
 import { qrSvg } from "../engine/qr.ts";
+import { SAMPLE_MODULE, SAMPLE_SYSTEM, SAMPLE_WORLD, makeSample } from "./sample.ts";
 import type { BuilderOptions, CharacterInput, CharacterView } from "./characters.ts";
 import type { UpwardView } from "./upward.ts";
 import { SettingsFile } from "./settings.ts";
@@ -424,6 +425,9 @@ export const BACKEND_METHODS = [
   "pointAt",
   "qrCode",
   "playerPreview",
+  "firstTime",
+  "setFirstTime",
+  "makeSample",
   "encounterTree",
   "modulePage",
   "addEncounter",
@@ -1140,16 +1144,16 @@ export class Backend {
     return this.editing.quick(id);
   }
   makeOwnCopy(id: Id, name?: string): Id {
-    return this.editing.makeOwnCopy(id, name);
+    return this.stepFor(this.editing.makeOwnCopy(id, name), true);
   }
   makeVariant(id: Id, name?: string): Id {
-    return this.editing.makeVariant(id, name);
+    return this.stepFor(this.editing.makeVariant(id, name), true);
   }
   printPreview(id: Id): { title: string; stats: string | null; paragraphs: string[] } {
     return this.editing.printPreview(id);
   }
   newInSection(key: CodexKey, name: string): Id {
-    return this.editing.newInSection(key, name);
+    return this.stepFor(this.editing.newInSection(key, name), false);
   }
   encounterTree(): EncounterNode[] {
     return this.editing.encounterTree();
@@ -1313,6 +1317,58 @@ export class Backend {
     const mode = input.mode === "advantage" ? " with advantage" : input.mode === "disadvantage" ? " with disadvantage" : "";
     return this.postChat({ kind: "roll", who: input.who, color: input.color, see: input.see, to: [], text: `${input.label ? `${input.label}: ` : ""}${r.total}`, roll: { formula: r.formula + mode, total: r.total, breakdown: r.breakdown + (r.other !== null ? ` (the other roll was ${r.other})` : ""), natural: r.natural }, ic: false, ...(input.from ? { from: input.from } : {}) });
   }
+  // ---------- The first time (version 2.6) ----------
+
+  /** The welcome, tips and first steps: what this computer has seen. */
+  firstTime(): { welcomed: boolean; tips: boolean; tipsSeen: string[]; stepsDone: string[]; stepsClosed: boolean; sample: { system: Id | null; world: Id | null; module: Id | null } } {
+    const d = this.settingsFile.data;
+    const find = <T extends { id: Id; name: string }>(list: T[], name: string) => list.find((x) => x.name === name)?.id ?? null;
+    return {
+      welcomed: d.welcomed,
+      tips: d.tips,
+      tipsSeen: d.tipsSeen,
+      stepsDone: d.stepsDone,
+      stepsClosed: d.stepsClosed,
+      sample: { system: find(this.lib.listSystems(), SAMPLE_SYSTEM), world: find(this.lib.listWorlds(), SAMPLE_WORLD), module: find(this.lib.listModules(), SAMPLE_MODULE) },
+    };
+  }
+
+  setFirstTime(patch: { welcomed?: boolean; tips?: boolean; tipSeen?: string; resetTips?: boolean; stepsClosed?: boolean }): true {
+    this.settingsFile.update((s) => {
+      if (patch.welcomed !== undefined) s.welcomed = !!patch.welcomed;
+      if (patch.tips !== undefined) s.tips = !!patch.tips;
+      if (patch.tipSeen && !s.tipsSeen.includes(patch.tipSeen)) s.tipsSeen = [...s.tipsSeen, patch.tipSeen];
+      if (patch.resetTips) s.tipsSeen = [];
+      if (patch.stepsClosed !== undefined) s.stepsClosed = !!patch.stepsClosed;
+    });
+    return true;
+  }
+
+  /** The sample valley: made fresh if it isn't on the shelves (Help brings it back). */
+  makeSample(): { system: Id; world: Id; module: Id } {
+    const have = this.firstTime().sample;
+    if (have.system && have.world && have.module) return { system: have.system, world: have.world, module: have.module };
+    return makeSample(this);
+  }
+
+  /** A first step ticks itself off ("Make your first monster"). */
+  private step(key: string) {
+    const d = this.settingsFile.data;
+    if (d.stepsClosed || d.stepsDone.includes(key)) return;
+    this.settingsFile.update((s) => (s.stepsDone = [...s.stepsDone, key]));
+  }
+  private stepFor(id: Id, copied: boolean): Id {
+    try {
+      const s = this.session;
+      const r = s ? s.ws.resolve(s.id, id) : null;
+      if (r?.record.kind === "being" && r.fields.beingKind === "monster") this.step("monster");
+      if (copied && r?.record.kind === "item") this.step("weapon");
+    } catch {
+      // Ticking a step never gets in the way.
+    }
+    return id;
+  }
+
   // ---------- Players join (version 2.5) ----------
 
   private lan: LanServer | null = null;
@@ -1791,7 +1847,7 @@ export class Backend {
     return this.editing.categories();
   }
   addBeing(input: { name: string; kind: BeingKind; variantOf: Id | null; template?: boolean }): Id {
-    return this.editing.addBeing(input);
+    return this.stepFor(this.editing.addBeing(input), false);
   }
   addItem(input: { name: string; categoryId: Id | null; variantOf: Id | null; template?: boolean }): Id {
     return this.editing.addItem(input);
@@ -1951,7 +2007,9 @@ export class Backend {
 
   /** The rulebook's content (the window lays it out into pages; main.ts turns it into a PDF). */
   book(opts: BookRequest): BookData {
-    return this.editing.book(opts);
+    const data = this.editing.book(opts);
+    this.step("print");
+    return data;
   }
   /** Saves the rulebook as a Word file (.docx). Resolves to where it went, or null if cancelled. */
   async bookWord(opts: BookRequest, dest?: string): Promise<string | null> {
@@ -1988,7 +2046,9 @@ export class Backend {
     return this.editing.addLore(name, template);
   }
   rollTable(id: Id): ReturnType<Editing["rollTable"]> {
-    return this.editing.rollTable(id);
+    const r = this.editing.rollTable(id);
+    this.step("roll");
+    return r;
   }
   /** Table mode: the world as a read-only reading view for running a game. */
   tableMode(): TableModeView {

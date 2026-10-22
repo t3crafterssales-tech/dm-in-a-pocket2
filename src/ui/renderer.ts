@@ -11,6 +11,7 @@ import { ICONS } from "./icons.ts";
 import { aiSettings } from "./ai-panel.ts";
 import { becameReadOnly, current, leavePlace, openPlace, redrawForPlayers, renderPlace } from "./place.ts";
 import { pulseFromPlayer } from "./tools/map-tool.ts";
+import { drawSteps, maybeWelcome, setWelcomeHost, showHelp } from "./welcome.ts";
 
 /** The last thing deleted from the home screen, so Ctrl+Z can put it back. */
 let lastDeleted: RecycledInfo | null = null;
@@ -44,11 +45,13 @@ function tableChanged(what: "table" | "players") {
 
 // ---------- Home screen ----------
 
-async function showHome(highlight?: string) {
+async function showHome(highlight?: string, glow?: string) {
   leavePlace();
   const home = await attempt(() => api.home());
   if (!home) return;
   renderHome(home, highlight);
+  if (glow === "new-system") app.querySelector(".new-system")?.classList.add("glow");
+  void drawSteps();
 }
 
 function renderHome(home: HomeData, highlight?: string) {
@@ -61,6 +64,7 @@ function renderHome(home: HomeData, highlight?: string) {
       "nav",
       { class: "top-actions" },
       iconButton(ICONS.import, "Import", () => void importFile(), { title: "Import a world or system file someone sent you" }),
+      iconButton(ICONS.help, "Help", () => void showHelp(), { title: "Help: the tour, the sample, tips and first steps" }),
       iconButton(ICONS.bin, "Recycle bin", () => void showRecycleBin(), { badge: home.binCount }),
       iconButton(ICONS.gear, "Settings", () => void showSettings()),
     ),
@@ -69,7 +73,7 @@ function renderHome(home: HomeData, highlight?: string) {
   const systems = shelf(
     "Systems",
     "The rules. One system can power many worlds.",
-    h("button", { class: "button primary", onClick: () => void newSystem(home) }, svg(ICONS.plus), "New system"),
+    h("button", { class: "button primary new-system", onClick: () => void newSystem(home) }, svg(ICONS.plus), "New system"),
     home.systems.map((s) => systemCard(s, s.id === highlight)),
     "No systems yet. Every world needs a system, so start with New system.",
   );
@@ -634,9 +638,13 @@ document.addEventListener("keydown", (e) => {
 // ---------- Start ----------
 
 async function start() {
+  setWelcomeHost({
+    openPlace: (type, id) => openPlace({ type, id }),
+    home: (glow) => showHome(undefined, glow),
+  });
   const s = await attempt(() => api.startup());
   if (s?.resume) await openPlace(s.resume);
-  else await showHome();
+  else if (!(await maybeWelcome())) await showHome();
 }
 
 nav.home = showHome;
