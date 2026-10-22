@@ -12,6 +12,8 @@ A user can start anywhere. Pick a ready-made system and strip it down. Invent mo
 
 **Core value: flexible.** If they want to do it this way, fine. If they want to do it the other way, fine.
 
+**What this app is (Jeff, October 22, 2026).** An organized notebook and sketchbook with AI help. Not a virtual tabletop. An aid — a place to organize thoughts, ideas, drawings, maps and rules, all in one place, with AI available if wanted. It is not competing with Foundry VTT. It is the tool you use before you sit down at the table.
+
 ## Core philosophies
 
 These five rules do not change. Every design decision is checked against them.
@@ -546,6 +548,7 @@ the box the tracker has **many settings** (its gear), and the DM sets it up for 
 - After the session, turn a note into a lore page or an NPC (the improvised innkeeper becomes part
   of the world).
 - Ask the AI for a recap ("last session in a paragraph") to read out next time.
+- **Session recap template (Jeff, October 22, 2026).** After each session the DM can fill in a simple structured template — biggest moment, player of the game, what the party decided, what comes next, any notes for next time. The app does not listen or track automatically; the DM writes it by hand. It lives in the journal, can be exported and shared with the group, and gives the AI context for next session's prep. Simple, honest, no microphone required.
 - **Private by default.** The journal is the DM's notebook, not a node's rulebook text, so the
   "no secret GM notes" rule doesn't apply to it. It is shared only through permissions, and left
   out of shared files unless ticked. (Decided by Jeff, October 21, 2026.)
@@ -1181,6 +1184,29 @@ better-looking workspace, more to choose from (more pictures), and one new featu
 - **Erase all buttons** on the soundboard clears the buttons, never the files, and is undoable with
   Ctrl+Z like everything else.
 
+### Expanded starter system templates (Jeff, October 22, 2026)
+
+Version 1 ships with one starter template: d20 Basic. Version 3 adds a small library so new users
+have a familiar starting point for many kinds of game. Each template is a copy the user owns and
+changes freely — not a licensed game, just a generic type that feels like a familiar system.
+
+- **d20 Standard** — the existing template; fantasy, skills, classes, saving throws
+- **d6 Pool** — roll a handful of d6s and count successes; feels like World of Darkness or Shadowrun
+- **Percentile** — roll under a skill percentage; feels like Call of Cthulhu or old Warhammer RPG
+- **2d6 Moves** — roll 2d6: 10+ succeed, 7–9 partial success, 6 and under something goes wrong;
+  feels like Powered by the Apocalypse
+- **d10 Chronicles** — dice pool counting tens; feels like the old Storyteller system
+- **Bare bones** — completely empty, no assumptions, for building something entirely from scratch
+
+New templates are added with each version so the library grows steadily. Templates use generic
+names only — nothing trademarked.
+
+**Import a friend's system** is already planned in the sharing rules (a system arrives as its own
+copy with the maker's name on it). Version 3 makes this prominent on the New System screen so it
+is easy to find. A full community library search — finding systems other DM in a Pocket users have
+published — needs the online marketplace infrastructure and is planned for version 5–6; the
+groundwork (permanent IDs, author names, version numbers) is already in place.
+
 ### The map picture library (Jeff, October 22, 2026)
 
 - **A palette panel** beside the map maker: category tabs (Floors, Walls, Doors and windows, Nature,
@@ -1200,6 +1226,290 @@ better-looking workspace, more to choose from (more pictures), and one new featu
 - **The starter set is free (CC0) packs** to begin with; every licence is checked when building
   (likely Kenney.nl and OpenGameArt's CC0 section; Forgotten Adventures can't be bundled). Nothing
   shipped is named after another company ("WoW style" is fine as a user's own label).
+
+### Themes (Jeff, October 22, 2026)
+
+- **Screen only.** Themes change only what appears on screen; print, PDF and rulebook export always
+  use black text on white regardless of theme.
+- **Five named themes ship with the app:** Default (the neutral dark look already there), Parchment
+  (warm off-white light theme, cream and amber, good for daytime), Ink (pure black and white, high
+  contrast, no colour), Ember (dark with deep red and rust accents, firelight feel), Steel (dark with
+  cool blue-grey accents, calm and modern), Verdant (dark with muted forest green, earthy fantasy).
+- **A theme sets five values:** background colour, panel colour, text colour, accent colour (buttons,
+  links, highlights) and border colour. Every colour in the app derives from those five.
+- **The picker** is a row of coloured circles or swatches in Settings. Click one and it applies
+  instantly so the user sees it live before saving. The chosen theme is saved to settings and
+  persists between sessions.
+
+### Interface font size (Jeff, October 22, 2026)
+
+- A **Small / Normal / Large** control in Settings scales all text in the app's menus, labels and
+  panels at once. One CSS scaling step under the hood; every screen changes together.
+- Built for people on small screens or who find small text hard to read. Has no effect on content
+  inside nodes or on print output.
+
+### Rich text editor (Jeff, October 22, 2026)
+
+- **Every content text box** in the app — monster descriptions, lore pages, encounter text, journal
+  entries — gets a full rich text editor instead of a plain text area.
+- **The toolbar** above each text box includes: font family (a curated list of free fonts that ship
+  with the app), font size for that paragraph, bold, italic, underline, strikethrough, text colour,
+  headings H1 / H2 / H3, bullet lists, numbered lists, and left / centre / right alignment.
+- **Flows into the rulebook export** exactly as written. A heading in a lore page becomes a heading
+  in the printed book.
+
+### Flexible panel layout (Jeff, October 22, 2026)
+
+- **Drag any divider** between panels to resize. Double-click a divider to snap back to the default
+  split. A small arrow button on any panel collapses it to a thin strip; clicking it again expands
+  it.
+- **Panels can be detached** and floated as their own small windows for second-monitor use (for
+  example, the map on one screen and the DM's table on the other).
+- **Panels keep their identity** — they move and resize but do not change type. The codex is always
+  the codex; the flag panel is always the flag panel.
+- **Built-in layout presets** switch the whole arrangement in one click: Builder (big editing area,
+  codex on the side, default for making content), Game night (DM's table large, codex shrunk, for
+  running a session), Writer (text editor fills the centre, everything else tucked away, for writing
+  lore), Dual monitor (wide layout for extra screen space, two panels side by side).
+- **Save your own presets** — name and save any arrangement, restore it any time, like named
+  snapshots for the layout.
+
+### The expanded picture library (Jeff, October 22, 2026)
+
+The map picture library (above) handles images for the map maker. This section covers the library
+for everything else — the picture that appears on a node (a goblin, a sword, a faction, a place).
+
+- **Every node has a picture slot** with two options: Upload (a single file from the computer) and
+  Browse library (the full library panel).
+- **The library panel** is organised by tag, not fixed categories. Search by name or tag. Filter by
+  style. Multiple images per subject — a goblin might have six variants (scrappy, armoured, shaman,
+  boss). Supports JPEG, PNG and animated GIF.
+- **The map library and the node library share the same folder and browser.** A dragon stamp on the
+  map and a dragon picture on the creature node can be the same file, stored once.
+- **Version 3 ships a starter set of free CC0 images** — hundreds, possibly thousands — pre-tagged
+  and ready to use. Primary sources: OpenGameArt.org (RPG tokens, portraits, tilesets, CC0 and
+  CC-BY), Kenney.nl (icons, sprites, top-down art, entirely CC0), Game-icons.net (4,000+ game icons,
+  CC0), and Itch.io's free section. CC-BY content adds a credit line automatically in the app's
+  about screen. Any required attribution is automatic, like the SRD's.
+- **AI-assisted tagging** is used once at build time to tag the starter library; the user reviews
+  and approves in batches.
+
+### Auto-picture on node creation (Jeff, October 22, 2026)
+
+- **Every node kind and category has a default image** mapped to it by tag. Create a sword and it
+  gets the sword icon. Create a goblin and it gets the goblin token. Create a faction and it gets a
+  banner symbol. This happens silently; the user never has to think about it.
+- **A dropdown beside the picture** shows alternatives — only images whose tags match that node's
+  category. Axes show axes; potions show potions; goblins show goblins. At the bottom of the
+  dropdown are Upload your own and Browse full library for anything the automatic suggestions miss.
+- **A setting in Settings: Add pictures automatically** (on by default). Turning it off means new
+  nodes are created with no picture and the user fills them in at their own pace. Good for people
+  who want full control or who are building a game where the fantasy defaults look wrong.
+
+### Tag system for pictures (Jeff, October 22, 2026)
+
+- **Every picture has one or more tags.** Tags are single words, always stored in lowercase
+  (the app converts automatically so `Sword`, `SWORD` and `sword` are the same tag).
+- **The import dialog** has a Name field, a Main tag field (one word, used first for auto-picture
+  matching) and an Add tag button that adds as many extra single-word tag lines as the user wants.
+  A small × on each line removes it. Five or more tags on one image is fine.
+- **Each tag line has a dropdown** showing the most commonly used tags in the library, sorted by
+  frequency. Typing narrows the list to matches (autocomplete). Suggestions are context-aware: if
+  the main tag is `sword`, the second-line dropdown nudges toward `melee`, `weapon`, `blade`,
+  `fantasy` first. The user can always type a brand-new word not in the list.
+- **Users create new tags freely.** A new word typed into any tag line becomes a live tag the moment
+  the image is saved. It appears in the filter panel and in dropdown suggestions for future imports,
+  alongside all built-in tags, with no setup required.
+- **The filter panel in the library browser** lists every tag alphabetically — built-in and
+  user-created together. Click one to filter; click several to narrow further.
+- **Autocomplete prevents near-duplicates.** Typing `wea` suggests the existing `weapon` tag before
+  the user finishes typing, so `weapons` and `weapon` do not end up as separate tags by accident.
+
+### Global search (Jeff, October 22, 2026)
+
+- **One search box** at the top of the app finds anything across the whole world at once: node
+  names, lore text, encounter descriptions, journal entries, everything.
+- Results grouped by kind (Beings, Items, Lore, Encounters…). Clicking a result opens that node.
+- Useful when a DM remembers writing something about a character weeks ago but cannot find where.
+
+### Condition tracker (Jeff, October 22, 2026)
+
+- **A row of condition icons** beside each creature in the initiative order during combat. The DM
+  clicks an icon to apply a condition; clicks again to remove it.
+- Conditions come from the system's own condition nodes (Poisoned, Stunned, Frightened,
+  Concentrating, and any the user has made).
+- **Players see conditions on their screen** as the condition name in plain words beside the
+  creature's health.
+
+### Session timer (Jeff, October 22, 2026)
+
+- A **quiet clock on the DM's table** showing how long the current session has been running.
+- Starts when Begin session is clicked, stops when the session ends. Can be paused and resumed.
+- Easy to ignore if not needed; tucked in a corner next to the other table tools.
+
+### Dice roller on the player's phone (Jeff, October 22, 2026)
+
+- The **player screen** gets a dice roller: a row of die buttons (d4, d6, d8, d10, d12, d20, d100)
+  and a modifier field.
+- **Every roll appears in the shared chat log** on the DM's screen and on all other connected
+  players' screens, with the roller's name, the formula and the result.
+- Supports the same blind, whisper and public roll modes as the DM's table.
+- Players do not need a separate dice app; everything stays in one place.
+
+### World changelog (Jeff, October 22, 2026)
+
+- A **plain-language summary** of recent changes to a world, auto-generated from its history.
+  "Added 3 goblins. Changed sword damage from d6 to d8. Wrote the mill encounter."
+- Shown at the top of the world on opening, collapsed after the first glance. Can be dismissed.
+- Useful after a break of days or weeks when the DM cannot remember where they left off.
+
+### Random generator button (Jeff, October 22, 2026)
+
+- A **Generate button** on the DM's table, connected to the world's existing roll tables.
+- The DM picks which tables to roll (NPC names, weather, random encounters, treasure), clicks
+  Generate, and the results print into the session log instantly.
+- No internet needed, no AI needed — pure dice logic using tables the DM already wrote.
+- A quick Generate all option rolls every table ticked in a single click.
+
+## Version 4: a world-aware AI partner (Jeff, October 22, 2026)
+
+Version 4 makes the AI genuinely understand the world it is working in. Instead of a chat box that
+knows general fantasy, it reads your actual world first — your races, factions, locations, tone and
+rules — and creates things that fit what you have already built, not a generic template.
+
+Everything in version 4 is switched on or off. None of it requires an API key to use the rest of
+the app.
+
+### World context document (Jeff, October 22, 2026)
+
+- Before any generation job the app builds a short **world context summary** — your races, factions,
+  major places, tone, any rules flagged as important — and sends it to the AI as context.
+- This is never the whole world file, only the relevant pieces for that job, keeping it fast and
+  cheap.
+- The summary is readable by the user (shown in the AI panel as "What the AI knows about your
+  world") and can be edited or added to by hand.
+- The AI keeps this context across a session so it does not have to relearn the world on every
+  prompt.
+
+### The governing rule (Jeff, October 22, 2026)
+
+**If you can build it by hand, the AI can build it for you.**
+
+Every creation point in the app — monsters, items, races, locations, factions, lore pages,
+encounters, rules, backgrounds, histories, roll tables, journal entries, all of it — has an AI
+prompt option sitting beside the manual one. If the app lets you create it, the AI can draft it.
+This future-proofs the design: when later versions add new node types, the AI prompt comes with
+them automatically.
+
+Two things never change regardless of which creation point is used:
+1. Everything goes through preview and accept — the AI never creates anything silently.
+2. All AI features are optional — no API key means no AI features, but everything else works
+   exactly as normal.
+
+### World-aware content generation (Jeff, October 22, 2026)
+
+- From any node or from a prompt box the user can ask the AI to **create something new** that fits
+  the world. Opening a location and typing "help me create a place in the northern part of my world
+  influenced by the Vethkari" produces a result built from what the AI knows about the Vethkari,
+  the north, and the tone of the world — not a generic answer.
+- **Variants are world-aware too.** Typing "make a variant of the Folic tribe that is more aquatic"
+  produces a new race already set as a child of the Folic tribe, with the right fields inherited
+  and only the aquatic differences changed — because the AI knows the Folic tribe's stats, culture
+  and the world's rules before it starts.
+- The AI always generates **two or three versions** of anything creative so the user can pick,
+  combine, or use one as a starting point. Each version has a short label describing its feel
+  ("more militaristic", "ruined and forgotten", "active trade post"). The number of versions
+  returned is set in Settings — default two, up to six.
+- A **Create more** button generates fresh alternatives without losing the ones already shown.
+- Accepting a version creates the node through the normal preview-and-accept flow, so it goes
+  through undo and history exactly like a user-made change.
+- The AI never creates anything silently; every result is a suggestion until the user accepts it.
+
+### Voice input (Jeff, October 22, 2026)
+
+- Any AI prompt box can accept **voice instead of typing.** Press and hold a microphone button,
+  speak the prompt, release — the app transcribes it and treats it exactly like a typed prompt.
+- The app never listens on its own; it only records while the button is held, so table chatter and
+  background noise are never picked up accidentally.
+- Voice uses the same API key as text, running the audio through a transcription step first and
+  then passing the text to the AI as normal. The same preview-and-accept flow applies.
+- Good for when hands are busy at the table or the user thinks faster out loud than by typing.
+
+### AI picture generation (Jeff, October 22, 2026)
+
+- Every node's picture slot has a **Generate picture** button beside Upload and Browse library.
+  Clicking it opens a small prompt box — the user types a few words ("hunched goblin shaman, bone
+  staff, swamp") and hits Generate.
+- The AI uses the world context it already has plus those words to generate the image. The number
+  of images returned is set in Settings — default one, up to six. Each result shows as a small
+  card with an Accept button.
+- A **Refine** prompt box lets the user add more words ("darker, more ragged") and generates a
+  fresh batch without losing the ones already showing.
+- Accepted images go into the node's picture slot and also into the picture library automatically,
+  tagged with the words the user typed, so the library grows over time without extra work.
+- **Image generation needs a separate API key** from a dedicated image service (such as OpenAI's
+  image API), because Claude does not generate images. The user brings their own key, stored the
+  same way as the Claude key. If no image key is set, the Generate picture button does not appear.
+  This is an optional extra on top of the optional AI; the rest of the app is unaffected.
+
+### Version 4 stress test: build a whole system from one prompt (Jeff, October 22, 2026)
+
+The hardest thing version 4 should be able to handle: a user creates a blank world and types one
+prompt — "Create me a world based on Lord of the Rings. D6 system, no d20. Four stats. Sound
+epic." — and hits go.
+
+**What the AI does, section by section:**
+1. The system: four stats with epic LoTR-flavoured names, d6 dice rules, a core check mechanic,
+   difficulty levels.
+2. Races: Men, Elves, Dwarves, Hobbits, Orcs. Each with stats filled in and a description in an
+   epic tone.
+3. Monsters: a starter set — orcs, trolls, wraiths, wargs, spiders, a cave drake. Stat blocks
+   built from the d6 system just made.
+4. Items: weapons, armour and a magic item template that fit the world.
+5. One or two starter locations matching the tone.
+
+Each section is previewed and accepted before the next generates. The user ticks what they want,
+changes what they do not, and moves on. Nothing is created silently.
+
+**What it will not do perfectly on the first pass:** stat balance needs playtesting, monster
+difficulty is an estimate, some names may need adjusting. The AI gets 80% of the way there in two
+minutes; the user refines the rest. That is the right division of labour.
+
+This stress test sets the bar for what version 4's AI must be capable of at its most ambitious.
+Simpler prompts ("add ten monsters to my existing world") are easier; this is the hardest case.
+
+## Version 6: the marketplace (Jeff, October 22, 2026)
+
+Version 6 adds the online layer — a community and marketplace built on top of everything already
+working. The app itself never requires it; it is an optional extra for people who want to share and
+discover.
+
+- **Community gallery on the home screen.** A simple feed of worlds and systems other users have
+  shared publicly. Free to browse and download. Opening a shared world or system imports it exactly
+  like a file share, with the maker's name attached.
+- **The marketplace.** Creators can publish systems, worlds, modules, picture packs and sound packs
+  for free or for a price they set. DM in a Pocket takes a small cut of paid sales. Everything sold
+  carries a permanent licence so buyers keep it forever even if the seller removes it.
+- **Search and discovery.** Filter by genre, system type, price, rating and style. A featured
+  section highlights quality content. Community ratings are simple — thumbs up, no review text in
+  version 1 of the marketplace to keep it clean.
+- **Creator accounts are optional.** Browsing and downloading is free with no account. Uploading
+  to share freely also has no account. Selling requires an account for payment purposes only.
+- **Required credits travel automatically.** CC-BY content in a shared pack carries its credit
+  line into everything that uses it, the same way SRD content already does.
+- **Foundry VTT export (Jeff, October 22, 2026).** One button — with a few clarifying questions from the AI — exports any completed world and system as a clean, installable Foundry VTT package. Building a custom game system in Foundry from scratch requires JavaScript, JSON and weeks of work. DM in a Pocket does it visually, by hand or with AI, and hands the user a package that installs in two clicks. This app is not competing with Foundry; it is feeding it. Foundry users become customers because this solves their hardest problem. The export is a spoke on the hub-and-spokes architecture and can be built without changing anything else.
+
+## Pricing (Jeff, October 22, 2026)
+
+- **Free to download, no time limit.** One world, one system, full functionality, no AI. Everything
+  works. The free version is a genuine, useful tool — not a crippled demo.
+- **Twenty dollars, one time, unlocks everything.** Unlimited worlds and systems, all versions of
+  the app forever, no subscription, no recurring charge, no account needed to use it.
+- **AI costs whatever the user's API key costs.** The app never charges for AI separately; the user
+  brings their own key and pays their provider directly. Cost estimates in the app keep surprises
+  away.
+- **Marketplace purchases are separate** and optional. Buying a content pack from another creator
+  is a one-time purchase that lives on the user's computer forever.
 
 ## Idea parking lot
 
@@ -1411,6 +1721,117 @@ The rules the program itself must follow, written before any code and read at th
 - **The user approves milestones, not every step.** Each milestone (for example "the flag panel works") is built, then tested by the user, who approves it or sends it back. Any decision that affects the design stops and asks, even mid-milestone.
 - **Technology:** Electron desktop app for Windows, written in TypeScript. A world file is one archive holding the data and the pictures.
 - **Who decides what (October 20, 2026).** Claude makes technical decisions without asking, as long as they keep every promise in Part 1. The user decides anything that changes how the app looks, feels or works for the person using it; anything that adds to or removes from version 1 or first playable; any change to the promises; and anything that would be hard to undo once real worlds exist. Every technical decision Claude makes is written in the progress log in one plain line, so the user can review and overrule it at any milestone.
+
+## The Dice Roller
+
+The dice roller is a fully featured standalone tool built into DM in a Pocket. It is not tied to any version yet and will be slotted in when the time is right. It is designed to be the best dice roller that exists — not just adequate, but something players talk about.
+
+### The 20 problems every bad roller has — and how this one fixes them
+
+1. **Ads and paywalls.** Gone. One-time purchase, no locked features, no subscriptions.
+2. **Ugly dice.** Fixed by the custom dice creator: color, pattern, opacity, material (wood, metal, stone, gem, plastic). The dice you build look like something you'd want to own.
+3. **No dice personality.** Fixed by AI-generated dice sets. Describe your character or world in a sentence and it generates a matching set. "Dark elf assassin" gets black and purple with silver edges.
+4. **Can't import custom dice.** Fixed. Import image files for faces, or import a full dice set someone else made and shared.
+5. **Formulas disappear when you close it.** Fixed. Every formula is saved forever, named by you, tagged and stored in the universal codex.
+6. **Re-entering the same roll every session.** Fixed by saved roll buttons. Your attack roll is one tap, always there.
+7. **No shared rolls at the table.** Fixed by shared table mode. Everyone sees every roll on the same screen in real time.
+8. **"I swear I rolled higher."** Fixed by full roll history. Every roll logged with formula, result, time and who rolled it.
+9. **Secret rolls are impossible.** Fixed. The DM can mark any roll hidden — only they see the result; players see only "DM rolled."
+10. **No connection to the character sheet.** Fixed. Stat blocks in DM in a Pocket already know their dice. Click the attack, it rolls with the right formula already loaded.
+11. **Clunky on-the-fly modifiers.** Fixed. Quick modifier buttons appear after any roll: +1, +2, advantage, disadvantage, reroll lowest. One tap to adjust.
+12. **No advantage/disadvantage built in.** Fixed. Every roll has a one-tap advantage and disadvantage toggle, rolls two dice and shows both results.
+13. **Sound effects you can't turn off.** Fixed. Sound is off by default. When on, choose the sound: wood clatter, metal clink, or silence with just a number flash.
+14. **Animations too slow.** Fixed. Default animation is fast and satisfying — under one second. Settings allow slower for flair or instant for speed.
+15. **No exploding dice.** Fixed. Any die can be set to explode (roll max, roll again), with a cap so it never runs forever.
+16. **Can't roll weird dice.** Fixed. d3, d5, d7, d14, d16, d24, d30, any number. If a system uses it, it exists.
+17. **No macro support.** Fixed. A macro is a sequence: roll initiative for every creature in the encounter at once, one button.
+18. **Sharing dice sets is impossible.** Fixed. Export a dice set as a file, share it with your group, they import it and have your exact set.
+19. **Looks bad on a TV at the table.** Fixed. Table mode scales to a big screen — large readable numbers, big dice faces, designed to be seen from across the room.
+20. **Works only online.** Fixed. Entirely local, entirely offline, always.
+
+### The universal codex
+
+Saved roll formulas do not belong to any world, system or module — they live in the universal codex, a personal library that is always available no matter what you have open. A formula saved once is accessible in every session, every world, every game.
+
+- **Tags on formulas.** The same tag system used everywhere in the app applies here. A formula can be tagged "5e", "attack", "goblin", "trap" — any single lowercase word. Formulas are filtered and found by tag.
+- **Formulas can be as complex as needed.** Conditional logic ("if the d20 equals 20, roll 2d6 instead of 1d6"), chained rolls, referenced stats, counters. The formula language handles anything a tabletop system can ask for.
+- **Import from other players.** A player who builds a brilliant complex formula can export it and share it. Anyone can import it into their codex and use it as-is or adapt it.
+- **Community formula packs.** Full formula libraries — "5e Fighter level 5 attack routine" — can be shared as a pack. Ties naturally into the version 6 marketplace.
+
+### Pinned roll buttons
+
+A saved formula can be dragged as a pin onto anything in the app — a journal entry, a map location, an encounter, a trap, a creature, a lore page. It sits there as a small dice icon until needed.
+
+At the table, clicking a pin opens a dropdown before the roll:
+
+- **Who does this apply to?** A list of every creature and player currently in the encounter, with Select All and Deselect All at the top.
+- The DM picks the targets — the three players near the trap, not the rogue who stayed back.
+- Roll. The formula runs once per selected target, shows each result individually, and logs them all in history with the target's name beside each result.
+
+The dropdown is live — it reads whoever is actually in the encounter right now, not whoever was there when the pin was made. The DM building the module may not know who will be in the party when someone plays it.
+
+**Additional pin behaviours:**
+- A pin can auto-apply to all creatures of a certain kind — "all goblins in this encounter" — without picking each time.
+- Pins can be hidden from players until the DM reveals them. A trap's roll formula is invisible until it triggers.
+- A pin carries a label — "Trapdoor DC 14 Dexterity save" — so at the table everyone knows what just happened.
+- Dice rolls can be linked to anything in the world just as any other value can be linked.
+
+### Eight more gaps addressed
+
+1. **Probability display.** Before rolling, show the odds: "35% chance of hitting AC 15." Toggle for players who want the math; hidden by default for casual players.
+2. **Roll annotation.** When rolling, type a quick note: "attack on the goblin chieftain." Shows in the history log next to the result so the log tells a story.
+3. **Conditional math.** "If the first d20 is 20, roll 2d6 instead of 1d6." Critical hits, fumble tables, abilities that change the dice mid-roll.
+4. **Roll triggers.** Link a formula to a flag or condition. A Poisoned creature automatically rolls with disadvantage. The condition is already in the world; the roller reads it.
+5. **Persistent counters.** Some systems track things between rolls: a spell slot used, a resource spent. The roller decrements a counter on the node when the roll is made.
+6. **Roll templates for the community.** Full formula packs shared by players. Someone builds it once; everyone benefits. Feeds directly into the version 6 marketplace.
+7. **Colorblind-friendly mode.** The dice creator generates beautiful color sets, but a colorblind player needs number and shape cues too. A setting adds symbols or patterns to die faces automatically.
+8. **Roll request.** The DM sends a roll request to a specific player: "Roll Perception." It appears on their screen, they roll, and the result comes back to the DM automatically. No shouting across the table.
+
+### Physics and the tray
+
+The dice roller has a full physics simulation. Every setting is optional — players who want instant results skip all of this with one toggle.
+
+**Physics sliders:**
+- **Throw strength.** Gentle tumble to hard bounce off the tray walls. Default is a satisfying medium.
+- **Gravity.** 1.0 is normal. Lower makes dice float and tumble slowly. Higher makes them slam down fast with less bounce.
+- **Surface friction.** How quickly dice slow after landing. Low friction — they slide; high friction — they stop where they land.
+- **Bounciness.** How much dice jump on impact. Marble feels different from felt.
+
+**Tray types — each with its own default physics profile and sounds:**
+- Wooden tray — medium bounce, warm clatter sound
+- Green felt tray — low bounce, soft thud, classic casino feel
+- Marble tray — high bounce, sharp crack, cold and heavy
+- No tray — dice roll across the screen itself and fade at the edges
+- Custom tray — the user uploads any background image
+
+Each tray's physics profile is a starting point. Every slider can still be adjusted on top of it.
+
+**Visual settings:**
+- **Animation on/off.** One button for instant results with no animation — for speed play.
+- **Tray size.** Click and drag to resize, or fullscreen for TV table mode.
+- **Dice transparency.** From fully solid to nearly invisible, so the screen shows through underneath.
+- **Dice size.** Larger for big screens or players who need it.
+- **Lighting and shadow.** Dice cast a soft shadow on the tray surface. A moveable light source — overhead, top-left, dramatic side light — makes the dice look like they are physically sitting on a surface. Pure cosmetic, pairs with transparency.
+
+**Sound settings:**
+- Sound on/off
+- Volume slider
+- Sound tied to tray material — felt sounds different from marble
+- Separate volume for roll sound versus result chime
+- Import custom sound files
+
+### Triggered animations and sounds
+
+Every formula in the codex can have its own set of triggers — conditions that fire a special animation or sound when a specific result lands. Triggers are per-formula, not global. An attack roll can have a critical hit animation; a gold piece roll does not need one.
+
+**Built-in trigger types:**
+- **Critical hit.** You define the threshold — 19 and 20, or just 20, or whatever your system uses. When it lands: dice glow, shake, burst with light. Sound: dramatic horn, thunder crack, crowd cheer — you choose.
+- **Critical miss.** Defined the same way. Sound: sad trombone, cracking sound, a pathetic rattle before settling on the one.
+- **Maximum damage.** Every pip lit, a deep satisfying thud.
+- **Minimum damage.** Quiet, a little sad.
+- **Custom number trigger.** Define any result — "when I roll exactly 7, play this." Useful for systems with rules around specific numbers.
+
+**Import your own.** Upload any audio file. Your table's inside joke, a famous movie line, anything. It plays every time that trigger fires.
 
 ## Open questions
 

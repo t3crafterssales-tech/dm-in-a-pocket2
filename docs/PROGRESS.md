@@ -992,3 +992,26 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-22: A shown map leaves out the DM-only layer and the map's own notes.
 - 2026-10-22: The QR code maker is written here (byte mode, medium error correction); checked
   against the standard's worked example and by reading the codes back with a scanner.
+- 2026-10-22: Version 3 design session with Jeff: themes (screen only, five named colour schemes),
+  interface font size (Small/Normal/Large), rich text editor in every content text box, flexible
+  resizable panel layout with named presets, expanded picture library with CC0 starter set
+  (OpenGameArt, Kenney, Game-icons.net), auto-picture on node creation with per-category defaults,
+  quick-swap dropdown showing matching-tag alternatives only, single-word lowercase tag system with
+  autocomplete, global search across the whole world, condition tracker on initiative order, session
+  timer, dice roller on the player phone screen, world changelog from history, random generator
+  button tied to roll tables. All written into docs/design.md.
+- 2026-10-22: Version 4 design session with Jeff: governing rule ("anything you can build by hand
+  the AI can build for you"), world context document, world-aware generation with variants,
+  multi-version results with Create more, voice input (press-and-hold, never always-on), AI picture
+  generation with a separate optional image API key, number-of-versions setting (default 1, up to
+  6). All written into docs/design.md.
+- 2026-10-22: Added expanded starter system templates to version 3 (d20 Standard, d6 Pool,
+  Percentile, 2d6 Moves, d10 Chronicles, Bare bones); community library search parked in version
+  5-6. Added version 4 stress test: build a whole LoTR-style d6 system from one prompt.
+  Design sessions for versions 3 and 4 complete. Coding resumes when Jeff's usage resets Sunday.
+- 2026-10-22: Pricing decided: free download with one world/system, $20 one-time unlocks
+  everything, no subscription. AI costs are the user's own API key only. Version 6 planned as
+  the marketplace and community gallery. Written into docs/design.md.
+- 2026-10-22: Dice roller designed as a standalone section in docs/design.md, not tied to any version yet. Covers: 20 bad-roller problems and fixes, custom dice creator (color/pattern/opacity/material), AI-generated dice sets, universal formula codex with tags and import, shared table mode, full roll history, pinned roll buttons on any node (live target dropdown), conditional math, roll triggers linked to conditions, persistent counters, probability display, roll annotation, roll request from DM to player, colorblind-friendly mode, community formula packs, TV table mode. Will be slotted into a version when the time is right.
+- 2026-10-22: Dice roller physics, tray and triggered animations designed and written into docs/design.md. Physics: throw strength, gravity, friction, bounciness. Trays: wood, felt, marble, none, custom — each with own sound and physics profile. Visual: animation toggle, tray resize, dice transparency, dice size, lighting and shadow. Triggered animations and sounds per formula: critical hit, critical miss, max damage, min damage, custom number, importable audio files.
+- 2026-10-22: Vision statement updated: app is an organized notebook and sketchbook with AI help, not a virtual tabletop. Foundry VTT export added to version 6: one button exports a completed world/system as an installable Foundry package, feeding Foundry users rather than competing with them. Session recap template added to journal section: DM-filled structured template after each session, no automatic tracking.
