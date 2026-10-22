@@ -1154,6 +1154,33 @@ drag in and resize come in a later version.
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
   extra), or start with same-network play only?
 
+## Version 3: a more immersive table (Jeff, October 22, 2026)
+
+Version 3 expands what is already there and makes it more enjoyable: a more customizable,
+better-looking workspace, more to choose from (more pictures), and one new feature, sound.
+
+### Sound: music, ambience and voice (Jeff, October 22, 2026)
+
+- **The app ships no music and no narration.** It is for any genre, so the user brings their own.
+  Only a small starter set of ambient sounds comes with it (rain, wind, fire, tavern crowd, forest,
+  cave drips, waves, thunder), and only truly free ones (CC0); any credit needed is added
+  automatically, like the SRD's.
+- **Bring your own files:** an Add sounds button and drag and drop (MP3, WAV, OGG, M4A). They live in
+  a Sounds folder in the main folder, like Foundry's data folder; files dropped there in Windows
+  show up in the app. Packs from others go in their own folder. Deleting files is done in Windows,
+  the user's choice. No ElevenLabs link for now (maybe later, with the user's own key, like the AI).
+- **A sound is a file plus a category: Music, Ambience or Voice.** The category is a behaviour, not
+  a label: Voice turns the others down while it plays (ducking), Ambience sits underneath, Music
+  ducks nothing. A voice clip filed as Music plays at full volume over everything.
+- **Buttons are separate from sounds.** The user makes buttons (a name or a number) like macro
+  buttons, each pointing at a sound; several buttons can use one file. Buttons live on the
+  **soundboard**, a tool at the DM's table.
+- **Floating buttons:** drag a button off the soundboard onto the screen; it floats and can be moved
+  anywhere (like the pins from version 2.4), and the soundboard can be minimized. Deleting a
+  floating button only takes it off the screen; its home copy stays on the soundboard.
+- **Erase all buttons** on the soundboard clears the buttons, never the files, and is undoable with
+  Ctrl+Z like everything else.
+
 ## Idea parking lot
 
 Good ideas that aren't for version 1 land here with a rough target version, so nothing gets lost and version 1 stays small.
