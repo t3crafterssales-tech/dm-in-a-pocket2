@@ -428,6 +428,9 @@ export const BACKEND_METHODS = [
   "firstTime",
   "setFirstTime",
   "makeSample",
+  "bookContents",
+  "saveBookLayout",
+  "bookLayouts",
   "encounterTree",
   "modulePage",
   "addEncounter",
@@ -2006,6 +2009,16 @@ export class Backend {
   }
 
   /** The rulebook's content (the window lays it out into pages; main.ts turns it into a PDF). */
+  saveBookLayout(name: string, request: BookRequest): Id {
+    return this.editing.saveBookLayout(name, request);
+  }
+  bookLayouts(): { id: Id; name: string; request: BookRequest }[] {
+    return this.editing.bookLayouts();
+  }
+  /** Everything a book could hold, for the book designer's tick list. */
+  bookContents(opts: BookRequest) {
+    return this.editing.bookContents(opts);
+  }
   book(opts: BookRequest): BookData {
     const data = this.editing.book(opts);
     this.step("print");

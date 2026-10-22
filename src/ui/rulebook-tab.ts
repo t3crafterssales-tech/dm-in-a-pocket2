@@ -4,8 +4,10 @@
 import type { BookRequest } from "../app/backend.ts";
 import { api } from "./api.ts";
 import { attempt } from "./common.ts";
-import { notice } from "./dialogs.ts";
-import { h } from "./dom.ts";
+import { notice, openDialog } from "./dialogs.ts";
+import { h, svg } from "./dom.ts";
+import { ICONS } from "./icons.ts";
+import { askText } from "./pickers.ts";
 import type { PlaceCtx } from "./place.ts";
 
 const choicesByPlace = new Map<string, BookRequest>();
@@ -63,6 +65,70 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
   const size = h("select", { class: "text-input" }, h("option", { value: "Letter", selected: req.pageSize !== "A4" }, "Letter (8.5 × 11 in)"), h("option", { value: "A4", selected: req.pageSize === "A4" }, "A4"));
   size.addEventListener("change", () => update({ pageSize: size.value as "Letter" | "A4" }));
 
+  // The book designer (version 2.6): exactly what goes in, front pages, contents and index.
+  const [tree, layouts] = await Promise.all([attempt(() => api.journalTree()), attempt(() => api.bookLayouts())]);
+  const fronts = (tree ?? []).filter((g) => g.category === "Front pages").flatMap((g) => g.pages).sort((a, b) => a.priority - b.priority);
+  const frontOff = new Set(req.frontOff ?? []);
+  const frontList = h(
+    "ul",
+    { class: "book-chapters" },
+    fronts.map((f) => {
+      const box = h("input", { type: "checkbox", checked: !frontOff.has(f.id) });
+      box.addEventListener("change", () => update({ frontOff: box.checked ? [...frontOff].filter((x) => x !== f.id) : [...frontOff, f.id] }));
+      return h("li", null, h("label", { class: "check" }, box, `${f.priority}. ${f.name}`), h("button", { class: "link small", title: "Edit it in the Journal tab", onClick: () => void ctx.open(f.id) }, "Edit"));
+    }),
+  );
+  const tick = (label: string, on: boolean, change: (v: boolean) => void) => {
+    const b = h("input", { type: "checkbox", checked: on });
+    b.addEventListener("change", () => change(b.checked));
+    return h("label", { class: "check" }, b, label);
+  };
+  const left = (req.leaveOut ?? []).length;
+  const loadLayout = h("select", { class: "text-input", "aria-label": "Saved books" }, h("option", { value: "" }, "Use a saved book…"), (layouts ?? []).map((l) => h("option", { value: l.id }, l.name)));
+  loadLayout.addEventListener("change", () => {
+    const l = (layouts ?? []).find((x) => x.id === loadLayout.value);
+    if (l) update({ ...l.request });
+  });
+  const designer = [
+    h("label", { class: "field-label spaced" }, "What goes in"),
+    h("button", { class: "button plain small-button", onClick: () => void chooseContents(req, update) }, left ? `Choose… (${left} left out)` : "Choose exactly what goes in…"),
+    h("label", { class: "field-label spaced" }, "Front pages"),
+    fronts.length ? frontList : h("p", { class: "muted small" }, "A cover, credits or a foreword, built from text and pictures like a journal page."),
+    h(
+      "button",
+      {
+        class: "link small",
+        onClick: async () => {
+          const name = await askText("A front page", "", "Its name", "Cover");
+          if (!name) return;
+          const id = await attempt(() => api.createPage(name, "Front pages"));
+          if (id) {
+            await attempt(() => api.setPage(id, { priority: fronts.length + 1 }));
+            void ctx.open(id);
+          }
+        },
+      },
+      "+ Front page",
+    ),
+    tick("The plain cover with the title", req.plainCover !== false, (v) => update({ plainCover: v })),
+    tick("Contents", req.contents !== false, (v) => update({ contents: v })),
+    tick("Index", req.index !== false, (v) => update({ index: v })),
+    h("label", { class: "field-label spaced" }, "Saved books"),
+    layouts?.length ? loadLayout : null,
+    h(
+      "button",
+      {
+        class: "link small",
+        title: "Keep these choices in the Codex (Sheet and book layouts) to use again",
+        onClick: async () => {
+          const name = await askText("Save this book", "", "Book name", "The giants of Greyhollow");
+          if (name && (await attempt(() => api.saveBookLayout(name, req)))) notice(`Saved ${name} in the Codex.`, "green", undefined, 4000);
+        },
+      },
+      "Save this book…",
+    ),
+  ];
+
   const save = h("button", { class: "button primary" }, "Save as PDF…");
   save.addEventListener("click", async () => {
     save.disabled = true;
@@ -108,6 +174,7 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
             h("p", { class: "muted small" }, "Otherwise a variant lists only what differs: \"As Goblin, plus…\"."),
             h("label", { class: "check" }, byCr, "Monsters in order of challenge"),
           ]),
+      ...designer,
       h("label", { class: "field-label spaced" }, "Created by"),
       author,
       h("label", { class: "field-label spaced" }, "Page size"),
@@ -130,4 +197,62 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
     frame,
   );
   return { list, editor };
+}
+
+/** The tick list: every chapter and thing the book could hold, with Select all and a search box. */
+async function chooseContents(req: BookRequest, update: (patch: Partial<BookRequest>) => void) {
+  const all = (await attempt(() => api.bookContents(req))) ?? [];
+  const out = new Set(req.leaveOut ?? []);
+  let find = "";
+  const d = openDialog("What goes in this book", { wide: true });
+  const draw = () => {
+    const words = find.toLowerCase().split(/\s+/).filter(Boolean);
+    const match = (t: string) => words.every((w) => t.toLowerCase().includes(w));
+    const box = h("input", { class: "text-input", type: "search", value: find, placeholder: "Find…", "aria-label": "Find" });
+    box.addEventListener("input", () => {
+      find = box.value;
+      draw();
+      (d.body.querySelector("input[type=search]") as HTMLInputElement | null)?.focus();
+    });
+    const shown = all.map((c) => ({ ...c, entries: c.entries.filter((e) => match(e.title) || match(c.title)) })).filter((c) => c.entries.length);
+    const set = (ids: string[], on: boolean) => {
+      for (const id of ids) on ? out.delete(id) : out.add(id);
+      draw();
+    };
+    d.body.replaceChildren(
+      h("div", { class: "inline spaced" }, box, h("button", { class: "button plain small-button", onClick: () => set(shown.flatMap((c) => c.entries.map((e) => e.id)), true) }, "Select all"), h("button", { class: "button plain small-button", onClick: () => set(shown.flatMap((c) => c.entries.map((e) => e.id)), false) }, "Unselect all")),
+      h("p", { class: "muted small" }, words.length ? "Select all and Unselect all change only what the search shows: unselect all monsters, find giant, select all, and it's a book of giants." : "Untick anything to leave it out. New things you make later go in by themselves."),
+      h(
+        "div",
+        { class: "book-pick" },
+        shown.map((c) =>
+          h(
+            "div",
+            { class: "book-pick-chapter" },
+            h("div", { class: "inline" }, h("strong", null, c.title), h("span", { class: "grow" }), h("button", { class: "link small", onClick: () => set(c.entries.map((e) => e.id), true) }, "All"), h("button", { class: "link small", onClick: () => set(c.entries.map((e) => e.id), false) }, "None")),
+            c.entries.map((e) => {
+              const b = h("input", { type: "checkbox", checked: !out.has(e.id) });
+              b.addEventListener("change", () => set([e.id], b.checked));
+              return h("label", { class: "check", style: `margin-left:${e.depth * 18}px` }, b, e.title);
+            }),
+          ),
+        ),
+      ),
+    );
+  };
+  draw();
+  d.footer.replaceChildren(
+    h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"),
+    h(
+      "button",
+      {
+        class: "button primary",
+        onClick: () => {
+          d.close();
+          update({ leaveOut: [...out] });
+        },
+      },
+      "Use these",
+    ),
+  );
 }

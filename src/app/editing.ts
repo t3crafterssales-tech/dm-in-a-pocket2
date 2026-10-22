@@ -2,6 +2,8 @@
 // undo and redo. Each one is a single step in history. The window and, later, the AI change
 // things only through these.
 
+import { cardLines, squaresFor } from "./printshop.ts";
+import type { Piece, PieceKind, PrintShop } from "./printshop.ts";
 import { F, levelKey, pointBuyOf, pointsSpent } from "../engine/index.ts";
 import type { Spent } from "../engine/index.ts";
 import { BOOK_CHAPTERS, CHAPTER_TITLES, bookEntry, isCoreCheck, DEFAULT_CHECKS, EngineError, buildBook, findAttachment, findLinks, link, redFlags, worldRuleFlags, yellowFlags } from "../engine/index.ts";
@@ -143,7 +145,9 @@ export interface HistoryView {
 export interface BookRequest {
   /** "adventure" is a module's booklet: its encounters in order, with appendices. "diary" is the
    * campaign diary from the journal; "handout" prints one journal page. */
-  type: BookType | "adventure" | "diary" | "handout";
+  type: BookType | "adventure" | "diary" | "handout" | "printshop";
+  /** The print shop: which pieces, of what (with how many of each), and the square size. */
+  pieces?: { kind: PieceKind; items: { id: Id; count: number }[]; inch?: number };
   /** Handouts: the journal page, and its look. */
   page?: Id;
   handout?: { style: string; seal: boolean; hand: boolean };
@@ -158,12 +162,30 @@ export interface BookRequest {
   /** "Created by" line; leave empty for none. */
   author?: string | null;
   pageSize?: "Letter" | "A4";
+  /** The book designer (version 2.6): things left out of this book, by id (new things go in). */
+  leaveOut?: Id[];
+  /** Front pages left out (journal pages in the "Front pages" category go in by priority). */
+  frontOff?: Id[];
+  /** The plain cover with the title; off when a front page is the cover. */
+  plainCover?: boolean;
+  /** Print the contents and the index (both on unless untucked). */
+  contents?: boolean;
+  index?: boolean;
 }
+
+/** The journal category whose pages become a book's front pages. */
+export const FRONT_PAGES = "Front pages";
 
 export interface BookData {
   book: Book;
   /** A single journal page printed as a handout (version 2), drawn from its blocks. */
   handout?: { title: string; style: string; seal: boolean; hand: boolean; blocks: Block[] };
+  /** The print shop's paper pieces. */
+  printshop?: PrintShop;
+  /** Front pages built from blocks, in priority order (cover, credits, foreword...). */
+  front?: { title: string; blocks: Block[] }[];
+  plainCover?: boolean;
+  contents?: boolean;
   /** Names of everything the entries mention, for "see Poisoned, page 42". */
   names: Record<Id, string>;
   pageSize: "Letter" | "A4";
@@ -354,6 +376,25 @@ export class Editing {
       const h = opts.handout ?? { style: "plain", seal: false, hand: false };
       return { book: { title: p.name, subtitle: "Handout", chapters: [], index: [], credits: [] }, names: {}, pageSize, handout: { title: p.name, style: String(h.style), seal: !!h.seal, hand: !!h.hand, blocks: p.blocks } };
     }
+    if (opts.type === "printshop") {
+      const want = opts.pieces ?? { kind: "cards" as PieceKind, items: [] };
+      const pieces: Piece[] = [];
+      for (const { id, count } of want.items) {
+        const n = this.ws.get(this.layer, id);
+        if (!n) continue;
+        const r = this.ws.resolve(this.layer, id)!;
+        let p: { title: string; stats: string | null; paragraphs: string[] };
+        try {
+          p = this.printPreview(id);
+        } catch {
+          p = { title: n.name, stats: null, paragraphs: n.text ? n.text.split(/\n{2,}/) : [] };
+        }
+        const kind = n.kind === "being" ? String(r.fields.beingKind ?? "being") : n.kind === "brick" ? String(r.fields.type ?? "rule") : n.kind;
+        const piece: Piece = { id, title: n.name, picture: n.picture, squares: squaresFor(r.fields.size, p.paragraphs.slice(0, 2)), stats: p.stats, lines: cardLines(p.paragraphs), kind: kind.charAt(0).toUpperCase() + kind.slice(1) };
+        for (let i = 0; i < Math.max(1, Math.min(50, Math.round(count) || 1)); i++) pieces.push(piece);
+      }
+      return { book: { title: this.ws.layer(this.layer).name, subtitle: "Print shop", chapters: [], index: [], credits: [] }, names: {}, pageSize, printshop: { kind: want.kind, pieces, inch: want.inch && want.inch > 0.3 && want.inch < 3 ? want.inch : 1 } };
+    }
     if (opts.type === "diary") {
       const nights = diary(this.ws, this.layer, { dmPages: !!opts.diaryDmPages });
       const chapters = nights.map((n, i) => ({
@@ -366,7 +407,7 @@ export class Editing {
     }
     if (opts.type === "adventure" && this.ws.layer(this.layer).type === "module") {
       const numbering = opts.encounterNumbers === "top" || opts.encounterNumbers === "off" ? opts.encounterNumbers : "full";
-      return { ...buildAdventureBook(this.ws, this.layer, { numbering, author: opts.author?.trim() || null }), pageSize };
+      return this.designed({ ...buildAdventureBook(this.ws, this.layer, { numbering, author: opts.author?.trim() || null }), pageSize }, opts);
     }
     const type = BOOK_TYPES.includes(opts.type as BookType) ? (opts.type as BookType) : "everything";
     const chapters = Array.isArray(opts.chapters) ? opts.chapters.filter((c): c is ChapterId => c in CHAPTER_TITLES) : undefined;
@@ -380,7 +421,62 @@ export class Editing {
       e.variants.forEach(walk);
     };
     book.chapters.forEach((c) => c.entries.forEach(walk));
-    return { book, names, pageSize };
+    return this.designed({ book, names, pageSize }, opts);
+  }
+
+  /** The book designer's choices: what's left out, the front pages, the contents and the index. */
+  private designed(data: BookData, opts: BookRequest): BookData {
+    const out = new Set(Array.isArray(opts.leaveOut) ? opts.leaveOut : []);
+    type E = BookData["book"]["chapters"][number]["entries"][number];
+    const keep = (list: E[]): E[] => list.filter((e) => !out.has(e.node)).map((e) => ({ ...e, variants: keep(e.variants) }));
+    const kept = new Set<Id>();
+    const chapters = data.book.chapters
+      .map((c) => ({ ...c, entries: keep(c.entries) }))
+      .filter((c) => c.entries.length || (c.text ?? "").trim());
+    const note = (e: E) => (kept.add(e.node), e.variants.forEach(note));
+    chapters.forEach((c) => c.entries.forEach(note));
+    const index = opts.index === false ? [] : data.book.index.filter((i) => kept.has(i.node));
+    const off = new Set(Array.isArray(opts.frontOff) ? opts.frontOff : []);
+    const front = journalTree(this.ws, this.layer)
+      .filter((g) => g.category === FRONT_PAGES)
+      .flatMap((g) => g.pages)
+      .filter((p) => !off.has(p.id))
+      .sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name))
+      .map((p) => ({ title: p.name, blocks: pageView(this.ws, this.layer, p.id).blocks }));
+    return { ...data, book: { ...data.book, chapters, index }, front, plainCover: opts.plainCover !== false, contents: opts.contents !== false };
+  }
+
+  /** Saves the book designer's choices to the Codex (Sheet and book layouts) to use again. */
+  saveBookLayout(name: string, request: BookRequest): Id {
+    const n = cleanName(name);
+    const req = JSON.parse(JSON.stringify(request)) as Value;
+    const existing = this.ws.list(this.layer, "layout").find((x) => x.name === n && this.ws.resolve(this.layer, x.id)!.fields.layoutKind === "book" && this.ws.owner(this.layer, x.id) === this.layer);
+    return this.run(() =>
+      this.ws.transact(`Saved the book ${n}`, () => {
+        if (existing) {
+          this.ws.setField(this.layer, existing.id, "request", req);
+          return existing.id;
+        }
+        return this.ws.create(this.layer, "layout", n, { fields: { layoutKind: "book", request: req } });
+      }),
+    );
+  }
+
+  /** Saved books in the Codex. */
+  bookLayouts(): { id: Id; name: string; request: BookRequest }[] {
+    return this.ws
+      .list(this.layer, "layout")
+      .filter((n) => this.ws.resolve(this.layer, n.id)!.fields.layoutKind === "book")
+      .map((n) => ({ id: n.id, name: n.name, request: this.ws.resolve(this.layer, n.id)!.fields.request as unknown as BookRequest }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Everything a book could hold, chapter by chapter, for the designer's tick list. */
+  bookContents(opts: BookRequest): { id: string; title: string; entries: { id: Id; title: string; depth: number }[] }[] {
+    const all = this.book({ ...opts, leaveOut: [], index: true });
+    type E = BookData["book"]["chapters"][number]["entries"][number];
+    const flat = (list: E[], depth: number): { id: Id; title: string; depth: number }[] => list.flatMap((e) => [{ id: e.node, title: e.title, depth }, ...flat(e.variants, depth + 1)]);
+    return all.book.chapters.map((c) => ({ id: c.id, title: c.title, entries: flat(c.entries, 0) }));
   }
 
   // ---------- History ----------

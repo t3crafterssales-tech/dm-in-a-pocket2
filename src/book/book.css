@@ -64,3 +64,33 @@ body.preview #pages { zoom: var(--zoom, 0.7); }
 .handout.look-border .page-body { border: 6pt double #6b4a2a; padding: 16pt; }
 .handout.handwriting .hblock { font-family: "Segoe Script", "Bradley Hand", "Brush Script MT", cursive; }
 .wax-seal { position: absolute; right: 0.9in; bottom: 0.9in; width: 0.9in; height: 0.9in; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #d6453a, #8e1a14 70%); color: #f3c4bd; display: grid; place-items: center; font-size: 26pt; box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+
+/* ---------- The print shop (version 2.6) ---------- */
+.shop .page-body { line-height: 0; }
+.shop .page-foot { visibility: hidden; }
+.token, .standee, .card, .tent { display: inline-flex; flex-direction: column; vertical-align: top; margin: 0 0.08in 0.12in 0; line-height: 1.2; break-inside: avoid; }
+.piece-letter { font: 700 calc(var(--sq) * 0.5) Georgia, serif; color: #8a4b2a; }
+.token { width: calc(var(--sq) * var(--n)); align-items: center; }
+.token-face { width: calc(var(--sq) * var(--n)); height: calc(var(--sq) * var(--n)); border-radius: 50%; border: 2pt solid #2b2620; overflow: hidden; display: grid; place-items: center; background: #efe6d6; }
+.token-face img { width: 100%; height: 100%; object-fit: cover; }
+.token-name { font-size: 7pt; text-align: center; margin-top: 2pt; max-width: calc(var(--sq) * var(--n) + 0.3in); }
+.standee { width: calc(var(--sq) * var(--n)); border: 0.5pt solid #555; }
+.standee-face { height: calc(var(--sq) * var(--n) * 1.4); display: grid; place-items: center; background: #f4ecdd; overflow: hidden; border-bottom: 0.5pt dashed #999; }
+.standee-face img { width: 100%; height: 100%; object-fit: cover; }
+.standee-base { height: calc(var(--sq) * 0.5 + 0.1in); display: grid; place-items: center; text-align: center; font: 600 7pt Georgia, serif; border-bottom: 0.5pt dashed #999; padding: 0 2pt; background: #fff; }
+.standee .flip { transform: rotate(180deg); }
+.card { width: 2.5in; height: 3.5in; border: 1pt solid #2b2620; border-radius: 0.12in; padding: 0.1in; overflow: hidden; background: #fffdf9; font-size: 7pt; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4pt; border-bottom: 1.5pt solid #8a4b2a; padding-bottom: 2pt; margin-bottom: 3pt; }
+.card-title { font: 700 10pt Georgia, serif; }
+.card-kind { font-size: 6pt; text-transform: uppercase; letter-spacing: 0.5pt; color: #6f665a; }
+.card-pic { height: 1.05in; display: grid; place-items: center; overflow: hidden; background: #f4ecdd; margin-bottom: 3pt; }
+.card-pic img { width: 100%; height: 100%; object-fit: cover; }
+.card-stats { font-weight: 700; font-size: 6.5pt; margin-bottom: 3pt; }
+.card-text { flex: 1; overflow: hidden; }
+.card-text p { margin: 0 0 3pt; }
+.tent { width: 3.5in; border: 0.5pt solid #555; }
+.tent-half { height: 1.25in; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 4pt; }
+.tent-half + .tent-half { border-top: 0.5pt dashed #999; }
+.tent-half.flip { transform: rotate(180deg); }
+.tent-name { font: 700 20pt Georgia, serif; }
+.tent-stats { font-size: 8pt; color: #6f665a; }

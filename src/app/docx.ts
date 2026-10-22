@@ -111,19 +111,27 @@ export function bookDocx(data: BookData, readPicture: (id: string) => Buffer | n
   };
 
   let body = "";
-  // Cover.
-  body += para("Title", run(book.title));
-  body += para("Subtitle", run(book.subtitle));
+  // Cover (unless a front page is the cover), then the front pages' words, one page each.
   const made = book.credits.find((c) => c.startsWith("Created by"));
-  if (made) body += para("Subtitle", run(made));
-  body += pageBreak;
+  if (data.plainCover !== false) {
+    body += para("Title", run(book.title));
+    body += para("Subtitle", run(book.subtitle));
+    if (made) body += para("Subtitle", run(made));
+    body += pageBreak;
+  }
+  for (const f of data.front ?? []) {
+    for (const b of [...f.blocks].sort((x, y) => x.y - y.y || x.x - y.x)) if (b.type === "text" && b.text.trim()) for (const p of b.text.split(/\n\s*\n/)) body += para(null, run(p.trim()));
+    body += pageBreak;
+  }
 
   // Contents: each line is a link plus a page-number field, which every word processor fills in.
   const tocLine = (style: string, key: string, title: string) => para(style, link(anchor(key), title) + `<w:r><w:tab/></w:r>` + field(`PAGEREF ${anchor(key)} \\h`, "?"));
-  body += para("TOCHeading", run("Contents"));
-  for (const c of book.chapters) {
-    body += tocLine("TOC1", `c-${c.id}`, c.title);
-    for (const e of c.entries) body += tocLine("TOC2", e.node, e.title);
+  if (data.contents !== false) {
+    body += para("TOCHeading", run("Contents"));
+    for (const c of book.chapters) {
+      body += tocLine("TOC1", `c-${c.id}`, c.title);
+      for (const e of c.entries) body += tocLine("TOC2", e.node, e.title);
+    }
   }
 
   for (const c of book.chapters) {

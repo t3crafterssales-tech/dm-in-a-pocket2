@@ -97,6 +97,29 @@ function line(cls: string, text: string, target: string): HTMLElement {
   return l;
 }
 
+/** A page of blocks (a handout or a front page), placed where they sit on the journal page. */
+function blockSheet(blocks: NonNullable<BookData["handout"]>["blocks"], look: { plain: boolean; hand: boolean }): HTMLElement {
+  const sheet = el("div", "handout-sheet");
+  const tall = Math.max(400, ...blocks.map((b) => b.y + b.h + 20));
+  sheet.style.setProperty("--page-h", String(tall));
+  for (const b of blocks) {
+    const box = el("div", `hblock type-${b.type}`);
+    box.style.cssText = `--x:${b.x};--y:${b.y};--w:${b.w};--h:${b.h}`;
+    if (b.type === "image" && b.picture) {
+      const img = el("img");
+      img.src = `${(window as unknown as { dmPicBase?: string }).dmPicBase ?? "dmpic://pic/"}${encodeURIComponent(b.picture)}`;
+      box.appendChild(img);
+    } else {
+      box.style.fontFamily = look.hand ? "" : b.font;
+      box.style.fontSize = `calc(${b.size}px * var(--k))`;
+      box.style.color = look.plain ? "#000" : b.color;
+      box.textContent = b.text;
+    }
+    sheet.appendChild(box);
+  }
+  return sheet;
+}
+
 export async function renderBook(data: BookData, opts: { preview?: boolean; zoom?: number } = {}): Promise<number> {
   document.documentElement.classList.toggle("a4", data.pageSize === "A4");
   document.body.classList.toggle("preview", !!opts.preview);
@@ -108,44 +131,87 @@ export async function renderBook(data: BookData, opts: { preview?: boolean; zoom
   // A handout (version 2): one journal page, drawn from its blocks, with an old-paper look if asked.
   if (data.handout) {
     const ho = data.handout;
-    const page = newPage(`handout look-${ho.style}${ho.hand ? " handwriting" : ""}`);
-    const sheet = el("div", "handout-sheet");
-    const tall = Math.max(400, ...ho.blocks.map((b) => b.y + b.h + 20));
-    sheet.style.setProperty("--page-h", String(tall));
-    for (const b of ho.blocks) {
-      const box = el("div", `hblock type-${b.type}`);
-      box.style.cssText = `--x:${b.x};--y:${b.y};--w:${b.w};--h:${b.h}`;
-      if (b.type === "image" && b.picture) {
-        const img = el("img");
-        img.src = `dmpic://pic/${encodeURIComponent(b.picture)}`;
-        box.appendChild(img);
-      } else {
-        box.style.fontFamily = ho.hand ? "" : b.font;
-        box.style.fontSize = `calc(${b.size}px * var(--k))`;
-        box.style.color = ho.style === "plain" ? "#000" : b.color;
-        box.textContent = b.text;
-      }
-      sheet.appendChild(box);
-    }
-    body.appendChild(sheet);
+    newPage(`handout look-${ho.style}${ho.hand ? " handwriting" : ""}`);
+    body.appendChild(blockSheet(ho.blocks, { plain: ho.style === "plain", hand: ho.hand }));
     if (ho.seal) body.appendChild(el("div", "wax-seal", "✦"));
-    void page;
     await Promise.all([...document.images].map((img) => (img.complete ? null : new Promise((r) => ((img.onload = r), (img.onerror = r))))));
     return 1;
   }
 
-  // Cover.
-  newPage("cover");
-  body.append(el("h1", "", book.title), el("div", "flourish"), el("div", "subtitle", book.subtitle));
+  // The print shop (version 2.6): paper pieces, laid out to fill each page.
+  if (data.printshop) {
+    const shop = data.printshop;
+    const pic = (id: string | null) => (id ? `${(window as unknown as { dmPicBase?: string }).dmPicBase ?? "dmpic://pic/"}${encodeURIComponent(id)}` : null);
+    const face = (p: (typeof shop.pieces)[number], cls: string) => {
+      const box = el("div", cls);
+      const src = pic(p.picture);
+      if (src) {
+        const img = el("img");
+        img.src = src;
+        box.appendChild(img);
+      } else box.appendChild(el("span", "piece-letter", p.title.slice(0, 1)));
+      return box;
+    };
+    newPage(`shop shop-${shop.kind}`);
+    document.body.style.setProperty("--sq", `${shop.inch}in`);
+    if (!shop.pieces.length) place(el("p", "", "Nothing picked yet. Choose what to print on the left."));
+    for (const p of shop.pieces) {
+      let piece: HTMLElement;
+      if (shop.kind === "tokens") {
+        piece = el("div", "token");
+        piece.style.setProperty("--n", String(p.squares));
+        piece.append(face(p, "token-face"), el("div", "token-name", p.title));
+      } else if (shop.kind === "standees") {
+        piece = el("div", "standee");
+        piece.style.setProperty("--n", String(p.squares));
+        piece.append(el("div", "standee-base flip", p.title), face(p, "standee-face flip"), face(p, "standee-face"), el("div", "standee-base", p.title));
+      } else if (shop.kind === "initiative") {
+        piece = el("div", "tent");
+        const half = (flip: boolean) => {
+          const x = el("div", `tent-half${flip ? " flip" : ""}`);
+          x.append(el("div", "tent-name", p.title), el("div", "tent-stats", p.stats ?? ""));
+          return x;
+        };
+        piece.append(half(true), half(false));
+      } else {
+        piece = el("div", "card");
+        const head = el("div", "card-head");
+        head.append(el("span", "card-title", p.title), el("span", "card-kind", p.kind));
+        piece.append(head);
+        if (p.picture) piece.append(face(p, "card-pic"));
+        if (p.stats) piece.append(el("div", "card-stats", p.stats));
+        const text = el("div", "card-text");
+        for (const l of p.lines) text.appendChild(el("p", "", l));
+        piece.append(text);
+      }
+      place(piece);
+    }
+    await Promise.all([...document.images].map((img) => (img.complete ? null : new Promise((r) => ((img.onload = r), (img.onerror = r))))));
+    return pages.querySelectorAll(".page").length;
+  }
+
+  // Cover (unless one of the front pages is the cover).
   const made = book.credits.find((c) => c.startsWith("Created by"));
-  if (made) body.appendChild(el("div", "made", made));
+  if (data.plainCover !== false) {
+    newPage("cover");
+    body.append(el("h1", "", book.title), el("div", "flourish"), el("div", "subtitle", book.subtitle));
+    if (made) body.appendChild(el("div", "made", made));
+  }
+
+  // Front pages (version 2.6): built from blocks like a journal page, in priority order.
+  for (const f of data.front ?? []) {
+    newPage("handout front-page");
+    body.appendChild(blockSheet(f.blocks, { plain: false, hand: false }));
+  }
 
   // Contents, with numbers filled in at the end.
-  newPage("toc");
-  place(el("h2", "chapter", "Contents"));
-  for (const c of book.chapters) {
-    place(line("toc-line chapter-line", c.title, `c-${c.id}`));
-    for (const e of c.entries) place(line("toc-line entry-line", e.title, `n-${e.node}`));
+  if (data.contents !== false) {
+    newPage("toc");
+    place(el("h2", "chapter", "Contents"));
+    for (const c of book.chapters) {
+      place(line("toc-line chapter-line", c.title, `c-${c.id}`));
+      for (const e of c.entries) place(line("toc-line entry-line", e.title, `n-${e.node}`));
+    }
   }
 
   // The chapters.

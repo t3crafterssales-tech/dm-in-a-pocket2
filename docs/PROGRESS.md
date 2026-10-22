@@ -35,7 +35,11 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Built, waiting for Jeff to test:** Versions 2.2 (characters), 2.3 (maps) and 2.4 (the DM's
   table), on `claude/v2-modules`. Every push there updates "Latest test version" on Releases.
 - **Built, waiting for Jeff to test:** Version 2.5, players join on their own screens.
-- **Next:** version 2.6, the sheet and book designers, print shop and the welcome tour.
+- **Built, waiting for Jeff to test:** Version 2.6 part 1: the welcome screen, sample valley, tour,
+  first steps checklist, tips, Help (?), and the book designer in the Rulebook tab.
+- **Next (stopped here October 22 to save Jeff's usage):** the print shop (its back end is in
+  `src/app/printshop.ts` and `book()` type "printshop"; the page layout and the screen to pick
+  pieces are not written yet), then the sheet designer.
 
 ## Milestones to first playable
 

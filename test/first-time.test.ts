@@ -38,3 +38,28 @@ test("the sample valley: a system, a world and a module with encounters, a map, 
   assert.ok(r.text.length > 5);
   assert.ok(b.firstTime().stepsDone.includes("roll"), "rolling on a table ticks the first steps");
 });
+
+test("the book designer: leave things out, front pages from the journal, contents and index ticks, saved books", () => {
+  const b = fresh();
+  const s = b.makeSample();
+  b.open({ type: "world", id: s.world });
+  const all = b.bookContents({ type: "monsters" });
+  const monsters = all.flatMap((c) => c.entries);
+  assert.ok(monsters.length > 50);
+  const giants = monsters.filter((e) => /giant/i.test(e.title)).map((e) => e.id);
+  const leaveOut = monsters.map((e) => e.id).filter((id) => !giants.includes(id));
+  const book = b.book({ type: "monsters", leaveOut, index: false, contents: false });
+  const kept = book.book.chapters.flatMap((c) => c.entries.map((e) => e.title));
+  assert.ok(kept.length >= 1 && kept.every((t) => /giant/i.test(t)), "a monster manual of only the giants");
+  assert.deepEqual(book.book.index, []);
+  assert.equal(book.contents, false);
+  const cover = b.createPage("Cover", "Front pages");
+  const credits = b.createPage("Credits", "Front pages");
+  b.setPage(cover, { priority: 1 });
+  b.setPage(credits, { priority: 2 });
+  assert.deepEqual(b.book({ type: "players" }).front!.map((f) => f.title), ["Cover", "Credits"]);
+  assert.deepEqual(b.book({ type: "players", frontOff: [credits] }).front!.map((f) => f.title), ["Cover"]);
+  b.saveBookLayout("Giants", { type: "monsters", leaveOut });
+  assert.equal(b.bookLayouts()[0]!.request.leaveOut!.length, leaveOut.length);
+  assert.equal(b.codex().find((x) => x.key === "layouts")!.entries.length, 1, "saved in the Codex");
+});

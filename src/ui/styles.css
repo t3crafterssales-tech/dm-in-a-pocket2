@@ -1169,3 +1169,10 @@ body.moving-tool .desk-area { outline: 2px dashed var(--line); outline-offset: 2
 .help-icon { font-size: 22px; }
 .welcome-logo.spin { animation: spin 1.2s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
 body.touring .tip-box, body.touring .steps-card { display: none; }
+
+/* The book designer (version 2.6) */
+.book-pick { columns: 3 240px; column-gap: 18px; max-height: 58vh; overflow: auto; }
+.book-pick-chapter { break-inside: avoid; margin-bottom: 12px; display: flex; flex-direction: column; gap: 2px; }
+.book-pick .check { font-size: 13px; }
+.book-chapters li { display: flex; align-items: center; gap: 6px; }
+.book-chapters li .link { margin-left: auto; }
