@@ -78,7 +78,7 @@ test("the app opens straight to an empty home screen in Documents\\DM in a Pocke
   for (const d of ["Systems", "Worlds", "Backups", "Recycle bin"]) assert.ok(existsSync(join(s.root, d)), `${d} folder made`);
 });
 
-test("New system: a name is required, and From scratch and Generic d20 both work", () => {
+test("New system: a name is required, and Bare bones and Generic d20 both work", () => {
   const s = setup();
   assert.throws(() => s.backend.createSystem({ name: "   ", picture: null, start: "scratch" }), LibraryError);
   assert.throws(() => s.backend.createSystem({ name: "d20 Basic", picture: null, start: "nonsense" as never }), /starting point/);

@@ -237,7 +237,7 @@ function wizard(title: string, steps: Step[], finishLabel: string, finish: () =>
   return d;
 }
 
-function nameStep(state: { name: string }, label: string, example: string): Step {
+function nameStep(state: { name: string }, label: string, example: string, extra?: HTMLElement): Step {
   return {
     title: "Name",
     render: (next) => {
@@ -249,7 +249,7 @@ function nameStep(state: { name: string }, label: string, example: string): Step
         e.preventDefault();
         next();
       });
-      return { body: [h("label", { class: "field-label" }, label), input, h("p", { class: "muted small" }, "Required. Even a single letter is fine; you can change it later.")], valid: () => state.name.trim().length > 0, focus: input };
+      return { body: [h("label", { class: "field-label" }, label), input, h("p", { class: "muted small" }, "Required. Even a single letter is fine; you can change it later."), ...(extra ? [extra] : [])], valid: () => state.name.trim().length > 0, focus: input };
     },
   };
 }
@@ -287,10 +287,16 @@ function pictureStep(state: { picture: string | null }): Step {
 
 async function newSystem(home: HomeData) {
   const state = { name: "", picture: null as string | null, start: "" };
+  const friend = h(
+    "div",
+    { class: "import-friend" },
+    h("p", { class: "small" }, h("strong", null, "Got a system from a friend? "), "Import it instead of making a new one. It arrives as its own copy with their name on it, and nothing you have is touched."),
+    h("button", { class: "button plain", onClick: () => (d.close(), void importFile()) }, svg(ICONS.import), "Import a friend's system"),
+  );
   const d = wizard(
     "New system",
     [
-      nameStep(state, "What is the system called?", "For example: My d20"),
+      nameStep(state, "What is the system called?", "For example: My d20", friend),
       pictureStep(state),
       {
         title: "Starting point",
@@ -302,7 +308,7 @@ async function newSystem(home: HomeData) {
             home.startingPoints.map((p) => h("option", { value: p.id, disabled: !p.ready, selected: state.start === p.id }, p.ready ? p.label : `${p.label} (${p.note})`)),
           );
           select.addEventListener("change", () => (state.start = select.value));
-          return { body: [h("label", { class: "field-label" }, "Start from"), select, h("p", { class: "muted small" }, "Required. From scratch starts with an empty Rules tab.")], valid: () => !!state.start, focus: select };
+          return { body: [h("label", { class: "field-label" }, "Start from"), select, h("p", { class: "muted small" }, "Required. Pick the kind of game it feels like. Each starter is yours to change. Bare bones starts with nothing.")], valid: () => !!state.start, focus: select };
         },
       },
     ],

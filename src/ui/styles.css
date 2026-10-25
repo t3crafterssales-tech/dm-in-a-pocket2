@@ -1244,3 +1244,4 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .quick-cond { border: 1px solid color-mix(in srgb, var(--c) 45%, var(--line)); background: transparent; color: var(--c); border-radius: 999px; min-width: 1.5rem; height: 1.5rem; padding: 0; font-size: 0.8rem; cursor: pointer; opacity: 0.55; }
 .quick-cond:hover, .quick-cond:focus-visible { opacity: 1; }
 .quick-cond.on { opacity: 1; background: color-mix(in srgb, var(--c) 22%, transparent); }
+.import-friend { margin-top: 1rem; padding: 0.75rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; gap: 0.5rem; justify-items: start; }

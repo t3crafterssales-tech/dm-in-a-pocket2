@@ -32,6 +32,8 @@ import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
 import { ensureCategories } from "./sheets.ts";
 import { buildD20Starter } from "./starters/d20.ts";
+import { LIBRARY_STARTS, buildLibraryStart, isLibraryStart } from "./starters/library.ts";
+import type { LibraryStart } from "./starters/library.ts";
 import { QUICK_QUESTIONS } from "./quickstart.ts";
 import type { QuickStartAnswers } from "./quickstart.ts";
 import { changeInSystem, upwardView } from "./upward.ts";
@@ -120,7 +122,7 @@ export interface WorldCard {
 }
 
 export interface StartingPoint {
-  id: "d20" | "scratch";
+  id: "d20" | "scratch" | "pool" | "percentile" | "moves" | "chronicles";
   label: string;
   /** False until its content is built; the drop-down shows it greyed out with `note`. */
   ready: boolean;
@@ -129,7 +131,8 @@ export interface StartingPoint {
 
 export const STARTING_POINTS: StartingPoint[] = [
   { id: "d20", label: "Generic d20", ready: true, note: null },
-  { id: "scratch", label: "From scratch", ready: true, note: null },
+  ...(Object.entries(LIBRARY_STARTS) as [LibraryStart, (typeof LIBRARY_STARTS)[LibraryStart]][]).map(([id, v]) => ({ id, label: v.label, ready: true, note: v.note })),
+  { id: "scratch", label: "Bare bones (empty)", ready: true, note: null },
 ];
 
 /** A module (version 2) on the home screen's Modules shelf. */
@@ -623,7 +626,10 @@ export class Backend {
     // point, not a change, so it isn't an undo step.
     const { ws } = this.lib.openSystem(id);
     if (start.id === "d20") ws.transact("Started from the generic d20", () => buildD20Starter(ws, id));
-    else ws.transact("Started from scratch", () => ensureCategories(ws, id));
+    else if (isLibraryStart(start.id)) {
+      const which = start.id;
+      ws.transact(`Started from ${start.label}`, () => buildLibraryStart(ws, id, which));
+    } else ws.transact("Started from scratch", () => ensureCategories(ws, id));
     ws.history = [];
     this.lib.saveSystem(ws, id);
     if (input.picture) this.lib.setPicture("system", id, input.picture);
