@@ -9,6 +9,7 @@ import { categoryTree, ensureCategories, fileBeing } from "./sheets.ts";
 import type { BeingKind } from "./sheets.ts";
 import { CODEX_SECTIONS, DAMAGE_TYPES, STARTER_COINS, STARTER_MATERIALS } from "./codex-lists.ts";
 import type { CodexKey } from "./codex-lists.ts";
+import { toPlain } from "../engine/richtext.ts";
 export * from "./codex-lists.ts";
 
 const BEING_SECTION: Record<BeingKind, CodexKey> = { monster: "monsters", npc: "npcs", character: "characters", race: "races", class: "classes" };
@@ -172,7 +173,7 @@ function subLine(ws: Workspace, layerId: Id, n: NodeRecord, f: Record<string, Va
   if (n.kind === "table") return `${typeof f.die === "string" ? f.die : "d6"} · ${Array.isArray(f.rows) ? f.rows.length : 0} rows`;
   if (n.kind === "journal") return [typeof f.category === "string" ? f.category : "", typeof f.priority === "number" ? `priority ${f.priority}` : ""].filter(Boolean).join(" · ");
   if (n.kind === "map") return `${Array.isArray(f.pins) ? f.pins.length : 0} pins`;
-  if (n.kind === "condition") return n.text.split(/[.\n]/)[0]?.slice(0, 60) ?? "";
+  if (n.kind === "condition") return toPlain(n.text).split(/[.\n]/)[0]?.slice(0, 60) ?? "";
   if (n.kind === "macro") return typeof f.summary === "string" ? f.summary : "";
   if (n.kind === "layout") return f.layoutKind === "book" ? "Book" : "Sheet";
   return n.kind === "brick" ? brickNote(ws, layerId, n.id) : "";

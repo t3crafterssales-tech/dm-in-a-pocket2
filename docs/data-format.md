@@ -294,3 +294,7 @@ library, not to any world, so a shared world carries its buttons but not the sou
 is missing shows as missing and everything else works. The soundboard's buttons are one `layout` node
 (see Layouts). Buttons dragged onto the screen are remembered in the table's memory as `soundFloats`:
 `{ id, button, x, y }`, where `button` is a soundboard button's id. They are only copies.
+
+## Rich text (version 3)
+
+A node's one text box can now carry formatting. No field was added: a formatted text is the same `text` string, starting with the marker `<!--rt-->` followed by a small cleaned-up piece of HTML (paragraphs, headings 1 to 3, bullet and numbered lists, bold, italic, underline, strikethrough, colour, font, size, alignment). Text with no formatting is still saved as plain text exactly as before, so old files and old apps read it unchanged. Anything pasted in is cleaned down to only these parts. Everything that needs plain words (search, AI, the Word export) turns it back to plain text first. Fonts are the ones already on the computer.

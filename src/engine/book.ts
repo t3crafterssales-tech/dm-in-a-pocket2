@@ -5,6 +5,8 @@ import { F, SRD_LICENSE, attachmentValues, levelKey } from "./conventions.ts";
 import { findLinks, isLink } from "./links.ts";
 import { isCoreCheck, ruleText } from "./rulestext.ts";
 import { cap, sentence } from "./text.ts";
+import { isRich, units } from "./richtext.ts";
+import type { Unit } from "./richtext.ts";
 import type { Attachment, Id, NodeRecord, Value } from "./types.ts";
 import type { Workspace } from "./workspace.ts";
 
@@ -72,6 +74,8 @@ export interface Entry {
   /** For variants printed as differences: the entry they are "as". */
   asParent: string | null;
   picture: Id | null;
+  /** Formatted text (version 3): the node's own text as laid-out units, standing in for `paragraphs` from `start` on. */
+  rich?: { start: number; units: Unit[] };
   /** An adventure's read-aloud text, printed in a box before the rest. */
   readAloud?: string | null;
   /** A map to draw (version 2), as the map tools see it; the book page draws it. */
@@ -237,7 +241,9 @@ function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): E
     paragraphs.push(`As ${parent!.name}${changed}${attachments.length ? ", plus:" : "."}`);
   }
   // One text box per node; each line in it is a paragraph.
-  paragraphs.push(...n.text.split(/\n+/).map((p) => p.trim()).filter(Boolean));
+  const own = units(n.text);
+  const richStart = paragraphs.length;
+  paragraphs.push(...own.map((u) => (u.marker ? `${u.marker} ${u.plain}` : u.plain)));
   paragraphs.push(...describeFields(ws, layerId, n, fields));
   // A class's features print in level order: "Level 3. Sneak Attack: ...". Others stay in sheet order.
   const levelOf = (aid: string) => {
@@ -270,7 +276,7 @@ function entry(ws: Workspace, layerId: Id, n: NodeRecord, asVariant: boolean): E
     a.children.forEach(fromAttachment);
   };
   for (const { attachment } of attachments) fromAttachment(attachment);
-  return { node: n.id, title: n.name, stats: !showOnlyOwn && stats.length ? stats.join(" · ") : null, paragraphs, mentions: [...mentions], variants: [], asParent: showOnlyOwn ? parent!.name : null, picture: n.picture };
+  return { node: n.id, title: n.name, stats: !showOnlyOwn && stats.length ? stats.join(" · ") : null, paragraphs, mentions: [...mentions], variants: [], asParent: showOnlyOwn ? parent!.name : null, picture: n.picture, ...(isRich(n.text) && own.length ? { rich: { start: richStart, units: own } } : {}) };
 }
 
 /** A spell's numbers line: "Level 3 Evocation · Action · 150 feet · V, S, M · Instantaneous". */

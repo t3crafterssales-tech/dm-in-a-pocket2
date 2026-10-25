@@ -3,6 +3,7 @@
 
 import { F } from "../engine/index.ts";
 import type { Id, NodeKind, Value, Workspace } from "../engine/index.ts";
+import { toPlain } from "../engine/richtext.ts";
 
 export type SearchTab = "Rules" | "Beings" | "Items" | "Lore" | "Party" | "Adventure" | "Maps";
 
@@ -45,7 +46,7 @@ export function search(ws: Workspace, layerId: Id, query: string, limit = 40): {
       byName.push(hit);
       continue;
     }
-    const text = `${n.text} ${Object.entries(f).filter(([k]) => k !== F.license).map(([, v]) => words(v)).join(" ")}`.replace(/\s+/g, " ");
+    const text = `${toPlain(n.text)} ${Object.entries(f).filter(([k]) => k !== F.license).map(([, v]) => words(v)).join(" ")}`.replace(/\s+/g, " ");
     const at = text.toLowerCase().indexOf(q);
     if (at < 0) continue;
     const from = Math.max(0, at - 40);

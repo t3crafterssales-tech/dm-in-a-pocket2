@@ -15,6 +15,7 @@ import type { PlaceCtx } from "./place.ts";
 import { newNameBox } from "./rules-tab.ts";
 import { DAMAGE_TYPES, DICE_CHOICES } from "../app/codex-lists.ts";
 import { addSelect, chips, stepper } from "./pickers.ts";
+import { richBox, richView } from "./rich-box.ts";
 
 export const DRAG_TYPE = "application/x-dm-bricks";
 
@@ -265,7 +266,7 @@ export function brickEditor(view: NodeView, choices: Choices, ctx: PlaceCtx, onR
   if (type === "trait" || type === "spell" || type === "effect") rows.push(ed.row("What it does, in a few words", "wording", ed.text("wording", type === "trait" ? "For example: advantage on attacks when an ally is nearby" : "In a few words, for the rulebook")));
   for (const el of rows) el.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select").forEach((x) => ro && (x.disabled = true));
 
-  const textBox = h("textarea", { class: "text-input desc-box", "data-key": "f-text", rows: 4, disabled: ro, placeholder: "The full description, as the rulebook prints it." }, view.text);
+  const textBox = richBox(view.text, { className: "desc-box", key: "f-text", rows: 4, disabled: ro, placeholder: "The full description, as the rulebook prints it.", label: "Description" });
   textBox.addEventListener("change", () => void ed.save(() => api.setText(view.id, textBox.value)));
   const copy = async () => {
     const id = await attempt(() => api.makeOwnCopy(view.id));

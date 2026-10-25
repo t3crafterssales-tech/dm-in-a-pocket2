@@ -15,6 +15,7 @@ import { openEditSystem } from "./edit-system.ts";
 import { offerRestore } from "./flag-panel.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import type { PlaceCtx } from "./place.ts";
+import { richBox, richView } from "./rich-box.ts";
 
 const collapsed = new Set<string>();
 /** The section with its "new rule" box open, if any. */
@@ -193,7 +194,7 @@ function editorPanel(view: NodeView | null, choices: Choices, moveTo: { key: str
 
   const summary = h("p", { class: "summary" }, view.summary);
   const { main, more } = kindFields(view, choices, ed, isCore);
-  const textBox = h("textarea", { class: "text-input rules-text", "data-key": "f-text", rows: 6, disabled: ro, placeholder: "Write the rule out in your own words. This is what the rulebook prints." }, view.text);
+  const textBox = richBox(view.text, { className: "rules-text", key: "f-text", rows: 6, disabled: ro, placeholder: "Write the rule out in your own words. This is what the rulebook prints.", label: "The rule, in your words" });
   textBox.addEventListener("change", () => void ed.save(() => api.setText(view.id, textBox.value)));
   // A core check's standard wording (backlog 1): leave it, write your own, or go back to it.
   const standard = isCore ? (STANDARD_CORE_TEXT[String(view.fields.family ?? "rollOver")] ?? null) : null;

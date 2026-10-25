@@ -13,6 +13,7 @@ import { RULE_SECTIONS, createRuleNode, sectionOf } from "../rules.ts";
 import { BEING_KINDS, categoryTree, createBeing, createCategory, createItem, scoreKey, scoreValue } from "../sheets.ts";
 import type { BeingKind } from "../sheets.ts";
 import { FIELD_LABELS } from "../upward.ts";
+import { toPlain } from "../../engine/richtext.ts";
 
 /** A tool as the Claude API describes one. */
 export interface ToolDef {
@@ -162,7 +163,7 @@ export function runReadTool(ws: Workspace, layerId: Id, tool: string, input: Rec
       section: ["ability", "resource", "skill", "condition", "rule"].includes(n.kind) ? sectionOf(ws, layerId, n) : undefined,
       variant_of: n.parent ? { id: n.parent.link, name: ws.peek(layerId, n.parent.link)?.name ?? "missing" } : null,
       template: n.template || undefined,
-      text: n.text.slice(0, 3000),
+      text: toPlain(n.text).slice(0, 3000),
       values: fields,
       bricks: r.attachments.map(({ attachment, from }) => ({ attachment: attachment.aid, brick: attachment.brick?.link ?? null, name: attachment.name ?? (attachment.brick ? ws.peek(layerId, attachment.brick.link)?.name : null), says: sentence(ws, layerId, attachment), inherited: from ? "from its parent; change it there" : undefined })),
     };
@@ -173,7 +174,7 @@ export function runReadTool(ws: Workspace, layerId: Id, tool: string, input: Rec
     const fam = typeof input.category === "string" && input.category ? categoryFamily(ws, layerId, input.category) : null;
     if (fam && !fam.size) throw new ActionError(`There is no category called ${String(input.category)}.`);
     const limit = Math.max(1, Math.min(300, Number(input.limit ?? 50) || 50));
-    const all = ws.list(layerId).filter((n) => (!kind || n.kind === kind) && (!fam || (n.category && fam.has(n.category.link))) && (!q || n.name.toLowerCase().includes(q) || n.text.toLowerCase().includes(q)));
+    const all = ws.list(layerId).filter((n) => (!kind || n.kind === kind) && (!fam || (n.category && fam.has(n.category.link))) && (!q || n.name.toLowerCase().includes(q) || toPlain(n.text).toLowerCase().includes(q)));
     return {
       total: all.length,
       results: all.slice(0, limit).map((n) => {

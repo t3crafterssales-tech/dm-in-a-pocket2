@@ -2,6 +2,8 @@
 // the index and "see Poisoned, page 42". The same page is the in-app preview and the PDF.
 
 import type { BookData, MapView } from "../app/backend.ts";
+import { isRich, units } from "../engine/richtext.ts";
+import type { Unit } from "../engine/richtext.ts";
 import { mapSvg } from "../ui/map-render.ts";
 
 type Entry = BookData["book"]["chapters"][number]["entries"][number];
@@ -12,6 +14,20 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   if (text !== undefined) e.textContent = text;
   return e;
 };
+
+/** One piece of formatted text as a book element. Its HTML was cleaned when it was read, so only safe tags are here. */
+function richUnit(u: Unit): HTMLElement {
+  const e = el(u.tag === "p" || u.tag === "li" ? "p" : "div", u.tag === "p" ? "" : `rt-${u.tag}`);
+  if (u.tag === "li") {
+    const mark = el("span", "rt-mark", u.marker ?? "•");
+    e.appendChild(mark);
+    const span = el("span", "rt-item");
+    span.innerHTML = u.html;
+    e.appendChild(span);
+  } else e.innerHTML = u.html;
+  if (u.align !== "left") e.style.textAlign = u.align;
+  return e;
+}
 
 let pages: HTMLElement;
 let body: HTMLElement;
@@ -63,7 +79,12 @@ function entryBlock(e: Entry, data: BookData, depth: number): HTMLElement[] {
   }
   if (e.readAloud) for (const [i, p] of e.readAloud.split(/\n+/).filter((x) => x.trim()).entries()) b.appendChild(el("p", `read-aloud${i ? " more" : ""}`, p.trim()));
   if (e.stats) b.appendChild(el("div", "stats", e.stats));
-  for (const p of e.paragraphs) b.appendChild(el("p", "", p));
+  const rich = e.rich;
+  e.paragraphs.forEach((p, i) => {
+    // Formatted text prints as written: headings, lists, fonts, colours and alignment.
+    if (rich && i >= rich.start && i < rich.start + rich.units.length) b.appendChild(richUnit(rich.units[i - rich.start]!));
+    else b.appendChild(el("p", "", p));
+  });
   // Only things printed in this book get a page reference.
   const printed = new Set(data.book.index.map((i) => i.node));
   const seen = e.mentions.filter((m) => data.names[m] && m !== e.node && printed.has(m));
@@ -251,7 +272,8 @@ export async function renderBook(data: BookData, opts: { preview?: boolean; zoom
     const h = el("h2", "chapter", c.title);
     h.id = `c-${c.id}`;
     place(h);
-    for (const p of (c.text ?? "").split(/\n\s*\n/).filter((x) => x.trim())) place(el("p", "", p.trim()));
+    if (isRich(c.text ?? "")) for (const u of units(c.text ?? "")) place(richUnit(u));
+    else for (const p of (c.text ?? "").split(/\n\s*\n/).filter((x) => x.trim())) place(el("p", "", p.trim()));
     for (const e of c.entries) for (const b of entryBlock(e, data, 0)) place(b);
   }
 

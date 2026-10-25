@@ -107,3 +107,11 @@ body.preview #pages { zoom: var(--zoom, 0.7); }
 .sheet-name { font-size: 20pt; line-height: 1.1; }
 .sheet-pic { display: block; width: 100%; max-height: 2.2in; object-fit: cover; border: 0.5pt solid #000; }
 .sheet-box { height: calc(var(--rows, 1) * 15pt); border: 0.75pt solid #000; border-radius: 2pt; background: repeating-linear-gradient(to bottom, transparent 0, transparent 14pt, #999 14pt, #999 15pt); }
+
+/* Formatted text (version 3) prints as written */
+.rt-h1 { font-size: 1.5em; font-weight: 700; margin: 0.6em 0 0.3em; line-height: 1.2; }
+.rt-h2 { font-size: 1.25em; font-weight: 700; margin: 0.5em 0 0.25em; line-height: 1.2; }
+.rt-h3 { font-size: 1.1em; font-weight: 700; font-style: italic; margin: 0.4em 0 0.2em; }
+.rt-li { display: flex; gap: 0.5em; margin: 0.1em 0 0.1em 0.8em; }
+.rt-li .rt-mark { flex: 0 0 1.4em; }
+.rt-li .rt-item { flex: 1; }

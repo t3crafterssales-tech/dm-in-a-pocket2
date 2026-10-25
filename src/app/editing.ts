@@ -55,6 +55,7 @@ import { aiBlocks, describeSlot, fixMissing, liveFlags, meantThat, missingDetail
 import type { FlagPanelView, MissingDetail, PanelState } from "./flagpanel.ts";
 import { newId } from "../engine/index.ts";
 import type { Slot } from "../engine/index.ts";
+import { toPlain } from "../engine/richtext.ts";
 
 export interface Option {
   id: Id;
@@ -409,7 +410,7 @@ export class Editing {
         try {
           p = this.printPreview(id);
         } catch {
-          p = { title: n.name, stats: null, paragraphs: n.text ? n.text.split(/\n{2,}/) : [] };
+          p = { title: n.name, stats: null, paragraphs: n.text ? toPlain(n.text).split(/\n{2,}/) : [] };
         }
         const kind = n.kind === "being" ? String(r.fields.beingKind ?? "being") : n.kind === "brick" ? String(r.fields.type ?? "rule") : n.kind;
         const piece: Piece = { id, title: n.name, picture: n.picture, squares: squaresFor(r.fields.size, p.paragraphs.slice(0, 2)), stats: p.stats, lines: cardLines(p.paragraphs), kind: kind.charAt(0).toUpperCase() + kind.slice(1) };

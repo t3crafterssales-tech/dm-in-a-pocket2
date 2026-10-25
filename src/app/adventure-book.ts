@@ -9,6 +9,7 @@ import type { Book, Chapter, Entry } from "../engine/book.ts";
 import { encounterTree } from "./encounters.ts";
 import { mapView } from "./maps.ts";
 import type { EncounterNode } from "./encounters.ts";
+import { toPlain } from "../engine/richtext.ts";
 
 /** How encounter numbers print: all of them (2.1.3), only the top level (2), or none. */
 export type EncounterNumbering = "full" | "top" | "off";
@@ -56,7 +57,7 @@ export function buildAdventureBook(ws: Workspace, layerId: Id, opts: { numbering
     const paragraphs: string[] = [];
     const mentions: Id[] = [];
     // The DM's notes: "What's really going on".
-    paragraphs.push(...r.record.text.split(/\n+/).map((p) => p.trim()).filter(Boolean));
+    paragraphs.push(...toPlain(r.record.text).split(/\n+/).map((p) => p.trim()).filter(Boolean));
     const who = (Array.isArray(f.creatures) ? f.creatures : []).flatMap((c) => {
       if (!c || typeof c !== "object" || Array.isArray(c) || isLink(c)) return [];
       const id = linkOf((c as Record<string, Value>).being);
@@ -114,7 +115,7 @@ export function buildAdventureBook(ws: Workspace, layerId: Id, opts: { numbering
       id: "adv:maps",
       title: "Maps",
       text: null,
-      entries: maps.map((m) => ({ node: m.id, title: m.name, stats: null, paragraphs: m.text.split(/\n+/).map((p) => p.trim()).filter(Boolean), mentions: [], variants: [], asParent: null, picture: null, map: mapView(ws, layerId, m.id), mapNumbers: numbering !== "off" })),
+      entries: maps.map((m) => ({ node: m.id, title: m.name, stats: null, paragraphs: toPlain(m.text).split(/\n+/).map((p) => p.trim()).filter(Boolean), mentions: [], variants: [], asParent: null, picture: null, map: mapView(ws, layerId, m.id), mapNumbers: numbering !== "off" })),
     });
   appendix("creatures", "Appendix: Creatures", creatures);
   appendix("treasure", "Appendix: Treasure", treasure);

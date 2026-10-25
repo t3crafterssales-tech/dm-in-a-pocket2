@@ -70,6 +70,7 @@ import type { ModelChoice } from "./ai/models.ts";
 import { CAREFUL, QUICK, dollars } from "./ai/models.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
+import { toPlain } from "../engine/richtext.ts";
 
 export type { Place } from "./settings.ts";
 export type { Grid, MapTreeNode, MapView, PinView, Shape } from "./maps.ts";
@@ -1712,7 +1713,7 @@ export class Backend {
       const p = this.editing.printPreview(id);
       return { title: p.title, kind: n.kind, stats: p.stats, paragraphs: p.paragraphs, picture: n.picture };
     } catch {
-      return { title: n.name, kind: n.kind, stats: null, paragraphs: n.text ? n.text.split(/\n{2,}/) : [], picture: n.picture };
+      return { title: n.name, kind: n.kind, stats: null, paragraphs: n.text ? toPlain(n.text).split(/\n{2,}/) : [], picture: n.picture };
     }
   }
 

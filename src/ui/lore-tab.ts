@@ -10,6 +10,7 @@ import { FieldMaker } from "./fields.ts";
 import { offerRestore } from "./flag-panel.ts";
 import { ICONS } from "./icons.ts";
 import type { PlaceCtx } from "./place.ts";
+import { richBox, richView } from "./rich-box.ts";
 
 type Value = NodeView["fields"][string];
 const collapsed = new Set<string>();
@@ -207,7 +208,7 @@ function loreEditor(view: NodeView, ctx: PlaceCtx) {
         "+ Add a heading",
       ),
     );
-  const textBox = h("textarea", { class: "text-input rules-text", "data-key": "f-text", rows: isBookPage ? 12 : 5, disabled: ro, placeholder: isBookPage ? "The page's text. Leave a blank line between paragraphs." : "Anything else about it. Everyone who reads the rulebook can read this; there are no secret notes." }, view.text);
+  const textBox = richBox(view.text, { className: "rules-text", key: "f-text", rows: isBookPage ? 12 : 5, disabled: ro, placeholder: isBookPage ? "The page's text. Leave a blank line between paragraphs." : "Anything else about it. Everyone who reads the rulebook can read this; there are no secret notes.", label: "Text" });
   textBox.addEventListener("change", () => void ed.save(() => api.setText(view.id, textBox.value)));
   return h(
     "section",
@@ -283,7 +284,7 @@ function tableEditor(view: NodeView, targets: { id: string; name: string; group:
       table,
       ro ? null : h("button", { class: "link small", onClick: () => void save([...rows, { from: next, to: next, text: "", result: null }]) }, "+ Add a row"),
       h("div", { class: "field" }, h("div", { class: "field-label" }, "Description", ed.pencil("text")), (() => {
-        const t = h("textarea", { class: "text-input rules-text", rows: 3, "data-key": "f-text", disabled: ro, placeholder: "When to roll on it." }, view.text);
+        const t = richBox(view.text, { className: "rules-text", rows: 3, key: "f-text", disabled: ro, placeholder: "When to roll on it.", label: "When to roll on it" });
         t.addEventListener("change", () => void ed.save(() => api.setText(view.id, t.value)));
         return t;
       })()),

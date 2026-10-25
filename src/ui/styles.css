@@ -1286,3 +1286,23 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .sound-float[data-playing="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
 .sound-float-grip { cursor: grab; padding: 0 0.2rem; opacity: 0.6; touch-action: none; }
 .sound-float-play { border: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; padding: 0.2rem 0.4rem; }
+
+/* Version 3: the rich text box */
+.rich-box { border: 1px solid var(--line); border-radius: 8px; background: var(--card); min-width: 0; }
+.rich-box:focus-within { border-color: var(--accent); }
+.rich-bar { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; padding: 0.3rem; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 70%, var(--card)); border-radius: 8px 8px 0 0; }
+.rich-btn { min-width: 1.8rem; height: 1.8rem; padding: 0 0.35rem; border: 1px solid transparent; background: transparent; color: var(--ink); border-radius: 5px; cursor: pointer; font: inherit; }
+.rich-btn:hover, .rich-btn:focus-visible { border-color: var(--line); background: var(--card); }
+.rich-btn.b { font-weight: 700; } .rich-btn.i { font-style: italic; } .rich-btn.u { text-decoration: underline; } .rich-btn.s { text-decoration: line-through; }
+.rich-select { height: 1.8rem; max-width: 7.5rem; border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--ink); font: inherit; font-size: 0.85em; }
+.rich-colour { width: 1.8rem; height: 1.8rem; padding: 0; border: 1px solid var(--line); border-radius: 5px; background: var(--card); cursor: pointer; }
+.rich-edit { padding: 0.5rem 0.65rem; outline: none; line-height: 1.5; overflow-wrap: anywhere; }
+.rich-edit.is-empty::before { content: attr(data-placeholder); color: color-mix(in srgb, var(--ink) 45%, transparent); pointer-events: none; position: absolute; }
+.rich-edit p, .rich-view p { margin: 0 0 0.5em; }
+.rich-edit h1, .rt-h1 { font-size: 1.5em; margin: 0.4em 0 0.25em; }
+.rich-edit h2, .rt-h2 { font-size: 1.25em; margin: 0.4em 0 0.25em; }
+.rich-edit h3, .rt-h3 { font-size: 1.1em; font-style: italic; margin: 0.3em 0 0.2em; }
+.rich-edit ul, .rich-edit ol { margin: 0 0 0.5em; padding-left: 1.4em; }
+.rich-view .rt-li { display: flex; gap: 0.5em; margin: 0.1em 0; }
+.rich-view .rt-mark { flex: 0 0 1.4em; }
+.rich-box.read-only .rich-edit { cursor: default; }

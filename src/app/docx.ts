@@ -5,6 +5,7 @@
 
 import { writeZip } from "../storage/index.ts";
 import type { BookData } from "./editing.ts";
+import { toPlain } from "../engine/richtext.ts";
 
 type Entry = BookData["book"]["chapters"][number]["entries"][number];
 
@@ -137,7 +138,7 @@ export function bookDocx(data: BookData, readPicture: (id: string) => Buffer | n
   for (const c of book.chapters) {
     body += pageBreak;
     body += para("Heading1", bookmark(anchor(`c-${c.id}`), run(c.title)));
-    for (const p of (c.text ?? "").split(/\n\s*\n/).filter((x) => x.trim())) body += para(null, run(p.trim()));
+    for (const p of toPlain(c.text ?? "").split(/\n\s*\n/).filter((x) => x.trim())) body += para(null, run(p.trim()));
     for (const e of c.entries) body += entry(e, 0);
   }
 

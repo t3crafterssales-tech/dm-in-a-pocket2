@@ -15,6 +15,7 @@ import { AiError, runJob } from "./job.ts";
 import type { AiTransport, JobResult } from "./job.ts";
 import { dollars, estimateCost, pickModel } from "./models.ts";
 import type { JobSize, ModelChoice } from "./models.ts";
+import { toPlain } from "../../engine/richtext.ts";
 
 export interface Note {
   text: string;
@@ -317,7 +318,7 @@ function worldRules(s: Session): string[] {
   return s.ws
     .list(s.id, "rule")
     .filter((n) => sectionOf(s.ws, s.id, n) === "world")
-    .map((n) => `${n.name}${n.text ? `: ${n.text}` : ""}`);
+    .map((n) => `${n.name}${n.text ? `: ${toPlain(n.text)}` : ""}`);
 }
 
 export interface CheckOptions {

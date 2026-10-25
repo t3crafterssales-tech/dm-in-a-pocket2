@@ -7,6 +7,7 @@ import type { FormulaTerm, Id, NodeRecord, Value, Workspace } from "../engine/in
 import type { PointBuy } from "../engine/pointbuy.ts";
 import { sentence } from "../engine/text.ts";
 import { ensureCategories, scoreKey, scoresOf, scoreValue } from "./sheets.ts";
+import { toPlain } from "../engine/richtext.ts";
 
 export type Method = "pointBuy" | "standard" | "roll4d6" | "roll3d6" | "own";
 
@@ -182,13 +183,13 @@ export function builderOptions(ws: Workspace, layerId: Id): BuilderOptions {
     .filter((n) => !n.template)
     .map((n) => ({ n, f: ws.resolve(layerId, n.id)!.fields }));
   const ofKind = (k: string) => beings.filter((b) => b.f[F.beingKind] === k).sort((a, b) => a.n.name.localeCompare(b.n.name));
-  const races: OptionRace[] = ofKind("race").map(({ n, f }) => ({ id: n.id, name: n.name, text: n.text, picture: n.picture, parent: n.parent && ws.get(layerId, n.parent.link) ? n.parent.link : null, speed: str(f[F.speed]) || null, size: str(f.size) || null, bonuses: bonusesOf(ws, layerId, n.id), ...featuresOf(ws, layerId, n.id) }));
-  const classes: OptionClass[] = ofKind("class").map(({ n, f }) => ({ id: n.id, name: n.name, text: n.text, picture: n.picture, parent: n.parent && ws.get(layerId, n.parent.link) ? n.parent.link : null, hitDie: str(f.hitDie) || null, primary: primaryOf(n.text, abilities), startingGear: startingGearOf(n.text), ...featuresOf(ws, layerId, n.id) }));
+  const races: OptionRace[] = ofKind("race").map(({ n, f }) => ({ id: n.id, name: n.name, text: toPlain(n.text), picture: n.picture, parent: n.parent && ws.get(layerId, n.parent.link) ? n.parent.link : null, speed: str(f[F.speed]) || null, size: str(f.size) || null, bonuses: bonusesOf(ws, layerId, n.id), ...featuresOf(ws, layerId, n.id) }));
+  const classes: OptionClass[] = ofKind("class").map(({ n, f }) => ({ id: n.id, name: n.name, text: toPlain(n.text), picture: n.picture, parent: n.parent && ws.get(layerId, n.parent.link) ? n.parent.link : null, hitDie: str(f.hitDie) || null, primary: primaryOf(toPlain(n.text), abilities), startingGear: startingGearOf(toPlain(n.text)), ...featuresOf(ws, layerId, n.id) }));
   // Backgrounds: rules named "Background: ..." (the d20 starter files them that way).
   const backgrounds = ws
     .list(layerId, "rule")
     .filter((n) => /^background:\s*/i.test(n.name))
-    .map((n) => ({ id: n.id, name: n.name.replace(/^background:\s*/i, ""), text: n.text }))
+    .map((n) => ({ id: n.id, name: n.name.replace(/^background:\s*/i, ""), text: toPlain(n.text) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const rule = methodRuleOf(ws, layerId);
   const pb = pointBuyOf(ws, layerId);

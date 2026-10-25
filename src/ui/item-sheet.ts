@@ -19,6 +19,7 @@ import { codexLink, showCodexSection } from "./codex-panel.ts";
 import { addSelect, chips, parseCost, stepper, weightIn, weightText } from "./pickers.ts";
 import type { PlaceCtx } from "./place.ts";
 import { brickCard, removeNode } from "./sheets-tab.ts";
+import { isRich, richBox, richView } from "./rich-box.ts";
 
 /** Whether More is open, per sheet, so a redraw after a change keeps it open. */
 const moreOpen = new Set<string>();
@@ -179,7 +180,7 @@ export function sheetFrame(view: NodeView, ctx: PlaceCtx, locked: boolean, child
 /** The description: the standard one with "Write my own", or your own with "Back to the standard". */
 export function description(view: NodeView, quick: QuickView, locked: boolean, ed: FieldMaker): HTMLElement {
   const standard = quick.standardText;
-  if (locked) return view.text ? longText(view.text, "std-line") : h("p", { class: "std-line muted" }, "No description.");
+  if (locked) return view.text ? (isRich(view.text) ? richView(view.text, "std-line") : longText(view.text, "std-line")) : h("p", { class: "std-line muted" }, "No description.");
   const usingStandard = !!standard && view.text === standard && (!view.parent || !view.own.includes("text"));
   if (usingStandard && !writing.has(view.id))
     return h(
@@ -189,7 +190,7 @@ export function description(view: NodeView, quick: QuickView, locked: boolean, e
       longText(standard),
       h("div", { class: "row tight" }, h("button", { class: "link", onClick: () => (writing.add(view.id), void ed.save(async () => {})) }, "Write my own"), h("span", { class: "muted small" }, "or leave it. This is what prints.")),
     );
-  const box = h("textarea", { class: "text-input desc-box", rows: 3, "data-key": "f-text", placeholder: "A few words about it: what it looks like, where it comes from…", "aria-label": "Description", "data-autofocus": writing.has(view.id) ? "" : null }, view.text);
+  const box = richBox(view.text, { className: "desc-box", rows: 3, key: "f-text", placeholder: "A few words about it: what it looks like, where it comes from…", label: "Description", autofocus: writing.has(view.id) });
   writing.delete(view.id);
   box.addEventListener("change", () => void ed.save(() => api.setText(view.id, box.value)));
   return h(

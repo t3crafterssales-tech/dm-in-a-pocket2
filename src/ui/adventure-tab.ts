@@ -15,6 +15,7 @@ import { DRAG_TYPE } from "./library-panel.ts";
 import { NODE_DRAG, codexPanel } from "./codex-panel.ts";
 import { askText, stepper } from "./pickers.ts";
 import type { PlaceCtx } from "./place.ts";
+import { richBox, richView } from "./rich-box.ts";
 
 const TREE_DRAG = "application/x-dm-encounters";
 
@@ -220,7 +221,7 @@ async function frontPage(pageId: string | null, tree: EncounterNode[], ctx: Plac
     const num = (k: string, d: number) => (typeof page.fields[k] === "number" ? (page.fields[k] as number) : d);
     const levels = h("input", { class: "text-input", value: String(page.fields.levels ?? ""), placeholder: "For example: 1 to 3", "data-key": "mp-levels", disabled: ro, "aria-label": "Character levels" });
     levels.addEventListener("change", () => void ed.save(() => api.setField(page.id, "levels", levels.value)));
-    const hook = h("textarea", { class: "text-input desc-box", rows: 5, "data-key": "f-text", disabled: ro, placeholder: "The hook: what's going on, and why the heroes get involved." }, page.text);
+    const hook = richBox(page.text, { className: "desc-box", rows: 5, key: "f-text", disabled: ro, placeholder: "The hook: what's going on, and why the heroes get involved.", label: "The hook" });
     hook.addEventListener("change", () => void ed.save(() => api.setText(page.id, hook.value)));
     inner.push(
       h(
@@ -268,7 +269,7 @@ async function encounterEditor(view: NodeView, all: EncounterNode[], ctx: PlaceC
 
   const readAloud = h("textarea", { class: "text-input read-aloud", rows: 4, "data-key": "f-readAloud", disabled: ro, placeholder: "What you read out to the players when they get here." }, String(view.fields.readAloud ?? ""));
   readAloud.addEventListener("change", () => save(() => api.setField(view.id, "readAloud", readAloud.value)));
-  const notes = h("textarea", { class: "text-input desc-box", rows: 4, "data-key": "f-text", disabled: ro, placeholder: "What's really going on: who's lying, what the trap does, what happens if…" }, view.text);
+  const notes = richBox(view.text, { className: "desc-box", rows: 4, key: "f-text", disabled: ro, placeholder: "What's really going on: who's lying, what the trap does, what happens if…", label: "What's really going on" });
   notes.addEventListener("change", () => save(() => api.setText(view.id, notes.value)));
 
   // Creatures, with how many of each.
