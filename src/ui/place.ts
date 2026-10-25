@@ -25,6 +25,7 @@ import { clearPins, drawPins, pinThing } from "./floating-pins.ts";
 import { macroBuilder } from "./tools/dice.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
+import { changelogCard } from "./changelog-card.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 import { focusTableSearch, forgetTableData } from "./table-mode.ts";
@@ -221,6 +222,7 @@ async function draw() {
   else if (tab === "Rulebook") ({ list, editor } = await rulebookPanels(ctx));
   else if (tab === "Lore") ({ list, editor } = await lorePanels(ctx));
   else ({ list, editor } = comingSoon(tab, view));
+  const changes = await changelogCard(view.id, () => renderPlace());
   const flags = await flagStrip(ctx);
   const selectedName = ctx.selected ? ((await api.node(ctx.selected).catch(() => null))?.name ?? null) : null;
   const ai = await aiPanel(ctx, selectedName);
@@ -230,7 +232,7 @@ async function draw() {
   // the flag strip at its foot.
   list.classList.add("side-list");
   const workspace = h("div", { class: "workspace two" }, editor, h("aside", { class: "side" }, list, flags));
-  app.replaceChildren(top, ...(banner ? [banner] : []), workspace, ai);
+  app.replaceChildren(top, ...(banner ? [banner] : []), ...(changes ? [changes] : []), workspace, ai);
   void drawPins(view, { open: (x) => void openNode(x) });
   void drawSteps();
   void tipOnce(tab);

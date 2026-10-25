@@ -27,7 +27,7 @@ import { createLore, loreList, markUsed, rollTable, rowsValue, tableFromList, ta
 import { tableModeView } from "./tablemode.ts";
 import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
 import { buildAdventureBook } from "./adventure-book.ts";
-import { addCondition, addConditionToCharacter, addEvent, addLog, addTimer, addToFight, advanceClock, beginSession, changeCondition, clearDefeated, damage, endFight, moveInOrder, nextTurn, openSession, revealAll, rollChain, sessionOf, setCombatant, setSession, setTimer, startFight, tableView, wrapUp } from "./table.ts";
+import { addCondition, addConditionToCharacter, addEvent, addLog, addTimer, addToFight, advanceClock, beginSession, changeCondition, clearDefeated, damage, endFight, moveInOrder, nextTurn, openSession, revealAll, rollChain, sessionOf, setCombatant, setSession, setTimer, setTimerPaused, startFight, tableView, wrapUp } from "./table.ts";
 import type { BeginInput, ClockStep, ConditionOn, LogLine, TableView, Timer } from "./table.ts";
 import { blocksValue, macroOf, macroWords, runMacro } from "./macros.ts";
 import type { Macro, MacroBlock, MacroResult } from "./macros.ts";
@@ -810,6 +810,11 @@ export class Editing {
   beginSession(input: BeginInput): Id {
     if (openSession(this.ws, this.layer)) throw new LibraryError("A session is already going. Wrap it up first, or carry on with it.");
     return this.run(() => this.ws.transact("Began a session", () => beginSession(this.ws, this.layer, input, this.now())));
+  }
+  /** Pauses or resumes tonight's session timer. */
+  setTimerPaused(paused: boolean): true {
+    this.table(paused ? "Paused the session timer" : "Resumed the session timer", (id) => setTimerPaused(this.ws, this.layer, id, paused, this.now()));
+    return true;
   }
   setSession(change: { present?: Id[]; starred?: Id[]; encounter?: Id | null; lastTime?: string }): true {
     this.table("Changed tonight's session", (id) => setSession(this.ws, this.layer, id, change));

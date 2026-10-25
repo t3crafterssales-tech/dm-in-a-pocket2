@@ -12,6 +12,9 @@ import { MODULE_EXT, SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
 import type { ImportResult, RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
 import { textSizeFor, themeFor } from "./themes.ts";
+import { summarize } from "./changelog.ts";
+import type { Changelog } from "./changelog.ts";
+export type { Changelog };
 import { bookDocx } from "./docx.ts";
 import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, SheetDesign, StepResult } from "./editing.ts";
 import type { PaperGroup, PaperLine, PaperSheet, SheetGroup, SheetLayout, SheetLine } from "./sheetdesign.ts";
@@ -377,6 +380,9 @@ export const BACKEND_METHODS = [
   "tableView",
   "beginSession",
   "setSession",
+  "setTimerPaused",
+  "changelog",
+  "dismissChangelog",
   "wrapUp",
   "addLog",
   "startFight",
@@ -2136,7 +2142,33 @@ export class Backend {
     }
   }
 
+  /** When each place was last open before this time, for "what changed since you were here" (kept in memory only). */
+  private since = new Map<Id, number>();
+  private glanced = new Set<Id>();
+
+  /** What changed in the open place since it was last open, in plain words; null when nothing did or it was dismissed. */
+  changelog(): Changelog | null {
+    const id = this.session?.id;
+    if (!id || this.glanced.has(id)) return null;
+    const h = this.editing.history();
+    return summarize(h.done, this.since.get(id) ?? null);
+  }
+
+  /** Hides the changelog until the next time the place is opened. */
+  dismissChangelog(): true {
+    if (this.session) this.glanced.add(this.session.id);
+    return true;
+  }
+
+  setTimerPaused(paused: boolean): true {
+    return this.editing.setTimerPaused(paused);
+  }
+
   private markOpened(id: Id, place: Place | null = null) {
+    const before = this.settingsFile.data.opened[id];
+    if (before !== undefined) this.since.set(id, before);
+    else this.since.delete(id);
+    this.glanced.delete(id);
     this.settingsFile.update((s) => {
       s.opened[id] = this.now();
       if (place) s.place = place;

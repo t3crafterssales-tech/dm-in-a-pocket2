@@ -4,6 +4,8 @@
 // lives in the session; characters are the party's own, so their hit points change on them.
 // Plain functions on the engine, inside the caller's step unless they say otherwise.
 
+import { sessionElapsed } from "./sessiontime.ts";
+export { sessionElapsed };
 import { F, isLink, link, newId, roll } from "../engine/index.ts";
 import type { Id, NodeRecord, Value, Workspace } from "../engine/index.ts";
 import { isCoreCheck } from "../engine/rulestext.ts";
@@ -88,6 +90,9 @@ export interface SessionState {
   title: string;
   started: number;
   ended: number | null;
+  /** The session timer (version 3): when it was paused (null when running) and how long it has been paused in all. */
+  pausedAt: number | null;
+  pausedMs: number;
   present: Id[];
   lastTime: string;
   encounter: Id | null;
@@ -168,6 +173,8 @@ export function sessionOf(ws: Workspace, layerId: Id, id: Id): SessionState {
     title: r.record.name,
     started: num(f.started, 0),
     ended: typeof f.ended === "number" ? f.ended : null,
+    pausedAt: typeof f.pausedAt === "number" ? f.pausedAt : null,
+    pausedMs: Math.max(0, num(f.pausedMs, 0)),
     present: links(f.present),
     lastTime: str(f.lastTime),
     encounter: linkOf(f.encounter),
@@ -179,6 +186,18 @@ export function sessionOf(ws: Workspace, layerId: Id, id: Id): SessionState {
     defeated: objects(f.defeated).flatMap((d) => (linkOf(d.being) ? [{ being: linkOf(d.being)!, count: num(d.count, 1) }] : [])),
     made: links(f.made),
   };
+}
+
+/** Pauses or resumes the session timer. Pausing twice, or resuming a running timer, changes nothing. */
+export function setTimerPaused(ws: Workspace, layerId: Id, sessionId: Id, paused: boolean, now: number) {
+  const s = sessionOf(ws, layerId, sessionId);
+  if (paused && s.pausedAt === null && s.ended === null) {
+    s.pausedAt = now;
+  } else if (!paused && s.pausedAt !== null) {
+    s.pausedMs += Math.max(0, now - s.pausedAt);
+    s.pausedAt = null;
+  } else return;
+  save(ws, layerId, s, ["pausedAt", "pausedMs"]);
 }
 
 /** Every game night here, newest first. */
@@ -224,6 +243,8 @@ export function beginSession(ws: Workspace, layerId: Id, input: BeginInput, now:
       number,
       started: now,
       ended: null,
+      pausedAt: null,
+      pausedMs: 0,
       present: input.present.map((x) => link(x)),
       lastTime: input.lastTime.trim(),
       encounter: input.encounter ? link(input.encounter) : (prev?.encounter ? link(prev.encounter) : null),

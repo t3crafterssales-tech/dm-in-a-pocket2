@@ -147,6 +147,7 @@ Characters are the party's own, so their hit points, trackers and conditions cha
 | Field | What it holds |
 | --- | --- |
 | `number`, `started`, `ended` | Session 7; when it began; when it was wrapped up (null while it can be resumed). |
+| `pausedAt`, `pausedMs` | Version 3 session timer: when it was paused (null while it runs), and the total time paused before that. Older sessions without them read as never paused. |
 | `present` | Links to the characters at the table tonight. |
 | `lastTime` | "Last time…" text. |
 | `encounter`, `starred` | The current encounter, and the ones expected tonight. |

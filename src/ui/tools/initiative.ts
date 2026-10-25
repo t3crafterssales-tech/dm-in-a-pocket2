@@ -137,6 +137,7 @@ function card(c: CardView, now: boolean, index: number, ctx: DeskCtx, showPlayer
             Object.entries(c.glance).map(([k, v]) => h("span", { class: "glance" }, `${k} ${v}`)),
           )
         : null,
+      ro || c.kind === "event" || c.members.length > 1 ? null : quickConditions(c, conds, ctx),
       c.members.length > 1
         ? h(
             "div",
@@ -188,6 +189,33 @@ function card(c: CardView, now: boolean, index: number, ctx: DeskCtx, showPlayer
   });
   void index;
   return el;
+}
+
+/** A row of small icons for the system's conditions: click to give one, click again to take it off (version 3). */
+function quickConditions(c: CardView, on: ConditionOn[], ctx: DeskCtx): HTMLElement {
+  const where = c.kind === "character" ? { character: c.ref! } : { combatant: c.id, member: c.members[0]?.id };
+  return h(
+    "div",
+    { class: "quick-conds", onClick: (e: MouseEvent) => e.stopPropagation() },
+    ctx.data.conditions.slice(0, 8).map((k) => {
+      const has = on.find((x) => x.condition === k.id);
+      return h(
+        "button",
+        {
+          class: `quick-cond${has ? " on" : ""}`,
+          style: `--c:${k.color}`,
+          title: `${has ? "Remove" : "Give"} ${k.name}`,
+          "aria-pressed": has ? "true" : "false",
+          "aria-label": `${k.name}${has ? " (on)" : ""}`,
+          onClick: async () => {
+            const ok = has ? await attempt(() => api.changeCondition(where, has.id, null)) : await attempt(() => api.addCondition([{ combatant: c.id, member: null }], { condition: k.id, left: null, unit: "removed", counter: null, source: "" }));
+            if (ok !== undefined) await ctx.refresh();
+          },
+        },
+        k.symbol,
+      );
+    }),
+  );
 }
 
 function badge(x: ConditionOn, ctx: DeskCtx, where: { character?: string; combatant?: string; member?: string }): HTMLElement {

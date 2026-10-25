@@ -22,6 +22,7 @@ let ic = false;
 let whisperTo: string[] = [];
 let rollSee: "public" | "dm" | "blind" = "public";
 let formula = "1d20";
+let modifier = "";
 let notesDraft: string | null = null;
 let lookup = "";
 let lookupHits: { title: string; group: string; stats: string | null; paragraphs: string[] }[] = [];
@@ -268,7 +269,7 @@ function card(c: PlayerCard, arrived: boolean): HTMLElement {
     { class: `turn kind-${c.kind}${c.now ? " now" : ""}${c.mine ? " mine" : ""}${arrived ? " squeeze" : ""}` },
     c.picture ? h("img", { class: "face", src: pic(c.picture), alt: "" }) : h("span", { class: "face blank" }, c.kind === "monster" ? "🐺" : c.kind === "event" ? "⏳" : "🧙"),
     h("span", { class: "turn-name" }, c.name, c.note ? h("span", { class: "muted small" }, ` ${c.note}`) : null),
-    h("span", { class: "conds" }, c.conditions.map((x) => h("span", { class: "cond", title: x.name, style: `background:${x.color}` }, x.symbol))),
+    h("span", { class: "conds" }, c.conditions.map((x) => h("span", { class: "cond", title: x.name, style: `background:${x.color}` }, x.symbol, h("span", { class: "cond-name" }, x.name)))),
     c.health ? h("span", { class: `health h-${c.health.replace(/\s+/g, "-")}` }, c.health) : null,
   );
 }
@@ -276,6 +277,12 @@ function card(c: PlayerCard, arrived: boolean): HTMLElement {
 function diceCard(s: State): HTMLElement {
   const box = h("input", { class: "text", value: formula, "aria-label": "What to roll", "data-key": "formula", inputmode: "text" });
   box.addEventListener("input", () => (formula = box.value));
+  const mod = h("input", { class: "text mod", value: modifier, "aria-label": "Modifier added to the die buttons", placeholder: "+0", inputmode: "numeric", "data-key": "modifier" });
+  mod.addEventListener("input", () => (modifier = mod.value));
+  const withMod = (d: string) => {
+    const n = Number(modifier.trim().replace(/^\+/, ""));
+    return modifier.trim() && Number.isFinite(n) && n !== 0 ? `1${d}${n > 0 ? "+" : "-"}${Math.abs(n)}` : `1${d}`;
+  };
   const roll = (f: string, mode: "normal" | "advantage" | "disadvantage" = "normal") => void act({ type: "roll", formula: f, mode, see: rollSee });
   const see = h("select", { class: "text", "aria-label": "Who sees it" }, h("option", { value: "public", selected: rollSee === "public" }, "Everyone sees"), h("option", { value: "dm", selected: rollSee === "dm" }, "Only the DM"), h("option", { value: "blind", selected: rollSee === "blind" }, "Blind (DM only, not me)"));
   see.addEventListener("change", () => (rollSee = see.value as typeof rollSee));
@@ -284,7 +291,8 @@ function diceCard(s: State): HTMLElement {
     "section",
     { class: "card" },
     h("h3", null, "Dice"),
-    h("div", { class: "dice" }, ["d20", "d12", "d10", "d8", "d6", "d4", "d100"].map((d) => h("button", { class: "die", onClick: () => roll(`1${d}`) }, d))),
+    h("div", { class: "dice" }, ["d20", "d12", "d10", "d8", "d6", "d4", "d100"].map((d) => h("button", { class: "die", onClick: () => roll(withMod(d)) }, d))),
+    h("div", { class: "row" }, h("label", { class: "muted small" }, "Modifier"), mod),
     h("div", { class: "row" }, box, h("button", { class: "button primary", onClick: () => roll(formula) }, "Roll")),
     h("div", { class: "row" }, h("button", { class: "button plain grow", onClick: () => roll(formula, "advantage") }, "Advantage"), h("button", { class: "button plain grow", onClick: () => roll(formula, "disadvantage") }, "Disadvantage")),
     h("div", { class: "row" }, see),

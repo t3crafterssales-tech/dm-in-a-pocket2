@@ -161,3 +161,8 @@ body.offline .top::after { content: "Reconnecting to the DM…"; display: block;
   .body { padding: 16px 20px; }
 }
 .grow { flex: 1; }
+
+/* Version 3: condition names in plain words, and the dice modifier box */
+.cond { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 0.4rem; border-radius: 999px; }
+.cond-name { font-size: 0.72rem; }
+.text.mod { width: 4.5rem; flex: 0 0 auto; text-align: center; }

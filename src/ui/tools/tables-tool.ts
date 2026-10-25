@@ -43,6 +43,7 @@ export async function tablesTool(ctx: DeskCtx): Promise<HTMLElement> {
   return h(
     "div",
     { class: "tables-tool" },
+    ctx.view.readOnly || !tables.length ? null : h("div", { class: "inline" }, h("button", { class: "button plain small-button", title: "Pick tables and roll them all at once", onClick: () => void generate(ctx, tables) }, svg(ICONS.dice), "Generate…"), h("button", { class: "button plain small-button", title: "Roll every table you ticked last time", onClick: () => void generateAll(ctx, tables) }, "Generate all")),
     box,
     result,
     shown.length
@@ -130,4 +131,50 @@ async function fromCodex(ctx: DeskCtx) {
     }
   });
   d.footer.replaceChildren(h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"), ok);
+}
+
+// ---------- Generate (version 3): roll several tables at once, results go to the log ----------
+
+/** Which tables are ticked for Generate, kept for the session. */
+const ticked = new Set<string>();
+
+async function rollMany(ctx: DeskCtx, tables: { id: string; name: string }[]) {
+  const lines: string[] = [];
+  for (const t of tables) {
+    const r = await attempt(() => api.rollTable(t.id));
+    if (!r) continue;
+    const words = [r.text, r.result?.name, r.chain].filter(Boolean).join(" → ");
+    lines.push(`${t.name}: ${words || "nothing"}`);
+  }
+  if (!lines.length) return;
+  const text = lines.join("\n");
+  await attempt(() => api.postChat({ kind: "roll", who: (ctx.settings("dice").name as string | undefined) ?? "DM", color: (ctx.settings("dice").color as string | undefined) ?? "#b93a2e", see: "dm" as "public", to: [], text, roll: { formula: "generate", total: lines.length, breakdown: `${lines.length} tables`, natural: null }, ic: false }));
+  if (ctx.data.session) await attempt(() => api.addLog("roll", `Generated: ${lines.join("; ")}`));
+  notice(`Rolled ${lines.length} table${lines.length === 1 ? "" : "s"}. The results are in the log.`, "green", undefined, 4000);
+  await ctx.refresh();
+}
+
+async function generateAll(ctx: DeskCtx, tables: { id: string; name: string }[]) {
+  const chosen = tables.filter((t) => ticked.has(t.id));
+  if (!chosen.length) return void (await generate(ctx, tables));
+  await rollMany(ctx, chosen);
+}
+
+function generate(ctx: DeskCtx, tables: { id: string; name: string }[]) {
+  const d = openDialog("Generate", { wide: true });
+  const draw = () =>
+    d.body.replaceChildren(
+      h("p", { class: "muted small" }, "Tick the tables to roll. The results go into the session log. Nothing here needs the internet."),
+      h("div", { class: "inline" }, h("button", { class: "link small", onClick: () => (tables.forEach((t) => ticked.add(t.id)), draw()) }, "Tick all"), h("button", { class: "link small", onClick: () => (ticked.clear(), draw()) }, "Untick all")),
+      h("ul", { class: "table-list" }, tables.map((t) => h("li", null, h("label", { class: "inline" }, h("input", { type: "checkbox", checked: ticked.has(t.id), onChange: (e: Event) => ((e.target as HTMLInputElement).checked ? ticked.add(t.id) : ticked.delete(t.id)) }), t.name)))),
+    );
+  draw();
+  const go = h("button", { class: "button primary" }, "Generate");
+  go.addEventListener("click", async () => {
+    const chosen = tables.filter((t) => ticked.has(t.id));
+    if (!chosen.length) return void notice("Tick at least one table.", "blue", undefined, 3000);
+    d.close();
+    await rollMany(ctx, chosen);
+  });
+  d.footer.replaceChildren(h("button", { class: "button plain", onClick: () => d.close() }, "Cancel"), go);
 }

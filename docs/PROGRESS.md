@@ -1037,3 +1037,7 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-25: "Default" stays the paper look the app has today (the design note called it a dark look, but the app was never dark). Parchment, Ink, Ember, Steel and Verdant are the other five.
 - 2026-10-25: Text size uses the window's own zoom (Small 90%, Normal, Large 115%) so every screen changes together; print, PDF and the rulebook page never read the theme or the size.
 - 2026-10-25: The Windows build now also publishes the "Latest test version" release from the version 3 branch.
+- 2026-10-25: Version 3.2. The session timer is two small fields on the session (`pausedAt`, `pausedMs`); older sessions without them count as never paused. Elapsed time is start to now (or the end), less paused time.
+- 2026-10-25: "Since you were last here" is worked out from the world's history and remembered only while the app is running (not saved in the file); it opens the first time, becomes a quiet line afterwards, and the × clears it.
+- 2026-10-25: Generate rolls the ticked roll tables and posts all results as one DM-only chat line plus one session-log entry. Generate all rolls whatever was ticked last (or opens the picker if nothing was).
+- 2026-10-25: Quick condition icons show the first eight of the system's conditions on single creatures; click to give, click again to remove. Players see condition names beside the icon, and the player dice get a modifier box that adds to the die buttons.

@@ -6,6 +6,7 @@
 
 import type { PlaceView, TableMeta, TableView, ToolPlace } from "../app/backend.ts";
 import { TOOL_NAMES } from "../app/tablemeta.ts";
+import { formatElapsed, sessionElapsed } from "../app/sessiontime.ts";
 import { api } from "./api.ts";
 import { app, attempt, brand, iconButton } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
@@ -74,7 +75,7 @@ async function draw(view: PlaceView, exit: () => void, goHome: () => void) {
 
   const s = data.session;
   const status = s
-    ? h("span", { class: "desk-status" }, h("strong", null, s.title), s.combat.active ? h("span", { class: "tag accent" }, `Round ${s.combat.round}`) : null, h("span", { class: "muted small" }, `${data.date.time}, ${data.date.text}`))
+    ? h("span", { class: "desk-status" }, h("strong", null, s.title), s.combat.active ? h("span", { class: "tag accent" }, `Round ${s.combat.round}`) : null, h("span", { class: "muted small" }, `${data.date.time}, ${data.date.text}`), sessionTimer(s, ctx))
     : h("span", { class: "desk-status muted" }, "No game tonight yet.");
 
   const arrangement = h(
@@ -273,6 +274,26 @@ export async function peekOpen(id: string, ctx: DeskCtx) {
   const n = meta.pins.length;
   await attempt(() => api.setTableMeta({ pins: [...meta.pins, { id: `${Date.now()}`, node: id, x: 120 + (n % 6) * 30, y: 120 + (n % 6) * 30, collapsed: false }] }));
   await ctx.refresh();
+}
+
+/** A quiet clock for how long tonight has run, with pause and resume (version 3). */
+function sessionTimer(s: NonNullable<TableView["session"]>, ctx: DeskCtx): HTMLElement {
+  const paused = s.pausedAt !== null;
+  const time = h("span", { class: "session-time", title: paused ? "Paused" : "How long this session has run" });
+  const tick = () => {
+    const now = Date.now();
+    time.textContent = formatElapsed(sessionElapsed(s, now));
+    if (!time.isConnected) clearInterval(timerHandle);
+  };
+  const timerHandle = window.setInterval(tick, 1000);
+  tick();
+  return h(
+    "span",
+    { class: `session-timer${paused ? " paused" : ""}` },
+    h("span", { "aria-hidden": "true" }, "⏱"),
+    time,
+    ctx.view.readOnly ? null : h("button", { class: "icon-button tiny", title: paused ? "Resume the timer" : "Pause the timer", "aria-label": paused ? "Resume the timer" : "Pause the timer", onClick: async () => (await attempt(() => api.setTimerPaused(!paused)), await ctx.refresh()) }, paused ? "▶" : "⏸"),
+  );
 }
 
 // ---------- Prepare and begin a session ----------
