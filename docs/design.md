@@ -1161,7 +1161,7 @@ Jeff likes version 2 as it is. Before versions 4 and 5, this pass makes the prog
 - **After naming a system or world made from a ready-made start** (d20 and the others), the six Quick start questions do NOT appear. Instead a **"Where do you want to start?"** screen offers three big choices: **Look at the rules**, **Make a monster or item**, **Start a world**. The six questions appear only when the person chose to start from scratch, and are then framed as "Build the basics for me".
 - **A short "What next?" card** sits in the empty middle of the Rules tab, and of the empty Beings, Items, Lore, Maps and Journal tabs. It goes away once the person has done something there.
 - **The First steps checklist is tied to the real screens:** clicking a step takes the person to the right place and points at the button.
-- **To check:** why the six questions appeared after picking d20 (the code should only offer them for "Bare bones"). Trace it before designing anything.
+- **Traced (October 25):** the code only shows the six questions automatically after the "Bare bones (empty)" start, never after "Generic d20" or the other ready-made starts. Two likely causes of what Jeff saw: Bare bones was picked (it is the last item in the Starting point list), or he opened them from the **"Quick start…" button on the Rules tab's empty screen, which shows on every system, even one already full of d20 rules.** Fix: show that button only when a system has almost no rules, and replace it with the "What next?" card otherwise.
 
 ### 2. Bricks that look like bricks
 
@@ -1178,7 +1178,8 @@ Jeff likes version 2 as it is. Before versions 4 and 5, this pass makes the prog
 - An **Arrange** button tidies the open windows into a grid or a cascade, and **Tuck all away** clears a crowded screen.
 - A window remembers its position and size the next time that brick opens.
 - Same mechanism as the floating panels of version 3.
-- **Open question for Jeff:** does a click on a Codex brick always open a window, or does the middle area stay as the "main thing" being built (the goblin) while the bricks being compared float over it? And: double-click opens, single-click selects (like files on a desktop), which also protects dragging a brick onto a sheet.
+- **Decided (Jeff, October 25):** the middle area stays as the main thing being built (the goblin); bricks from the Codex open as floating windows over it. A window has a **"Pin to middle"** button for when that brick becomes the main work.
+- **Decided:** in the Codex, **single-click selects, double-click opens** (like files on a desktop), Enter also opens the selected brick, and Shift-click or Ctrl-click picks several. Hovering shows "Double-click to open, drag to add". Inside a sheet's own sections, a single click on an attached card still opens it for editing, since nothing there is dragged.
 
 ### 4. Back and forward (never an undo)
 
@@ -1186,7 +1187,7 @@ Jeff likes version 2 as it is. Before versions 4 and 5, this pass makes the prog
 - A trail of where the person has been: goblin sheet, then the "What do you want to make?" screen, then wherever before that.
 - **Familiar shortcuts:** Alt+Left and Alt+Right, and the mouse side buttons.
 - A **"Make another" button** on a freshly made sheet, and a **"Back to Beings" link** at the top of every sheet.
-- **To decide:** does the trail remember tabs as well as sheets, and does it reset when leaving a world?
+- **Decided (Jeff, October 25):** the trail remembers tabs as well as sheets, keeps up to about 50 steps, and resets when leaving a world. Windows and the tray are not part of the trail. The Recent list is what carries across worlds.
 
 ### 5. Left-hand hotkeys (proposed; Jeff has not changed any)
 
