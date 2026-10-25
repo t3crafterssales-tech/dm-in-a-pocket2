@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { defaultLayout } from "../src/app/layout.ts";
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -407,7 +408,7 @@ test("the main folder can be changed in settings, and a damaged settings file ne
     assert.equal(s.backend.home().systems.length, 1);
 
     writeFileSync(join(s.dir, "settings.json"), "{ not json");
-    assert.deepEqual(SettingsFile.read(join(s.dir, "settings.json")), { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true });
+    assert.deepEqual(SettingsFile.read(join(s.dir, "settings.json")), { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, layout: defaultLayout(), layoutPresets: {} });
   })();
 });
 

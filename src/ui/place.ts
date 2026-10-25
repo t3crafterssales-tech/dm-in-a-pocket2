@@ -28,6 +28,7 @@ import { rulebookPanels } from "./rulebook-tab.ts";
 import { changelogCard } from "./changelog-card.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
+import { arrange, layoutDialog, loadLayout } from "./layout.ts";
 import { focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
 
@@ -199,6 +200,7 @@ async function draw() {
       { class: "top-actions" },
       view.readOnly ? null : h("button", { class: "button primary new-button", title: "Make something new: a weapon, a monster, a spell…", onClick: () => newThing() }, svg(ICONS.plus), "New"),
       iconButton(ICONS.dice, "DM's table", () => ((tableMode = true), void renderPlace()), { title: "The DM's table: run a game night with initiative, dice, the clock, the journal and more" }),
+      iconButton(ICONS.layout, "Layout", () => void layoutDialog(() => void renderPlace()), { iconOnly: true, title: "Panel layout: Builder, Game night, Writer, Dual monitor, or your own" }),
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
       iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
@@ -231,8 +233,9 @@ async function draw() {
   // Two columns: what you're making in the middle, the Codex (or the tab's list) on the right with
   // the flag strip at its foot.
   list.classList.add("side-list");
-  const workspace = h("div", { class: "workspace two" }, editor, h("aside", { class: "side" }, list, flags));
-  app.replaceChildren(top, ...(banner ? [banner] : []), ...(changes ? [changes] : []), workspace, ai);
+  await loadLayout();
+  const { workspace, ai: aiFrame } = arrange({ editor, codex: list, flags, ai, refresh: () => void renderPlace() });
+  app.replaceChildren(top, ...(banner ? [banner] : []), ...(changes ? [changes] : []), workspace, ...(aiFrame ? [aiFrame] : []));
   void drawPins(view, { open: (x) => void openNode(x) });
   void drawSteps();
   void tipOnce(tab);

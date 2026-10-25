@@ -298,3 +298,7 @@ is missing shows as missing and everything else works. The soundboard's buttons 
 ## Rich text (version 3)
 
 A node's one text box can now carry formatting. No field was added: a formatted text is the same `text` string, starting with the marker `<!--rt-->` followed by a small cleaned-up piece of HTML (paragraphs, headings 1 to 3, bullet and numbered lists, bold, italic, underline, strikethrough, colour, font, size, alignment). Text with no formatting is still saved as plain text exactly as before, so old files and old apps read it unchanged. Anything pasted in is cleaned down to only these parts. Everything that needs plain words (search, AI, the Word export) turns it back to plain text first. Fonts are the ones already on the computer.
+
+## Panel layout (version 3)
+
+How the panels are arranged is kept in the app's own settings file on this computer (not in any world file, so sharing a world never moves someone else's panels): `layout` (side width in pixels, whether the side column, flags and AI panel are folded, and the position and size of any panel floated as its own window) and `layoutPresets` (the user's named arrangements). The four built-in presets (Builder, Game night, Writer, Dual monitor) are in the code. Damaged values fall back to the default.

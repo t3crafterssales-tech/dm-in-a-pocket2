@@ -68,6 +68,7 @@ import { search } from "./search.ts";
 import type { SearchHit } from "./search.ts";
 import type { ModelChoice } from "./ai/models.ts";
 import { CAREFUL, QUICK, dollars } from "./ai/models.ts";
+import { type Layout, allPresets, cleanLayout, cleanPresetName } from "./layout.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 import { toPlain } from "../engine/richtext.ts";
@@ -512,6 +513,11 @@ export const BACKEND_METHODS = [
   "eraseSoundButtons",
   "soundsFolder",
   "setAutoPictures",
+  "layoutState",
+  "setLayout",
+  "saveLayoutPreset",
+  "applyLayoutPreset",
+  "deleteLayoutPreset",
   "pictureLibrary",
   "pictureTags",
   "pictureSuggestions",
@@ -835,6 +841,37 @@ export class Backend {
   setAutoPictures(on: boolean): SettingsView {
     this.settingsFile.update((s) => (s.autoPictures = on === true));
     return this.settings();
+  }
+
+  /** The panel arrangement and every preset, built in and the user's own (version 3). */
+  layoutState(): { layout: Layout; presets: { name: string; blurb: string; layout: Layout; own: boolean }[] } {
+    const d = this.settingsFile.data;
+    return { layout: d.layout, presets: allPresets(d.layoutPresets) };
+  }
+
+  setLayout(layout: Layout): Layout {
+    this.settingsFile.update((s) => (s.layout = cleanLayout(layout)));
+    return this.settingsFile.data.layout;
+  }
+
+  /** Name and keep the arrangement as it is now. A built-in name can't be overwritten. */
+  saveLayoutPreset(name: string): { name: string; presets: ReturnType<Backend["layoutState"]>["presets"] } {
+    const n = cleanPresetName(name);
+    if (!n) throw new Error("Give the layout a name.");
+    if (allPresets({}).some((p) => p.name.toLowerCase() === n.toLowerCase())) throw new Error(`"${n}" is one of the built-in layouts. Pick another name.`);
+    this.settingsFile.update((s) => (s.layoutPresets[n] = cleanLayout(s.layout)));
+    return { name: n, presets: this.layoutState().presets };
+  }
+
+  applyLayoutPreset(name: string): Layout {
+    const p = allPresets(this.settingsFile.data.layoutPresets).find((x) => x.name === name);
+    if (!p) throw new Error("That layout isn't there any more.");
+    return this.setLayout(p.layout);
+  }
+
+  deleteLayoutPreset(name: string): ReturnType<Backend["layoutState"]>["presets"] {
+    this.settingsFile.update((s) => delete s.layoutPresets[name]);
+    return this.layoutState().presets;
   }
 
   /** Small, Normal or Large interface text (version 3). */
