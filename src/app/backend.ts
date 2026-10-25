@@ -11,6 +11,7 @@ import { Library, LibraryError, realTimers } from "../storage/index.ts";
 import { MODULE_EXT, SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
 import type { ImportResult, RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
+import { textSizeFor, themeFor } from "./themes.ts";
 import { bookDocx } from "./docx.ts";
 import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, SheetDesign, StepResult } from "./editing.ts";
 import type { PaperGroup, PaperLine, PaperSheet, SheetGroup, SheetLayout, SheetLine } from "./sheetdesign.ts";
@@ -176,6 +177,9 @@ export interface SettingsView {
   author: string | null;
   /** Pounds or kilograms for the weight pickers. */
   units: "lb" | "kg";
+  /** The colour theme and the size of the interface text (version 3). */
+  theme: string;
+  textSize: "small" | "normal" | "large";
 }
 
 /** Settings → AI, and the corner of the AI panel. */
@@ -476,6 +480,8 @@ export const BACKEND_METHODS = [
   "bookWord",
   "setAuthor",
   "setUnits",
+  "setTheme",
+  "setTextSize",
   "importFile",
   "share",
   "snapshots",
@@ -716,12 +722,24 @@ export class Backend {
   // ---------- Settings ----------
 
   settings(): SettingsView {
-    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units };
+    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units, theme: this.settingsFile.data.theme, textSize: this.settingsFile.data.textSize };
   }
 
   /** Pounds or kilograms for the weight pickers. */
   setUnits(units: "lb" | "kg"): SettingsView {
     this.settingsFile.update((s) => (s.units = units === "kg" ? "kg" : "lb"));
+    return this.settings();
+  }
+
+  /** The colour theme (version 3); anything unknown means Default. */
+  setTheme(id: string): SettingsView {
+    this.settingsFile.update((s) => (s.theme = themeFor(id).id));
+    return this.settings();
+  }
+
+  /** Small, Normal or Large interface text (version 3). */
+  setTextSize(size: string): SettingsView {
+    this.settingsFile.update((s) => (s.textSize = textSizeFor(size)));
     return this.settings();
   }
 

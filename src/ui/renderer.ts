@@ -12,6 +12,8 @@ import { aiSettings } from "./ai-panel.ts";
 import { becameReadOnly, current, leavePlace, openPlace, redrawForPlayers, renderPlace } from "./place.ts";
 import { pulseFromPlayer } from "./tools/map-tool.ts";
 import { drawSteps, maybeWelcome, setWelcomeHost, showHelp } from "./welcome.ts";
+import { applyLook } from "./look.ts";
+import { TEXT_SIZES, THEMES } from "../app/themes.ts";
 
 /** The last thing deleted from the home screen, so Ctrl+Z can put it back. */
 let lastDeleted: RecycledInfo | null = null;
@@ -617,12 +619,48 @@ async function showSettings() {
         });
         return input;
       })(),
+      h("h3", null, "Look"),
+      h("p", { class: "muted" }, "Pick a theme and a text size. They change only what you see on screen; printed pages and PDFs are always black on white."),
+      lookSettings(s, () => void draw()),
       h("h3", null, "AI"),
       aiSettings(() => void draw()),
     );
     d.footer.replaceChildren(h("span", { class: "spacer" }), h("button", { class: "button primary", onClick: () => d.close() }, "Done"));
   };
   await draw();
+}
+
+/** Theme swatches and the Small, Normal, Large text size. Each applies at once, so the choice is seen live. */
+function lookSettings(s: { theme: string; textSize: string }, redraw: () => void): HTMLElement {
+  const pick = async (theme: string, size: string) => {
+    applyLook(theme, size);
+    await attempt(async () => {
+      if (theme !== s.theme) await api.setTheme(theme);
+      if (size !== s.textSize) await api.setTextSize(size);
+    });
+    redraw();
+  };
+  return h(
+    "div",
+    { class: "look-settings" },
+    h(
+      "div",
+      { class: "theme-swatches", role: "radiogroup", "aria-label": "Theme" },
+      THEMES.map((t) =>
+        h(
+          "button",
+          { class: `theme-swatch${t.id === s.theme ? " on" : ""}`, role: "radio", "aria-checked": t.id === s.theme ? "true" : "false", title: t.name, onClick: () => void pick(t.id, s.textSize) },
+          h("span", { class: "swatch-dot", style: `background:linear-gradient(135deg, ${t.background} 50%, ${t.accent} 50%);border-color:${t.border}` }),
+          h("span", null, t.name),
+        ),
+      ),
+    ),
+    h(
+      "div",
+      { class: "switch", role: "radiogroup", "aria-label": "Text size" },
+      TEXT_SIZES.map((z) => h("button", { class: `switch-button${z.id === s.textSize ? " active" : ""}`, role: "radio", "aria-checked": z.id === s.textSize ? "true" : "false", onClick: () => void pick(s.theme, z.id) }, z.name)),
+    ),
+  );
 }
 
 // ---------- Keyboard ----------
@@ -642,6 +680,8 @@ async function start() {
     openPlace: (type, id) => openPlace({ type, id }),
     home: (glow) => showHome(undefined, glow),
   });
+  const look = await attempt(() => api.settings());
+  if (look) applyLook(look.theme, look.textSize);
   const s = await attempt(() => api.startup());
   if (s?.resume) await openPlace(s.resume);
   else if (!(await maybeWelcome())) await showHome();

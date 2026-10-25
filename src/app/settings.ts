@@ -4,6 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { Id } from "../engine/index.ts";
 import { atomicWrite } from "../storage/index.ts";
+import { textSizeFor, themeFor } from "./themes.ts";
 
 export interface Place {
   type: "world" | "system" | "module";
@@ -42,10 +43,13 @@ export interface Settings {
   /** The first steps checklist: steps done, and whether it was closed. */
   stepsDone: string[];
   stepsClosed: boolean;
+  /** The colour theme (version 3) and the size of the interface text. Screen only. */
+  theme: string;
+  textSize: "small" | "normal" | "large";
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal" };
 }
 
 export class SettingsFile {
@@ -79,6 +83,8 @@ export class SettingsFile {
         tipsSeen: Array.isArray(raw.tipsSeen) ? raw.tipsSeen.filter((x): x is string => typeof x === "string") : [],
         stepsDone: Array.isArray(raw.stepsDone) ? raw.stepsDone.filter((x): x is string => typeof x === "string") : [],
         stepsClosed: raw.welcomed === undefined ? true : raw.stepsClosed === true,
+        theme: themeFor(raw.theme).id,
+        textSize: textSizeFor(raw.textSize),
       };
     } catch {
       return defaultSettings();

@@ -49,8 +49,7 @@ Newest first. Every session reads this after `CLAUDE.md`.
   "hide" tick to leave them off the paper. Save this layout puts it in the Codex (and can make it the
   default for the game or world); "Use the system's" goes back. The same layout draws the sheet on
   screen. Preview, Print and Save as PDF work.
-- **Next:** build the Windows installer so Jeff can download and run it. Nothing from versions 3, 4
-  or 5 is being built.
+- **Version 3 (started October 25 on branch `claude/v3-table`, Jeff: "build version 3 now"):** 3.1 themes and text size done (Settings → Look). Next: 3.2 table tools, 3.3 player dice roller, 3.4 starter systems, 3.5 pictures and tags, 3.6 sound, 3.7 rich text and panel layout. Versions 4 and 5 are not being built.
 - **Not in the sheet designer yet:** skills, saving throws, attacks and spells groups. A character's
   sheet doesn't carry those yet, so they appear when it does.
 
@@ -1034,3 +1033,7 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-25: Any stored layout is repaired to fit the character it is shown on (unknown groups dropped, new ones added at the end, widths kept between 3 and 12), so a layout from another game or an older file can never break a sheet.
 - 2026-10-25: Order of which layout applies: the character's own, then one picked from the Codex, then the default layout (marked in the Codex), then the plain layout. Each change is one undoable step.
 - 2026-10-25 (Jeff's test): the "Drag from the Codex, or pick one" line on sheets now reads "open Traits and features in the Codex →" (it names the kind of bricks that fit that box), in bold underline, and the Choices box hint has the same link. One shared link (`codexLink`) is used by being and item sheets.
+- 2026-10-25: Version 3.1. A theme is five colours (background, panel, text, accent, border); every other colour is worked out from them with `color-mix` in the style sheet, and the red, yellow, blue and green keep their meaning on every theme (lightened on the dark ones). Tests check that text is readable on every theme.
+- 2026-10-25: "Default" stays the paper look the app has today (the design note called it a dark look, but the app was never dark). Parchment, Ink, Ember, Steel and Verdant are the other five.
+- 2026-10-25: Text size uses the window's own zoom (Small 90%, Normal, Large 115%) so every screen changes together; print, PDF and the rulebook page never read the theme or the size.
+- 2026-10-25: The Windows build now also publishes the "Latest test version" release from the version 3 branch.
