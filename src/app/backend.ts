@@ -12,7 +12,9 @@ import { MODULE_EXT, SYSTEM_EXT, WORLD_EXT } from "../storage/index.ts";
 import type { ImportResult, RecycledInfo, Timers } from "../storage/index.ts";
 import { Editing } from "./editing.ts";
 import { bookDocx } from "./docx.ts";
-import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, StepResult } from "./editing.ts";
+import type { BinView, BookData, BookRequest, Choices, FlagView, HistoryView, NodeView, RestoreResult, SheetDesign, StepResult } from "./editing.ts";
+import type { PaperGroup, PaperLine, PaperSheet, SheetGroup, SheetLayout, SheetLine } from "./sheetdesign.ts";
+export type { PaperGroup, PaperLine, PaperSheet, SheetDesign, SheetGroup, SheetLayout, SheetLine };
 import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
@@ -430,6 +432,11 @@ export const BACKEND_METHODS = [
   "makeSample",
   "bookContents",
   "shopChoices",
+  "sheetLayouts",
+  "sheetDesign",
+  "setSheetLayout",
+  "useSheetLayout",
+  "saveSheetLayout",
   "saveBookLayout",
   "bookLayouts",
   "encounterTree",
@@ -2019,6 +2026,21 @@ export class Backend {
   /** Everything a book could hold, for the book designer's tick list. */
   bookContents(opts: BookRequest) {
     return this.editing.bookContents(opts);
+  }
+  sheetLayouts() {
+    return this.editing.sheetLayouts();
+  }
+  sheetDesign(id: Id) {
+    return this.editing.sheetDesign(id);
+  }
+  setSheetLayout(id: Id, layout: SheetLayout | null) {
+    this.editing.setSheetLayout(id, layout);
+  }
+  useSheetLayout(id: Id, layoutId: Id | null) {
+    this.editing.useSheetLayout(id, layoutId);
+  }
+  saveSheetLayout(name: string, layout: SheetLayout, makeDefault: boolean): Id {
+    return this.editing.saveSheetLayout(name, layout, makeDefault);
   }
   /** Everything the print shop could print, grouped like the rulebook's chapters. */
   shopChoices() {

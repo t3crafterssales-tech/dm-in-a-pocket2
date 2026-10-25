@@ -3,6 +3,8 @@
 // things only through these.
 
 import { cardLines, squaresFor } from "./printshop.ts";
+import { defaultLayout, normalizeLayout, paperSheet, sheetGroups } from "./sheetdesign.ts";
+import type { PaperSheet, SheetGroup, SheetLayout } from "./sheetdesign.ts";
 import type { Piece, PieceKind, PrintShop } from "./printshop.ts";
 import { F, levelKey, pointBuyOf, pointsSpent } from "../engine/index.ts";
 import type { Spent } from "../engine/index.ts";
@@ -142,10 +144,20 @@ export interface HistoryView {
   undone: HistoryStep[];
 }
 
+export interface SheetDesign {
+  groups: SheetGroup[];
+  layout: SheetLayout;
+  /** Where the layout in force comes from: the character's own, one picked from the Codex, the system's, or the plain default. */
+  source: { kind: "own" | "codex" | "system" | "default"; name: string | null };
+}
+
 export interface BookRequest {
   /** "adventure" is a module's booklet: its encounters in order, with appendices. "diary" is the
    * campaign diary from the journal; "handout" prints one journal page. */
-  type: BookType | "adventure" | "diary" | "handout" | "printshop";
+  type: BookType | "adventure" | "diary" | "handout" | "printshop" | "sheet";
+  /** A character's sheet on paper: which character, and a layout to try before it is kept. */
+  character?: Id;
+  sheetLayout?: SheetLayout;
   /** The print shop: which pieces, of what (with how many of each), and the square size. */
   pieces?: { kind: PieceKind; items: { id: Id; count: number }[]; inch?: number };
   /** Handouts: the journal page, and its look. */
@@ -182,6 +194,8 @@ export interface BookData {
   handout?: { title: string; style: string; seal: boolean; hand: boolean; blocks: Block[] };
   /** The print shop's paper pieces. */
   printshop?: PrintShop;
+  /** A character's sheet, laid out in groups. */
+  sheet?: PaperSheet;
   /** Front pages built from blocks, in priority order (cover, credits, foreword...). */
   front?: { title: string; blocks: Block[] }[];
   plainCover?: boolean;
@@ -376,6 +390,12 @@ export class Editing {
       const h = opts.handout ?? { style: "plain", seal: false, hand: false };
       return { book: { title: p.name, subtitle: "Handout", chapters: [], index: [], credits: [] }, names: {}, pageSize, handout: { title: p.name, style: String(h.style), seal: !!h.seal, hand: !!h.hand, blocks: p.blocks } };
     }
+    if (opts.type === "sheet") {
+      const id = String(opts.character ?? "");
+      const v = characterView(this.ws, this.layer, id);
+      const design = this.sheetDesign(id);
+      return { book: { title: v.name, subtitle: "Character sheet", chapters: [], index: [], credits: [] }, names: {}, pageSize, sheet: paperSheet(v, opts.sheetLayout ?? design.layout) };
+    }
     if (opts.type === "printshop") {
       const want = opts.pieces ?? { kind: "cards" as PieceKind, items: [] };
       const pieces: Piece[] = [];
@@ -477,6 +497,82 @@ export class Editing {
     type E = BookData["book"]["chapters"][number]["entries"][number];
     const flat = (list: E[], depth: number): { id: Id; title: string; depth: number }[] => list.flatMap((e) => [{ id: e.node, title: e.title, depth }, ...flat(e.variants, depth + 1)]);
     return all.book.chapters.map((c) => ({ id: c.id, title: c.title, entries: flat(c.entries, 0) }));
+  }
+
+  // ---------- The sheet designer ----------
+
+  /** Saved sheet layouts in the Codex, the default first. */
+  sheetLayouts(): { id: Id; name: string; isDefault: boolean; own: boolean }[] {
+    return this.ws
+      .list(this.layer, "layout")
+      .filter((n) => this.ws.resolve(this.layer, n.id)!.fields.layoutKind === "sheet")
+      .map((n) => ({ id: n.id, name: n.name, isDefault: this.ws.resolve(this.layer, n.id)!.fields.isDefault === true, own: this.ws.owner(this.layer, n.id) === this.layer }))
+      .sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.name.localeCompare(b.name));
+  }
+
+  /** A character's groups and lines, the layout in force, and where that layout came from. */
+  sheetDesign(id: Id): SheetDesign {
+    const groups = sheetGroups(characterView(this.ws, this.layer, id));
+    const f = this.ws.resolve(this.layer, id)?.fields ?? {};
+    const stored = (nid: Id) => {
+      const x = this.ws.resolve(this.layer, nid)?.fields;
+      return x ? { groups: x.groups, unticked: x.unticked, hidden: x.hidden } : null;
+    };
+    let raw: unknown = null;
+    let source: SheetDesign["source"] = { kind: "default", name: null };
+    const used = typeof f.sheetUse === "object" && f.sheetUse && "link" in f.sheetUse ? String((f.sheetUse as { link: Id }).link) : null;
+    const system = this.sheetLayouts().find((l) => l.isDefault);
+    if (f.sheetLayout && typeof f.sheetLayout === "object" && !Array.isArray(f.sheetLayout)) {
+      raw = f.sheetLayout;
+      source = { kind: "own", name: null };
+    } else if (used && this.ws.get(this.layer, used)) {
+      raw = stored(used);
+      source = { kind: "codex", name: this.ws.get(this.layer, used)!.name };
+    } else if (system) {
+      raw = stored(system.id);
+      source = { kind: "system", name: system.name };
+    }
+    return { groups, layout: raw ? normalizeLayout(raw, groups) : defaultLayout(groups), source };
+  }
+
+  /** Keeps a layout as this character's own, or (null) goes back to the system's. */
+  setSheetLayout(id: Id, layout: SheetLayout | null) {
+    const n = this.must(id);
+    const groups = sheetGroups(characterView(this.ws, this.layer, id));
+    this.run(() =>
+      this.ws.transact(layout ? `Rearranged ${n.name}'s sheet` : `${n.name}'s sheet follows the system's layout again`, () => {
+        this.ws.setField(this.layer, id, "sheetLayout", layout ? (JSON.parse(JSON.stringify(normalizeLayout(layout, groups))) as Value) : undefined);
+        if (!layout) this.ws.setField(this.layer, id, "sheetUse", undefined);
+      }),
+    );
+  }
+
+  /** Uses a layout from the Codex (it keeps following it), or (null) the system's. */
+  useSheetLayout(id: Id, layoutId: Id | null) {
+    const n = this.must(id);
+    const l = layoutId ? this.must(layoutId) : null;
+    this.run(() =>
+      this.ws.transact(l ? `${n.name}'s sheet uses the layout ${l.name}` : `${n.name}'s sheet follows the system's layout again`, () => {
+        this.ws.setField(this.layer, id, "sheetLayout", undefined);
+        this.ws.setField(this.layer, id, "sheetUse", l ? link(l.id) : undefined);
+      }),
+    );
+  }
+
+  /** Keeps a layout in the Codex (Sheet layouts) so others can use it; optionally as everyone's default. */
+  saveSheetLayout(name: string, layout: SheetLayout, makeDefault: boolean): Id {
+    const n = cleanName(name);
+    const value = JSON.parse(JSON.stringify(layout)) as Record<string, Value>;
+    const existing = this.ws.list(this.layer, "layout").find((x) => x.name === n && this.ws.resolve(this.layer, x.id)!.fields.layoutKind === "sheet" && this.ws.owner(this.layer, x.id) === this.layer);
+    return this.run(() =>
+      this.ws.transact(`Saved the sheet layout ${n}`, () => {
+        const id = existing ? existing.id : this.ws.create(this.layer, "layout", n, { fields: { layoutKind: "sheet" } });
+        for (const k of ["groups", "unticked", "hidden"]) this.ws.setField(this.layer, id, k, value[k]);
+        if (makeDefault) for (const o of this.sheetLayouts()) if (o.own && o.id !== id && o.isDefault) this.ws.setField(this.layer, o.id, "isDefault", false);
+        this.ws.setField(this.layer, id, "isDefault", makeDefault ? true : existing ? (this.ws.resolve(this.layer, id)!.fields.isDefault === true) : false);
+        return id;
+      }),
+    );
   }
 
   /** Everything the print shop could print: the same things the rulebook holds, picked one by one. */
