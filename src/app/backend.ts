@@ -429,6 +429,7 @@ export const BACKEND_METHODS = [
   "setFirstTime",
   "makeSample",
   "bookContents",
+  "shopChoices",
   "saveBookLayout",
   "bookLayouts",
   "encounterTree",
@@ -2018,6 +2019,10 @@ export class Backend {
   /** Everything a book could hold, for the book designer's tick list. */
   bookContents(opts: BookRequest) {
     return this.editing.bookContents(opts);
+  }
+  /** Everything the print shop could print, grouped like the rulebook's chapters. */
+  shopChoices() {
+    return this.editing.shopChoices();
   }
   book(opts: BookRequest): BookData {
     const data = this.editing.book(opts);

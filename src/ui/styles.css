@@ -1176,3 +1176,6 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .book-pick .check { font-size: 13px; }
 .book-chapters li { display: flex; align-items: center; gap: 6px; }
 .book-chapters li .link { margin-left: auto; }
+
+/* Print shop: the small "how many copies" box beside a ticked thing. */
+.count-input { width: 4.5em; padding: 2px 6px; }

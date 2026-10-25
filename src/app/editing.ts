@@ -479,6 +479,11 @@ export class Editing {
     return all.book.chapters.map((c) => ({ id: c.id, title: c.title, entries: flat(c.entries, 0) }));
   }
 
+  /** Everything the print shop could print: the same things the rulebook holds, picked one by one. */
+  shopChoices() {
+    return this.bookContents({ type: "everything" }).filter((c) => c.entries.length);
+  }
+
   // ---------- History ----------
 
   history(): HistoryView {

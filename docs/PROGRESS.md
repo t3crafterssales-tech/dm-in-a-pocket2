@@ -37,9 +37,12 @@ Newest first. Every session reads this after `CLAUDE.md`.
 - **Built, waiting for Jeff to test:** Version 2.5, players join on their own screens.
 - **Built, waiting for Jeff to test:** Version 2.6 part 1: the welcome screen, sample valley, tour,
   first steps checklist, tips, Help (?), and the book designer in the Rulebook tab.
-- **Next (stopped here October 22 to save Jeff's usage):** the print shop (its back end is in
-  `src/app/printshop.ts` and `book()` type "printshop"; the page layout and the screen to pick
-  pieces are not written yet), then the sheet designer.
+- **Built, waiting for Jeff to test (October 25):** the print shop screen. In the Rulebook tab, pick
+  "Print shop" in the Book list: choose standees, round tokens, cards or initiative tent cards, tick
+  what to print, set how many copies of each and the inches per square, see the pages, then Save as PDF
+  or Print.
+- **Next:** the sheet designer (groups to drag and resize, the print ticks panel, layouts saved in
+  the Codex). Nothing from versions 3, 4 or 5 is being built.
 
 ## Milestones to first playable
 
@@ -1015,3 +1018,4 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-22: Dice roller designed as a standalone section in docs/design.md, not tied to any version yet. Covers: 20 bad-roller problems and fixes, custom dice creator (color/pattern/opacity/material), AI-generated dice sets, universal formula codex with tags and import, shared table mode, full roll history, pinned roll buttons on any node (live target dropdown), conditional math, roll triggers linked to conditions, persistent counters, probability display, roll annotation, roll request from DM to player, colorblind-friendly mode, community formula packs, TV table mode. Will be slotted into a version when the time is right.
 - 2026-10-22: Dice roller physics, tray and triggered animations designed and written into docs/design.md. Physics: throw strength, gravity, friction, bounciness. Trays: wood, felt, marble, none, custom — each with own sound and physics profile. Visual: animation toggle, tray resize, dice transparency, dice size, lighting and shadow. Triggered animations and sounds per formula: critical hit, critical miss, max damage, min damage, custom number, importable audio files.
 - 2026-10-22: Vision statement updated: app is an organized notebook and sketchbook with AI help, not a virtual tabletop. Foundry VTT export added to version 6: one button exports a completed world/system as an installable Foundry package, feeding Foundry users rather than competing with them. Session recap template added to journal section: DM-filled structured template after each session, no automatic tracking.
+- 2026-10-25: The print shop's pick screen lives in the Rulebook tab as one more choice in the Book list, so it shares the preview, PDF and Print buttons. Its list of printable things reuses the rulebook's contents list (`shopChoices`), and looking at it writes nothing to history. Copies are capped at 50 per thing and the square size is kept between half an inch and two inches.

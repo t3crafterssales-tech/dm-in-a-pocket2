@@ -32,8 +32,14 @@ export async function rulebookPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement
     void ctx.refresh();
   };
 
-  const typeSelect = h("select", { class: "text-input", "aria-label": "Book" }, types.map((t) => h("option", { value: t.id, selected: t.id === req.type }, t.title)));
+  const typeSelect = h(
+    "select",
+    { class: "text-input", "aria-label": "Book" },
+    types.map((t) => h("option", { value: t.id, selected: t.id === req.type }, t.title)),
+    h("option", { value: "printshop", selected: req.type === "printshop" }, "Print shop (standees, tokens, cards)"),
+  );
   typeSelect.addEventListener("change", () => update({ type: typeSelect.value as BookRequest["type"], chapters: undefined }));
+  if (req.type === "printshop") return printShopPanels(ctx, req, typeSelect, update);
   const chapterList = h(
     "ul",
     { class: "book-chapters" },
@@ -255,4 +261,112 @@ async function chooseContents(req: BookRequest, update: (patch: Partial<BookRequ
       "Use these",
     ),
   );
+}
+
+// ---------- The print shop (version 2.6) ----------
+
+const SHOP_KINDS: { id: "standees" | "tokens" | "cards" | "initiative"; title: string; help: string }[] = [
+  { id: "standees", title: "Fold-over standees", help: "Cut out, fold in half and stand on the table. Sized to each creature." },
+  { id: "tokens", title: "Round tokens", help: "Cut out circles for the battle map, one square wide, two for Large and so on." },
+  { id: "cards", title: "Cards", help: "Spells, items, monsters and conditions on small cards for the table." },
+  { id: "initiative", title: "Initiative tent cards", help: "A name and the key numbers on both sides, so everyone sees who is up." },
+];
+
+const shopFind = new Map<string, string>();
+
+async function printShopPanels(ctx: PlaceCtx, req: BookRequest, typeSelect: HTMLSelectElement, update: (patch: Partial<BookRequest>) => void): Promise<{ list: HTMLElement; editor: HTMLElement }> {
+  const pieces = (req.pieces ??= { kind: "tokens", items: [], inch: 1 });
+  const set = (patch: Partial<NonNullable<BookRequest["pieces"]>>) => update({ pieces: { ...pieces, ...patch } });
+  const groups = (await attempt(() => api.shopChoices())) ?? [];
+  const counts = new Map(pieces.items.map((i) => [i.id, i.count]));
+  const find = shopFind.get(ctx.view.id) ?? "";
+  const words = find.toLowerCase().split(/\s+/).filter(Boolean);
+  const match = (t: string) => words.every((w) => t.toLowerCase().includes(w));
+  const shown = groups.map((c) => ({ ...c, entries: c.entries.filter((e) => match(e.title) || match(c.title)) })).filter((c) => c.entries.length);
+  const ids = (list: { id: string }[]) => list.map((e) => e.id);
+  const pick = (on: string[], off: string[]) => {
+    const keep = pieces.items.filter((i) => !off.includes(i.id) && !on.includes(i.id));
+    const added = on.map((id) => ({ id, count: counts.get(id) ?? 1 }));
+    set({ items: [...keep, ...added] });
+  };
+
+  const kind = h("select", { class: "text-input", "aria-label": "What to print" }, SHOP_KINDS.map((k) => h("option", { value: k.id, selected: k.id === pieces.kind }, k.title)));
+  kind.addEventListener("change", () => set({ kind: kind.value as typeof pieces.kind }));
+  const inch = h("input", { class: "text-input", type: "number", min: 0.5, max: 2, step: 0.25, value: String(pieces.inch ?? 1), "aria-label": "Inches per square" });
+  inch.addEventListener("change", () => set({ inch: Math.min(2, Math.max(0.5, Number(inch.value) || 1)) }));
+  const search = h("input", { class: "text-input", type: "search", value: find, placeholder: "Find…", "aria-label": "Find" });
+  search.addEventListener("change", () => {
+    shopFind.set(ctx.view.id, search.value);
+    void ctx.refresh();
+  });
+  const size = h("select", { class: "text-input" }, h("option", { value: "Letter", selected: req.pageSize !== "A4" }, "Letter (8.5 × 11 in)"), h("option", { value: "A4", selected: req.pageSize === "A4" }, "A4"));
+  size.addEventListener("change", () => update({ pageSize: size.value as "Letter" | "A4" }));
+
+  const tickList = h(
+    "div",
+    { class: "book-pick" },
+    shown.map((c) =>
+      h(
+        "div",
+        { class: "book-pick-chapter" },
+        h("div", { class: "inline" }, h("strong", null, c.title), h("span", { class: "grow" }), h("button", { class: "link small", onClick: () => pick(ids(c.entries), []) }, "All"), h("button", { class: "link small", onClick: () => pick([], ids(c.entries)) }, "None")),
+        c.entries.map((e) => {
+          const on = counts.has(e.id);
+          const box = h("input", { type: "checkbox", checked: on });
+          box.addEventListener("change", () => (box.checked ? pick([e.id], []) : pick([], [e.id])));
+          const n = h("input", { class: "text-input count-input", type: "number", min: 1, max: 50, value: String(counts.get(e.id) ?? 1), "aria-label": `How many ${e.title}` });
+          n.addEventListener("change", () => set({ items: pieces.items.map((i) => (i.id === e.id ? { ...i, count: Math.min(50, Math.max(1, Math.round(Number(n.value)) || 1)) } : i)) }));
+          return h("div", { class: "inline", style: `margin-left:${e.depth * 18}px` }, h("label", { class: "check grow" }, box, e.title), on ? n : null);
+        }),
+      ),
+    ),
+  );
+
+  const save = h("button", { class: "button primary" }, "Save as PDF…");
+  save.addEventListener("click", async () => {
+    save.disabled = true;
+    const r = await window.dm.bookPdf(req);
+    save.disabled = false;
+    if (!r.ok) return notice(r.message, "red");
+    if (r.value) notice(`Saved ${String(r.value).split(/[\\/]/).pop()}.`, "green", { label: "Open it", run: () => void window.dm.openPdf(String(r.value)) }, 9000);
+  });
+  const print = h("button", { class: "button plain" }, "Print…");
+  print.addEventListener("click", async () => {
+    const r = await window.dm.bookPrint(req);
+    if (!r.ok) notice(r.message, "red");
+  });
+  const total = pieces.items.reduce((n, i) => n + i.count, 0);
+  const help = SHOP_KINDS.find((k) => k.id === pieces.kind)?.help ?? "";
+
+  const list = h(
+    "aside",
+    { class: "panel list-panel book-options", "aria-label": "Print shop", "data-scroll": "book-options" },
+    h("div", { class: "panel-head" }, "Print shop"),
+    h(
+      "div",
+      { class: "pad" },
+      h("label", { class: "field-label" }, "Book"),
+      typeSelect,
+      h("label", { class: "field-label spaced" }, "Print"),
+      kind,
+      h("p", { class: "muted small" }, help),
+      pieces.kind === "cards" ? null : h("label", { class: "field-label spaced" }, "Inches per square"),
+      pieces.kind === "cards" ? null : inch,
+      h("label", { class: "field-label spaced" }, "Pick what to print"),
+      h("div", { class: "inline spaced" }, search, h("button", { class: "button plain small-button", onClick: () => pick(ids(shown.flatMap((c) => c.entries)), []) }, "Select all"), h("button", { class: "button plain small-button", onClick: () => pick([], ids(shown.flatMap((c) => c.entries))) }, "Unselect all")),
+      groups.length ? tickList : h("p", { class: "muted small" }, "Nothing to print yet. Make a monster, an item or a rule first."),
+      h("p", { class: "muted small" }, total ? `${total} piece${total === 1 ? "" : "s"} picked. Tick a thing, then say how many copies.` : "Tick the things to print, then say how many copies of each."),
+      h("label", { class: "field-label spaced" }, "Page size"),
+      size,
+      h("div", { class: "book-actions" }, save, print),
+    ),
+  );
+
+  const pagesNote = h("span", { class: "muted small" }, "");
+  const frame = h("iframe", { class: "book-frame", src: "book.html", title: "Print shop preview" });
+  const data = await attempt(() => api.book(req));
+  frame.addEventListener("load", () => frame.contentWindow?.postMessage({ type: "book", data, zoom: 0.62 }, "*"));
+  current = { frame, note: pagesNote };
+  const editor = h("section", { class: "panel editor book-preview" }, h("div", { class: "panel-head" }, "Preview", pagesNote, h("span", { class: "muted small head-count" }, "Exactly what prints. Cut along the edges.")), frame);
+  return { list, editor };
 }
