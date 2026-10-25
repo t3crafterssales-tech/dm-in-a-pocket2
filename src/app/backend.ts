@@ -68,7 +68,7 @@ import { search } from "./search.ts";
 import type { SearchHit } from "./search.ts";
 import type { ModelChoice } from "./ai/models.ts";
 import { CAREFUL, QUICK, dollars } from "./ai/models.ts";
-import { type Layout, allPresets, cleanLayout, cleanPresetName } from "./layout.ts";
+import { type Layout, type RecentThing, type Where, WHERE_MAX, allPresets, cleanLayout, cleanPresetName, pushRecent } from "./layout.ts";
 import type { Place } from "./settings.ts";
 import { whenLabel } from "./words.ts";
 import { toPlain } from "../engine/richtext.ts";
@@ -516,6 +516,10 @@ export const BACKEND_METHODS = [
   "setAutoPictures",
   "setAutoCodex",
   "layoutState",
+  "noteRecent",
+  "recentThings",
+  "rememberWhere",
+  "whereWas",
   "setLayout",
   "saveLayoutPreset",
   "applyLayoutPreset",
@@ -843,6 +847,31 @@ export class Backend {
   setAutoPictures(on: boolean): SettingsView {
     this.settingsFile.update((s) => (s.autoPictures = on === true));
     return this.settings();
+  }
+
+  /** Notes that something was opened, for the Recent list. */
+  noteRecent(item: Omit<RecentThing, "at">): RecentThing[] {
+    this.settingsFile.update((s) => (s.recent = pushRecent(s.recent, { ...item, at: this.opts.timers?.now() ?? Date.now() })));
+    return this.settingsFile.data.recent;
+  }
+
+  recentThings(): RecentThing[] {
+    return this.settingsFile.data.recent;
+  }
+
+  /** Remembers the tab and sheet a place was left on, so it reopens there. */
+  rememberWhere(placeId: string, w: Where): void {
+    const cur = this.settingsFile.data.where[placeId];
+    if (cur && cur.tab === w.tab && cur.node === w.node) return;
+    this.settingsFile.update((s) => {
+      delete s.where[placeId];
+      s.where[placeId] = { tab: w.tab, node: w.node };
+      for (const k of Object.keys(s.where).slice(0, Math.max(0, Object.keys(s.where).length - WHERE_MAX))) delete s.where[k];
+    });
+  }
+
+  whereWas(placeId: string): Where | null {
+    return this.settingsFile.data.where[placeId] ?? null;
   }
 
   /** The panel arrangement and every preset, built in and the user's own (version 3). */

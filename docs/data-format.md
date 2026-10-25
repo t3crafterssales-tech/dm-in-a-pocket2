@@ -302,3 +302,5 @@ A node's one text box can now carry formatting. No field was added: a formatted 
 ## Panel layout (version 3)
 
 How the panels are arranged is kept in the app's own settings file on this computer (not in any world file, so sharing a world never moves someone else's panels): `layout` (side width in pixels, whether the side column, flags and AI panel are folded, and the position and size of any panel floated as its own window) and `layoutPresets` (the user's named arrangements). The four built-in presets (Builder, Game night, Writer, Dual monitor) are in the code. Damaged values fall back to the default.
+
+The same settings file also keeps `recent` (the last 10 things opened: place, sheet, name, tab) and `where` (the tab and sheet each world or system was left on, up to 100). Both are for the screen only and are never part of a world file.

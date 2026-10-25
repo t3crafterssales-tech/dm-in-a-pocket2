@@ -19,6 +19,8 @@ export const ICONS = {
   undo: icon(`<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>`),
   redo: icon(`<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>`),
   pencil: icon(`<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/>`),
+  back: icon(`<path d="M10 6l-6 6 6 6M4 12h16"/>`),
+  forward: icon(`<path d="M14 6l6 6-6 6M20 12H4"/>`),
   chevron: icon(`<path d="M9 6l6 6-6 6"/>`),
   clock: icon(`<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`),
   star: icon(`<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/>`),

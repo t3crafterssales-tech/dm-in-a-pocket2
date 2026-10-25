@@ -10,7 +10,7 @@ import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
 import { aiSettings } from "./ai-panel.ts";
-import { becameReadOnly, current, leavePlace, openPlace, redrawForPlayers, renderPlace } from "./place.ts";
+import { becameReadOnly, current, leavePlace, openAt, openPlace, redrawForPlayers, renderPlace } from "./place.ts";
 import { pulseFromPlayer } from "./tools/map-tool.ts";
 import { drawSteps, maybeWelcome, setWelcomeHost, showHelp } from "./welcome.ts";
 import { applyLook } from "./look.ts";
@@ -57,6 +57,18 @@ async function showHome(highlight?: string, glow?: string) {
   void drawSteps();
 }
 
+async function recentRow(home: HomeData): Promise<HTMLElement | null> {
+  const known = new Set([...home.systems, ...home.worlds, ...home.modules].map((p) => p.id));
+  const items = ((await attempt(() => api.recentThings())) ?? []).filter((r) => known.has(r.placeId)).slice(0, 6);
+  if (!items.length) return null;
+  return h(
+    "section",
+    { class: "shelf recent-row", "aria-label": "Pick up where you left off" },
+    h("div", { class: "shelf-head" }, h("div", null, h("h2", null, "Pick up where you left off"), h("p", { class: "muted" }, "The last things you opened. One click takes you straight back."))),
+    h("div", { class: "recent-chips" }, items.map((r) => h("button", { class: "recent-chip", title: `${r.name} in ${r.placeName}`, onClick: () => void openAt({ type: r.placeType, id: r.placeId }, r.nodeId, r.placeName) }, h("strong", null, r.name), h("span", { class: "muted small" }, `${r.tab} · ${r.placeName}`)))),
+  );
+}
+
 function renderHome(home: HomeData, highlight?: string) {
   const canCreateWorld = home.systems.length > 0;
   const top = h(
@@ -100,7 +112,9 @@ function renderHome(home: HomeData, highlight?: string) {
     canCreateModule ? "No modules yet. Make an adventure with New module." : "No modules yet. Create a system first; a module is built on a world or a system.",
   );
 
-  app.replaceChildren(top, h("main", { class: "home" }, systems, worlds, modules), h("footer", { class: "home-footer" }, "Main folder: ", h("button", { class: "link", title: "Show in File Explorer", onClick: () => void window.dm.showFolder() }, home.folder)));
+  const main = h("main", { class: "home" }, systems, worlds, modules);
+  app.replaceChildren(top, main, h("footer", { class: "home-footer" }, "Main folder: ", h("button", { class: "link", title: "Show in File Explorer", onClick: () => void window.dm.showFolder() }, home.folder)));
+  void recentRow(home).then((row) => row && main.isConnected && main.prepend(row));
   if (highlight) (app.querySelector(`[data-id="${CSS.escape(highlight)}"]`) as HTMLElement | null)?.focus();
 }
 
@@ -326,8 +340,8 @@ async function newSystem(home: HomeData) {
   );
 }
 
-async function newWorld(home: HomeData) {
-  const state = { name: "", picture: null as string | null, systemId: "" };
+async function newWorld(home: HomeData, systemId = "") {
+  const state = { name: "", picture: null as string | null, systemId };
   const d = wizard(
     "New world",
     [
@@ -713,4 +727,9 @@ async function start() {
 }
 
 nav.home = showHome;
+nav.newWorldWith = async (systemId) => {
+  await showHome();
+  const home = await attempt(() => api.home());
+  if (home) void newWorld(home, systemId);
+};
 void start();

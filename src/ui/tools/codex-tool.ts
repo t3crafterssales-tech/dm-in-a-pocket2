@@ -6,6 +6,6 @@ import type { PlaceCtx } from "../place.ts";
 import type { DeskCtx } from "./registry.ts";
 
 export async function codexTool(ctx: DeskCtx): Promise<HTMLElement> {
-  const place: PlaceCtx = { view: ctx.view, selected: null, select: () => {}, refresh: ctx.refresh, open: async (id) => void (await ctx.peek(id)) };
+  const place: PlaceCtx = { view: ctx.view, selected: null, select: () => {}, refresh: ctx.refresh, go: () => {}, open: async (id) => void (await ctx.peek(id)) };
   return codexPanel(place);
 }

@@ -29,6 +29,7 @@ import { changelogCard } from "./changelog-card.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 import { arrange, layoutDialog, loadLayout } from "./layout.ts";
+import { Trail } from "../app/trail.ts";
 import { focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
 
@@ -47,6 +48,34 @@ let tab: Tab = "Rules";
 let tableMode = false;
 /** The node open in the editor, per tab. */
 const selected: Partial<Record<Tab, string | null>> = {};
+/** Where the person has been in this place, for Back and Forward. It moves the view only. */
+const trail = new Trail();
+
+/** Back or forward one step along the trail. Never an undo: nothing in the work changes. */
+async function walk(dir: "back" | "forward") {
+  if (!current || tableMode) return;
+  for (;;) {
+    const spot = dir === "back" ? trail.back() : trail.forward();
+    if (!spot) return void notice(dir === "back" ? "Nowhere further back." : "Nowhere further forward.", "blue", undefined, 2000);
+    if (spot.sel && !(await attempt(() => api.node(spot.sel!)))) {
+      trail.drop(spot.sel);
+      continue;
+    }
+    if (!tabsOf(current).includes(spot.tab as Tab)) continue;
+    tab = spot.tab as Tab;
+    selected[tab] = spot.sel;
+    if (!spot.sel && (tab === "Beings" || tab === "Items")) startOver();
+    return void (await renderPlace());
+  }
+}
+
+/** Open a place on the tab and sheet it was left on, if they are still there. */
+async function resume(view: PlaceView) {
+  const w = await attempt(() => api.whereWas(view.id));
+  if (!w || !tabsOf(view).includes(w.tab as Tab)) return;
+  tab = w.tab as Tab;
+  if (w.node && (await attempt(() => api.node(w.node!)))) selected[tab] = w.node;
+}
 
 export interface PlaceCtx {
   view: PlaceView;
@@ -54,6 +83,8 @@ export interface PlaceCtx {
   select: (id: string | null) => void;
   /** Redraws after a change. */
   refresh: () => Promise<void>;
+  /** Goes to a tab, on its start screen. */
+  go: (tab: string) => void;
   /** Opens anything by its id, switching to the tab it lives in. */
   open: (id: string, opts?: { focusName?: boolean }) => Promise<void>;
 }
@@ -87,6 +118,14 @@ async function openNode(id: string, opts: { focusName?: boolean } = {}) {
   await renderPlace();
 }
 
+function goTab(t: string) {
+  if (!current || !tabsOf(current).includes(t as Tab)) return;
+  tab = t as Tab;
+  selected[tab] = null;
+  if (tab === "Beings" || tab === "Items") startOver();
+  void renderPlace();
+}
+
 /** "+ New": the start screen, "What do you want to make?". */
 function newThing() {
   if (!current) return;
@@ -116,9 +155,17 @@ export async function openPlace(place: Place, mode: "normal" | "read-only" | "ta
   tableMode = false;
   search = null;
   for (const t of TABS) selected[t] = null;
+  trail.reset();
+  await resume(res.view);
   await renderPlace();
   if (res.view.recovered) notice("Recovered after an unexpected close.", "blue", undefined, 0);
   if (then === "quickstart") await showQuickStart(() => renderPlace());
+}
+
+/** Opens a place and goes straight to something in it (the Home screen's Recent row). */
+export async function openAt(place: Place, nodeId: string, name?: string) {
+  await openPlace(place, "normal", name);
+  if (current && current.id === place.id) await openNode(nodeId);
 }
 
 export function leavePlace() {
@@ -180,6 +227,7 @@ async function draw() {
       void renderPlace();
     },
     refresh: () => renderPlace(),
+    go: (t) => goTab(t),
     open: (id, opts) => openNode(id, opts),
   };
   const isWorld = view.type === "world";
@@ -201,6 +249,8 @@ async function draw() {
       view.readOnly ? null : h("button", { class: "button primary new-button", title: "Make something new: a weapon, a monster, a spell…", onClick: () => newThing() }, svg(ICONS.plus), "New"),
       iconButton(ICONS.dice, "DM's table", () => ((tableMode = true), void renderPlace()), { title: "The DM's table: run a game night with initiative, dice, the clock, the journal and more" }),
       iconButton(ICONS.layout, "Layout", () => void layoutDialog(() => void renderPlace()), { iconOnly: true, title: "Panel layout: Builder, Game night, Writer, Dual monitor, or your own" }),
+      iconButton(ICONS.back, "Back", () => void walk("back"), { iconOnly: true, title: "Back to where you were (Alt+Left). This only moves your view; it never undoes anything.", disabled: !trail.canBack }),
+      iconButton(ICONS.forward, "Forward", () => void walk("forward"), { iconOnly: true, title: "Forward again (Alt+Right)", disabled: !trail.canForward }),
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
       iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
@@ -229,13 +279,21 @@ async function draw() {
   const selectedName = ctx.selected ? ((await api.node(ctx.selected).catch(() => null))?.name ?? null) : null;
   const ai = await aiPanel(ctx, selectedName);
   if (current !== view) return; // went home while loading
+  // Remember where this is: for Back and Forward, for Recent, and for reopening here next time.
+  trail.record({ tab, sel: ctx.selected });
+  void attempt(() => api.rememberWhere(view.id, { tab, node: ctx.selected }));
+  if (ctx.selected && selectedName && lastNoted !== `${view.id}:${ctx.selected}`) {
+    lastNoted = `${view.id}:${ctx.selected}`;
+    void attempt(() => api.noteRecent({ placeType: view.type, placeId: view.id, placeName: view.name, nodeId: ctx.selected!, name: selectedName, tab }));
+  }
+  const crumbs = breadcrumb(view, selectedName, ctx);
 
   // Two columns: what you're making in the middle, the Codex (or the tab's list) on the right with
   // the flag strip at its foot.
   list.classList.add("side-list");
   await loadLayout();
   const { workspace, ai: aiFrame } = arrange({ editor, codex: list, flags, ai, refresh: () => void renderPlace() });
-  app.replaceChildren(top, ...(banner ? [banner] : []), ...(changes ? [changes] : []), workspace, ...(aiFrame ? [aiFrame] : []));
+  app.replaceChildren(top, crumbs, ...(banner ? [banner] : []), ...(changes ? [changes] : []), workspace, ...(aiFrame ? [aiFrame] : []));
   void drawPins(view, { open: (x) => void openNode(x) });
   void drawSteps();
   void tipOnce(tab);
@@ -255,6 +313,27 @@ async function draw() {
     el?.focus();
     if (caret !== null && (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && el.type !== "number") el.setSelectionRange(caret, caret);
   }
+}
+
+let lastNoted = "";
+
+/** "Home › Greyhollow › Beings › Goblin": every part but the last takes you there. */
+function breadcrumb(view: PlaceView, sheetName: string | null, ctx: PlaceCtx): HTMLElement {
+  const link = (text: string, run: () => void, title: string) => h("button", { class: "crumb-link", title, onClick: run }, text);
+  const sep = () => h("span", { class: "crumb-sep", "aria-hidden": "true" }, "›");
+  const parts: (HTMLElement | string)[] = [link("Home", () => void goHome(), "Back to the home screen")];
+  const first = tabsOf(view)[0]!;
+  parts.push(sep(), tab === first && !ctx.selected ? h("span", { class: "crumb-here" }, view.name) : link(view.name, () => ((tab = first), (selected[tab] = null), void renderPlace()), `Go to ${view.name}'s ${first} tab`));
+  parts.push(sep(), ctx.selected ? link(tab, () => ((selected[tab] = null), tab === "Beings" || tab === "Items" ? startOver() : null, void renderPlace()), `Back to the ${tab} start`) : h("span", { class: "crumb-here" }, tab));
+  if (ctx.selected && sheetName) parts.push(sep(), h("span", { class: "crumb-here", "aria-current": "page" }, sheetName));
+  const canMake = !view.readOnly && ctx.selected && (tab === "Beings" || tab === "Items");
+  return h(
+    "nav",
+    { class: "crumbs", "aria-label": "You are here" },
+    parts,
+    h("span", { class: "spacer" }),
+    canMake ? h("button", { class: "button plain small-button", title: `Back to "What do you want to make?" in ${tab}`, onClick: () => newThing() }, svg(ICONS.plus), "Start something new") : null,
+  );
 }
 
 function comingSoon(t: Tab, view: PlaceView) {
@@ -299,9 +378,20 @@ function searchBox(): HTMLElement {
     selected[tab] = hit.id;
     void renderPlace();
   };
+  /** What was opened lately in this place, shown when the box is empty. */
+  let recents: SearchHit[] = [];
+  const loadRecents = async () => {
+    const all = (await attempt(() => api.recentThings())) ?? [];
+    recents = all.filter((r) => r.placeId === current?.id).map((r) => ({ id: r.nodeId, name: r.name, what: "Recent", tab: r.tab as SearchHit["tab"], snippet: null }));
+  };
   const show = () => {
     const q = input.value.trim();
-    list.hidden = q.length < 2;
+    if (q.length < 2) {
+      list.hidden = !recents.length || !!q;
+      list.replaceChildren(h("p", { class: "muted small pad" }, "Recent"), ...recents.map((hit) => h("button", { class: "search-hit", role: "option", onMousedown: (e: MouseEvent) => (e.preventDefault(), go(hit)) }, h("span", { class: "search-name" }, hit.name), h("span", { class: "muted small" }, ` ${hit.tab}`))));
+      return;
+    }
+    list.hidden = false;
     list.replaceChildren(
       ...(hits.length
         ? hits.map((hit, i) =>
@@ -330,7 +420,7 @@ function searchBox(): HTMLElement {
       show();
     })();
   });
-  input.addEventListener("focus", () => input.value.trim().length >= 2 && show());
+  input.addEventListener("focus", () => void loadRecents().then(() => show()));
   input.addEventListener("blur", () => setTimeout(() => (list.hidden = true), 150));
   input.addEventListener("keydown", (e) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -374,6 +464,20 @@ document.addEventListener("mouseover", (e) => {
   hovered = (e.target as HTMLElement).closest?.<HTMLElement>("[data-node]")?.dataset.node ?? null;
 });
 
+// Back and Forward from the keyboard (Alt+Left and Alt+Right) and from a mouse's side buttons.
+document.addEventListener("keydown", (e) => {
+  if (!current || document.querySelector(".overlay") || !e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    e.preventDefault();
+    void walk(e.key === "ArrowLeft" ? "back" : "forward");
+  }
+});
+document.addEventListener("mouseup", (e) => {
+  if (!current || document.querySelector(".overlay") || (e.button !== 3 && e.button !== 4)) return;
+  e.preventDefault();
+  void walk(e.button === 3 ? "back" : "forward");
+});
+
 document.addEventListener("keydown", (e) => {
   if (!current || document.querySelector(".overlay")) return;
   if (e.key === "?" && !typingIn(e) && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -415,7 +519,7 @@ document.addEventListener("keydown", (e) => {
     // Ctrl+Shift+D is a separate copy (your own copy that goes its own way).
     e.preventDefault();
     const id = hovered ?? (tab === "Beings" || tab === "Items" ? (selected[tab] ?? null) : null);
-    const ctx: PlaceCtx = { view: current, selected: selected[tab] ?? null, select: (x) => ((selected[tab] = x), void renderPlace()), refresh: () => renderPlace(), open: (x, o) => openNode(x, o) };
+    const ctx: PlaceCtx = { view: current, selected: selected[tab] ?? null, select: (x) => ((selected[tab] = x), void renderPlace()), refresh: () => renderPlace(), go: (t) => goTab(t), open: (x, o) => openNode(x, o) };
     if (!id) notice(`Point at something in the Codex, or open a sheet, then press ${e.shiftKey ? "Ctrl+Shift+D to make your own copy" : "Ctrl+D to make a variant"} of it.`, "blue", undefined, 5000);
     else if (e.shiftKey) void separateCopy(id, ctx);
     else void variantOf(id, ctx);

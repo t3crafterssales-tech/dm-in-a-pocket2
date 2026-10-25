@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { Id } from "../engine/index.ts";
 import { atomicWrite } from "../storage/index.ts";
-import { type Layout, cleanLayout, cleanPresetName, defaultLayout } from "./layout.ts";
+import { type Layout, type RecentThing, type Where, cleanLayout, cleanPresetName, cleanRecent, cleanWhere, defaultLayout } from "./layout.ts";
 import { textSizeFor, themeFor } from "./themes.ts";
 
 export interface Place {
@@ -54,10 +54,13 @@ export interface Settings {
   /** How the panels are arranged, and the arrangements the user saved (version 3). Screen only. */
   layout: Layout;
   layoutPresets: Record<string, Layout>;
+  /** The last things opened, and where each world or system was left (navigation stage 1). Screen only. */
+  recent: RecentThing[];
+  where: Record<string, Where>;
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, autoCodex: true, layout: defaultLayout(), layoutPresets: {} };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, autoCodex: true, layout: defaultLayout(), layoutPresets: {}, recent: [], where: {} };
 }
 
 export class SettingsFile {
@@ -95,6 +98,8 @@ export class SettingsFile {
         textSize: textSizeFor(raw.textSize),
         autoPictures: raw.autoPictures !== false,
         autoCodex: raw.autoCodex !== false,
+        recent: cleanRecent(raw.recent),
+        where: cleanWhere(raw.where),
         layout: cleanLayout(raw.layout),
         layoutPresets: Object.fromEntries(Object.entries(raw.layoutPresets && typeof raw.layoutPresets === "object" ? raw.layoutPresets : {}).flatMap(([k, v]) => { const n = cleanPresetName(k); return n ? [[n, cleanLayout(v)]] : []; })),
       };

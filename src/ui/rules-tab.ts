@@ -14,6 +14,8 @@ import type { Link, Value } from "./fields.ts";
 import { openEditSystem } from "./edit-system.ts";
 import { offerRestore } from "./flag-panel.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
+import { whatNext } from "./what-next.ts";
+import { nav } from "./common.ts";
 import type { PlaceCtx } from "./place.ts";
 import { richBox, richView } from "./rich-box.ts";
 
@@ -34,7 +36,7 @@ export async function rulesPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement; e
   }
   return {
     list: listPanel(sections ?? [], ctx),
-    editor: editorPanel(view, choices ?? { abilities: [], conditions: [], resources: [] }, moveTo ?? [], ctx),
+    editor: editorPanel(view, sections ?? [], choices ?? { abilities: [], conditions: [], resources: [] }, moveTo ?? [], ctx),
   };
 }
 
@@ -153,20 +155,30 @@ async function remove(id: string, ctx: PlaceCtx) {
 
 const KIND_NAMES: Record<string, string> = { ability: "Ability", resource: "Resource", skill: "Skill", condition: "Condition", rule: "Rule" };
 
-function editorPanel(view: NodeView | null, choices: Choices, moveTo: { key: string; title: string }[], ctx: PlaceCtx) {
-  if (!view)
+function editorPanel(view: NodeView | null, sections: RulesSection[], choices: Choices, moveTo: { key: string; title: string }[], ctx: PlaceCtx) {
+  if (!view) {
+    const rules = sections.flatMap((s) => s.nodes);
+    const isSystem = ctx.view.type === "system";
+    const ro = ctx.view.readOnly;
+    // The six questions only make sense on a system that has almost nothing in it yet.
+    const barely = !ro && isSystem && rules.length <= 5;
     return h(
       "section",
       { class: "panel editor" },
-      h(
-        "div",
-        { class: "empty-editor" },
-        h("h2", null, ctx.view.name),
-        h("p", { class: "muted" }, "Pick a rule on the left to open it, or press + beside a section to add one."),
-        h("p", { class: "muted small" }, "Nothing here is required: every rule starts with sensible defaults, and you can build in any order."),
-        !ctx.view.readOnly && ctx.view.type === "system" ? h("button", { class: "button plain", title: "Six big questions that set up the basics", onClick: () => void showQuickStart(() => ctx.refresh()) }, "Quick start…") : null,
+      whatNext(
+        rules.length ? "Where do you want to start?" : `${ctx.view.name} is empty`,
+        rules.length ? `${ctx.view.name} already has its rules. Pick where to begin; you can build in any order and change anything later.` : "Press + beside a section on the right to add your first rule, or let the app build the basics for you.",
+        [
+          { icon: "📖", title: "Look through the rules", blurb: "Open the first rule and see how it works. Everything can be changed.", run: () => rules[0] && ctx.select(rules[0].id), disabled: !rules.length },
+          { icon: "🐉", title: "Make a monster or item", blurb: "Build something on top of these rules.", run: () => ctx.go("Beings") },
+          isSystem
+            ? { icon: "🌍", title: "Make a world with it", blurb: "Give these rules a setting: places, people and history.", run: () => void nav.newWorldWith(ctx.view.id), disabled: ro }
+            : { icon: "📜", title: "Write about your world", blurb: "Places, factions and lore pages.", run: () => ctx.go("Lore") },
+        ],
+        [barely ? h("button", { class: "button plain", title: "Six questions that build the basic rules for you", onClick: () => void showQuickStart(() => ctx.refresh()) }, "Build the basics for me…") : null],
       ),
     );
+  }
   const ro = view.readOnly;
   const ed = new FieldMaker(view, ctx);
   const isCore = view.kind === "rule" && view.sectionKey === "core";

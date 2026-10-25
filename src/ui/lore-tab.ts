@@ -3,6 +3,7 @@
 
 import type { LoreSection, NodeView } from "../app/backend.ts";
 import { api } from "./api.ts";
+import { whatNext } from "./what-next.ts";
 import { attempt } from "./common.ts";
 import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -113,7 +114,16 @@ async function createNew(kind: string, ctx: PlaceCtx) {
 }
 
 function emptyEditor(ctx: PlaceCtx) {
-  return h("section", { class: "panel editor" }, h("div", { class: "empty-editor" }, h("h2", null, ctx.view.name), h("p", { class: "muted" }, "Lore pages, places and factions, pages that appear only in a rulebook (a foreword, How to play), and roll tables. Press + beside a section to add one.")));
+  const ro = ctx.view.readOnly;
+  return h(
+    "section",
+    { class: "panel editor" },
+    whatNext("What next?", "Lore pages, places and factions, pages that appear only in a rulebook (a foreword, How to play), and roll tables. Pick one to start, or press + beside a section on the right.", [
+      { icon: "🏰", title: "A place", blurb: "A town, a dungeon, a forest.", run: () => void createNew("place", ctx), disabled: ro },
+      { icon: "⚑", title: "A faction", blurb: "A guild, a cult, a kingdom.", run: () => void createNew("faction", ctx), disabled: ro },
+      { icon: "📜", title: "A lore page", blurb: "History, a myth, a rule of the world.", run: () => void createNew("page", ctx), disabled: ro },
+    ]),
+  );
 }
 
 function head(view: NodeView, ed: FieldMaker, ctx: PlaceCtx, kindLabel: string) {

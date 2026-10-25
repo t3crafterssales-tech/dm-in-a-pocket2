@@ -46,3 +46,16 @@ test("the Codex follows your work unless switched off in settings", () => {
   assert.equal(backend.setAutoCodex(false).autoCodex, false);
   assert.equal(backend.setAutoCodex(true).autoCodex, true);
 });
+
+test("Recent keeps ten things with no repeats, and each place remembers where you left it", () => {
+  const backend = makeBackend();
+  for (let i = 0; i < 12; i++) backend.noteRecent({ placeType: "world", placeId: "w", placeName: "W", nodeId: `n${i}`, name: `N${i}`, tab: "Beings" });
+  backend.noteRecent({ placeType: "world", placeId: "w", placeName: "W", nodeId: "n5", name: "N5", tab: "Beings" });
+  const r = backend.recentThings();
+  assert.equal(r.length, 10);
+  assert.equal(r[0]!.nodeId, "n5");
+  assert.equal(r.filter((x) => x.nodeId === "n5").length, 1);
+  assert.equal(backend.whereWas("w"), null);
+  backend.rememberWhere("w", { tab: "Items", node: "abc" });
+  assert.deepEqual(backend.whereWas("w"), { tab: "Items", node: "abc" });
+});

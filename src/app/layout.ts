@@ -56,6 +56,51 @@ export function cleanLayout(raw: unknown): Layout {
   return { sideWidth: num(r.sideWidth, SIDE_MIN, SIDE_MAX, d.sideWidth), sideFolded: r.sideFolded === true, flagsFolded: r.flagsFolded === true, aiFolded: r.aiFolded === true, floating };
 }
 
+/** Something the person opened lately, so Recent can take them straight back (navigation stage 1). */
+export interface RecentThing {
+  placeType: "world" | "system" | "module";
+  placeId: string;
+  placeName: string;
+  nodeId: string;
+  name: string;
+  tab: string;
+  at: number;
+}
+
+export const RECENT_MAX = 10;
+export const WHERE_MAX = 100;
+
+export function cleanRecent(raw: unknown): RecentThing[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RecentThing[] = [];
+  for (const r of raw as Partial<RecentThing>[]) {
+    if (!r || typeof r !== "object") continue;
+    if (!(r.placeType === "world" || r.placeType === "system" || r.placeType === "module")) continue;
+    if (typeof r.placeId !== "string" || typeof r.nodeId !== "string" || typeof r.name !== "string" || typeof r.tab !== "string") continue;
+    out.push({ placeType: r.placeType, placeId: r.placeId, placeName: typeof r.placeName === "string" ? r.placeName.slice(0, 120) : "", nodeId: r.nodeId, name: r.name.slice(0, 200), tab: r.tab.slice(0, 20), at: typeof r.at === "number" ? r.at : 0 });
+  }
+  return out.slice(0, RECENT_MAX);
+}
+
+/** Puts one thing at the top of the list, with no repeats. */
+export function pushRecent(list: RecentThing[], item: RecentThing): RecentThing[] {
+  return [item, ...list.filter((r) => !(r.placeId === item.placeId && r.nodeId === item.nodeId))].slice(0, RECENT_MAX);
+}
+
+export interface Where {
+  tab: string;
+  node: string | null;
+}
+
+export function cleanWhere(raw: unknown): Record<string, Where> {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, Where> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, Partial<Where>>).slice(-WHERE_MAX)) {
+    if (v && typeof v.tab === "string") out[k] = { tab: v.tab.slice(0, 20), node: typeof v.node === "string" ? v.node : null };
+  }
+  return out;
+}
+
 export function cleanPresetName(name: unknown): string | null {
   if (typeof name !== "string") return null;
   const n = name.replace(/\s+/g, " ").trim().slice(0, 40);

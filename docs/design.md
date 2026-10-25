@@ -1152,7 +1152,7 @@ drag in and resize come in a later version.
 - **An index and contents are made automatically**; a tick decides whether they print.
 - Book selections and front pages can be saved to the Codex and reused, like anything else.
 
-### Navigation and flow pass (Jeff, October 25, 2026) — DRAFT, nothing built yet
+### Navigation and flow pass (Jeff, October 25, 2026) — stage 1 built, the rest is still a draft
 
 Jeff likes version 2 as it is. Before versions 4 and 5, this pass makes the program feel less clunky to move around in. It adds no new game features. **This is a draft for Jeff to mark up; nothing below is built until he approves it.** Anything that changes how the app looks or works stops and asks him first (CLAUDE.md, Part 9).
 
@@ -1231,6 +1231,10 @@ Jeff likes version 2 as it is. Before versions 4 and 5, this pass makes the prog
 - **Bigger click targets and clearer focus outlines.**
 - **Confirm only what cannot be undone;** everything else just happens with an Undo.
 - **A "Why is this greyed out?" hover** on every disabled button.
+
+### Stage 1 built (October 25) — for Jeff to test
+
+Back and Forward buttons (and Alt+Left, Alt+Right, mouse side buttons); the breadcrumb line with a "Start something new" button on Beings and Items sheets; the Recent list (in the search box when it is empty, and a "Pick up where you left off" row on the Home screen); each world and system reopens on the tab and sheet it was left on; the "Where do you want to start?" screen on Rules and "What next?" on Lore; "Quick start" renamed "Build the basics for me…" and shown only on a system with five rules or fewer. Not yet built: brick boxes, windows and tray, the left-hand hotkeys, journal handles, command palette, right-click menus, multi-select bar and the polish items.
 
 ### Suggested order to build (Jeff to approve)
 

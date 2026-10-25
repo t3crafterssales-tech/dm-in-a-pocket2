@@ -1343,3 +1343,21 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .divider-btn { top: 50%; transform: translateY(-50%); }
 .preset-pick { white-space: normal; min-width: 0; height: auto; }
 .preset-pick .muted { white-space: normal; }
+
+/* Navigation stage 1: the breadcrumb line */
+.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; padding: 6px 16px; border-bottom: 1px solid var(--line); font-size: 0.9em; }
+.crumb-link { border: none; background: none; padding: 2px 4px; border-radius: 4px; color: var(--accent); cursor: pointer; font: inherit; }
+.crumb-link:hover, .crumb-link:focus-visible { background: var(--accent-soft); text-decoration: underline; }
+.crumb-sep { color: color-mix(in srgb, var(--ink) 45%, transparent); }
+.crumb-here { font-weight: 600; padding: 2px 4px; }
+.crumbs .spacer { flex: 1; }
+.recent-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.recent-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); cursor: pointer; text-align: left; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.recent-chip:hover, .recent-chip:focus-visible { border-color: var(--accent); }
+.what-next { max-width: 760px; margin: 8vh auto 0; padding: 0 24px; text-align: center; }
+.what-next h2 { font-size: 26px; margin-bottom: 8px; }
+.next-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 18px 0 12px; }
+.next-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; box-shadow: 0 2px 4px rgb(0 0 0 / 0.1); }
+.next-card:hover:not(:disabled), .next-card:focus-visible { border-color: var(--accent); box-shadow: 0 4px 10px rgb(0 0 0 / 0.14); }
+.next-card:disabled { opacity: 0.55; cursor: default; }
+.next-icon { font-size: 28px; line-height: 1; }

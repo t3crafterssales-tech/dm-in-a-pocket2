@@ -11,6 +11,8 @@ export const app = document.getElementById("app")!;
 /** Moving between screens, filled in by the screens themselves (so they needn't import each other). */
 export const nav = {
   home: async (_highlight?: string) => {},
+  /** Goes to the home screen and opens "New world" with this system already picked. */
+  newWorldWith: async (_systemId: string) => {},
 };
 
 // One logo for the whole app, moved between screens, so a redraw never cuts its glow short.
