@@ -13,7 +13,7 @@ import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
 import { openEditParent } from "./edit-parent.ts";
 import { DRAG_TYPE, drop } from "./library-panel.ts";
-import { showCodexSection } from "./codex-panel.ts";
+import { codexLink, showCodexSection } from "./codex-panel.ts";
 import { addSelect, chips, parseCost, stepper, weightIn, weightText } from "./pickers.ts";
 import type { PlaceCtx } from "./place.ts";
 import { brickCard, removeNode } from "./sheets-tab.ts";
@@ -242,7 +242,7 @@ function moreBody(view: NodeView, categories: CategoryOption[], quick: QuickView
         (bySection.get(s) ?? []).map((a) => brickCard(view, a, ctx)),
         locked
           ? (bySection.get(s)?.length ? null : h("p", { class: "muted small" }, "Nothing here."))
-          : h("div", { class: "drop-zone" }, `Drag ${s === "Enchantments" ? "an enchantment" : s === "Attacks" ? "an attack" : "a brick"} here from the Codex, or `, h("button", { class: "link", onClick: () => (showCodexSection(codexFor[s] ?? null), void ctx.refresh()) }, "pick one")),
+          : h("div", { class: "drop-zone" }, `Drag ${s === "Enchantments" ? "an enchantment" : s === "Attacks" ? "an attack" : "a brick"} here from the Codex, or `, codexLink(codexFor[s] ?? null, ctx)),
       ),
     ),
     h("div", { class: "more-section" }, h("div", { class: "section-h" }, "Filed under"), category, quick.pattern !== "gear" ? null : h("p", { class: "muted small" }, "Filing it under Weapon or Armour gives it that sheet's pickers.")),

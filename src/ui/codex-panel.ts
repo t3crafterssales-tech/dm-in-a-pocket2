@@ -3,6 +3,7 @@
 // them; drag them onto another section (or use Move to) to refile them.
 
 import type { CodexEntry, CodexKey, CodexSection } from "../app/backend.ts";
+import { CODEX_SECTIONS } from "../app/codex-lists.ts";
 import { api } from "./api.ts";
 import { attempt } from "./common.ts";
 import { notice } from "./dialogs.ts";
@@ -26,6 +27,12 @@ let anchor: string | null = null;
 export function showCodexSection(key: CodexKey | null) {
   if (state.open !== key) state.find = "";
   state.open = key;
+}
+
+/** A clear link that opens the Codex on the right to the kind of bricks that can go here ("Open Traits and features in the Codex"). */
+export function codexLink(key: CodexKey | null, ctx: PlaceCtx): HTMLElement {
+  const title = key ? CODEX_SECTIONS.find((c) => c.key === key)?.title : null;
+  return h("button", { class: "link codex-link", title: "Opens the Codex on the right so you can drag or pick from it", onClick: () => (showCodexSection(key), void ctx.refresh()) }, title ? `open ${title} in the Codex` : "open the Codex", " →");
 }
 
 export function codexOpen(): CodexKey | null {

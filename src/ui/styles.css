@@ -1210,3 +1210,6 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .hide-switch { white-space: nowrap; }
 @media (max-width: 900px) { .designer-body { flex-direction: column; } .print-panel { flex: 1 1 auto; max-width: none; width: 100%; } }
 .dialog .book-frame { display: block; width: 100%; height: 68vh; border: 0; }
+
+/* "open Traits and features in the Codex →": a link that is easy to see and says what it opens. */
+.codex-link { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }

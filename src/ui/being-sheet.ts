@@ -11,7 +11,7 @@ import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
-import { showCodexSection } from "./codex-panel.ts";
+import { codexLink, showCodexSection } from "./codex-panel.ts";
 import { description, ownCopy, printsBox, sheetFrame, variantOf } from "./item-sheet.ts";
 import { chips, stepper } from "./pickers.ts";
 import type { PlaceCtx } from "./place.ts";
@@ -108,7 +108,7 @@ export async function beingSheet(view: NodeView, categories: CategoryOption[], c
         (bySection.get(s) ?? []).map((a) => brickCard(view, a, ctx)),
         locked || s === "Choices"
           ? null
-          : h("div", { class: "drop-zone" }, "Drag from the Codex, or ", h("button", { class: "link", onClick: () => (showCodexSection(CODEX_FOR[s] ?? null), void ctx.refresh()) }, "pick one")),
+          : h("div", { class: "drop-zone" }, "Drag from the Codex, or ", codexLink(CODEX_FOR[s] ?? null, ctx)),
       ),
     ),
   );
@@ -169,7 +169,7 @@ function choicesHint(view: NodeView, locked: boolean, ctx: PlaceCtx): HTMLElemen
   return h(
     "div",
     { class: "choices-hint" },
-    h("p", { class: "muted small" }, "A Choices box lets a player pick from a few options when they take this, such as one fighting style from Archery, Defense or Dueling. Make the box, then drag the options onto it from the Codex."),
+    h("p", { class: "muted small" }, "A Choices box lets a player pick from a few options when they take this, such as one fighting style from Archery, Defense or Dueling. Make the box, then drag the options onto it from the Codex, or ", codexLink("traits", ctx), "."),
     locked ? null : h("button", { class: "button plain small-button", onClick: () => void addChoice(view, ctx) }, svg(ICONS.plus), "Add a choice"),
   );
 }
