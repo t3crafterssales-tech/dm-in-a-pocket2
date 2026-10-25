@@ -13,6 +13,7 @@ import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
+import { aiOn, draftWithAi } from "./ai-panel.ts";
 import { codexLink, showCodexSection } from "./codex-panel.ts";
 import { description, ownCopy, printsBox, sheetFrame, variantOf } from "./item-sheet.ts";
 import { chips, stepper } from "./pickers.ts";
@@ -154,6 +155,7 @@ export async function beingSheet(view: NodeView, categories: CategoryOption[], c
         ? null
         : [
             h("button", { class: "button plain", onClick: () => void ownCopy(view, ctx) }, "Make another like it"),
+            aiOn() ? h("button", { class: "button plain", title: "Describe a variant and let the AI draft a few to pick from", onClick: () => draftWithAi(ctx, `Make a variant of ${view.name} that is `, "selected") }, svg(ICONS.spark), "Draft a variant with AI…") : null,
             h("button", { class: "button plain", title: kind === "class" ? "A subclass that keeps following this class (Ctrl+D)" : "A child copy that keeps following this one (Ctrl+D)", onClick: () => void variantOf(view.id, ctx) }, kind === "class" ? "Make a subclass" : kind === "race" ? "Make a subrace" : "Make a variant"),
           ],
     view.readOnly ? null : h("button", { class: "button plain danger-text", onClick: () => void removeNode(view.id, ctx) }, svg(ICONS.trash), "Delete"),

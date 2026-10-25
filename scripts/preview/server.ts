@@ -25,10 +25,13 @@ async function bundle() {
 await bundle();
 
 const listeners = new Set<(e: BackendEvent) => void>();
+let previewKey: string | null = null;
 const backend = new Backend({
   settingsPath: join(folder, "settings.json"),
   defaultFolder: join(folder, "DM in a Pocket"),
   machine: "preview",
+  // A pretend key store, so the AI buttons can be looked at (nothing is sent anywhere).
+  secrets: { read: () => previewKey, write: (k) => (previewKey = k) },
   emit: (e) => listeners.forEach((fn) => fn(e)),
   pickPicture: async () => null,
   pickFolder: async () => null,

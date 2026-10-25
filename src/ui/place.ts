@@ -29,6 +29,7 @@ import { changelogCard } from "./changelog-card.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 import { arrange, layoutDialog, loadLayout } from "./layout.ts";
+import { aiOn, draftWithAi, noteAi } from "./ai-panel.ts";
 import { Trail } from "../app/trail.ts";
 import { focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
@@ -230,6 +231,8 @@ async function draw() {
     go: (t) => goTab(t),
     open: (id, opts) => openNode(id, opts),
   };
+  noteAi(await attempt(() => api.aiStatus()));
+  const draftStart: Partial<Record<Tab, string>> = { Rules: "Create a rule for this game: ", Beings: "Create a monster that fits this world: ", Items: "Create an item that fits this world: ", Lore: "Create a place, faction or lore page that fits this world: " };
   const isWorld = view.type === "world";
   const tabs = h(
     "nav",
@@ -247,6 +250,7 @@ async function draw() {
       "nav",
       { class: "top-actions" },
       view.readOnly ? null : h("button", { class: "button primary new-button", title: "Make something new: a weapon, a monster, a spell…", onClick: () => newThing() }, svg(ICONS.plus), "New"),
+      aiOn() && !view.readOnly && draftStart[tab] ? iconButton(ICONS.spark, "Draft with AI", () => draftWithAi(ctx, draftStart[tab]!), { title: "Describe what you want and let the AI draft it for you to preview. Nothing is made until you accept." }) : null,
       iconButton(ICONS.dice, "DM's table", () => ((tableMode = true), void renderPlace()), { title: "The DM's table: run a game night with initiative, dice, the clock, the journal and more" }),
       iconButton(ICONS.layout, "Layout", () => void layoutDialog(() => void renderPlace()), { iconOnly: true, title: "Panel layout: Builder, Game night, Writer, Dual monitor, or your own" }),
       iconButton(ICONS.back, "Back", () => void walk("back"), { iconOnly: true, title: "Back to where you were (Alt+Left). This only moves your view; it never undoes anything.", disabled: !trail.canBack }),

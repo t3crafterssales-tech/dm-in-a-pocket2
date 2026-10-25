@@ -129,9 +129,10 @@ const GENERATE_STEPS: { title: string; instruction: string }[] = [
   { title: "Resources and conditions", instruction: "Make the resources (hit points and anything like it; kind resources) and the conditions (kind conditions)." },
   { title: "Skills", instruction: "Make the skills (kind skills), each with the ability it uses (value ability, a link to the ability)." },
   { title: "Rules of play", instruction: "Write the main rules of play: combat, magic or powers if any, advancement, time and rest, money (kinds combat, magic, advancement, time, currency), a short text each." },
+  { title: "Races and peoples", instruction: "Make the races or peoples of this world (kind being, being_kind race): the ones the idea names or implies, each with a short description in the tone of the idea, and the values and ability bonuses that fit this game's own abilities. Add classes (being_kind class) only if the idea or the game calls for them." },
   { title: "Monsters and characters", instruction: "Make about ten monsters and a few characters of the world (kind being), with hit points, armour, speed, challenge and a short description, and attack bricks where they fit." },
   { title: "Equipment", instruction: "Make about fifteen items (kind item): weapons with attack bricks, armour, and useful gear, with costs that make sense against each other, filed in fitting categories." },
-  { title: "Lore", instruction: "Make a few lore pages, places and factions (kind lore) that set the scene." },
+  { title: "Places and lore", instruction: "Make one or two starter places (kind lore, lore_template place) and a few lore pages or factions (kind lore) that set the scene and match the tone of the idea." },
 ];
 
 export function buildStart(s: Session, kind: "document" | "generate", input: { name?: string; text?: string; prompt?: string }): AiView {

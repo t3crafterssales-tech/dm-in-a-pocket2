@@ -504,7 +504,7 @@ test("whole-system generation runs section by section; Stop ends it, and each se
   const s = setup();
   s.backend.setAiKey("sk-ant-api03-abcdefghijklmnop1234");
   const v = s.backend.aiGenerate("A cyberpunk game with a d6 dice pool");
-  assert.deepEqual([v.build!.total, v.build!.next], [7, "The core check and abilities"]);
+  assert.deepEqual([v.build!.total, v.build!.next], [8, "The core check and abilities"]);
   s.backend.setAiOptions({ threshold: 0 });
   const r = await s.backend.aiBuildNext();
   assert.equal(r.status, "estimate");

@@ -13,6 +13,7 @@ import { openEditSystem } from "./edit-system.ts";
 import { h, svg } from "./dom.ts";
 import { FieldMaker } from "./fields.ts";
 import { ICONS } from "./icons.ts";
+import { aiOn, draftWithAi } from "./ai-panel.ts";
 import { openEditParent } from "./edit-parent.ts";
 import { DRAG_TYPE, drop } from "./library-panel.ts";
 import { codexLink, showCodexSection } from "./codex-panel.ts";
@@ -121,6 +122,7 @@ export async function itemSheet(view: NodeView, categories: CategoryOption[], _c
         ? null
         : [
             h("button", { class: "button plain", title: "A new copy of this one that goes its own way", onClick: () => void ownCopy(view, ctx) }, "Make another like it"),
+            aiOn() ? h("button", { class: "button plain", title: "Describe a variant and let the AI draft a few to pick from", onClick: () => draftWithAi(ctx, `Make a variant of ${view.name} that is `, "selected") }, svg(ICONS.spark), "Draft a variant with AI…") : null,
             h("button", { class: "button plain", title: "A child copy that keeps following this one (Ctrl+D)", onClick: () => void variantOf(view.id, ctx) }, "Make a variant"),
           ],
     view.readOnly ? null : h("button", { class: "button plain danger-text", title: "It goes to the recycle bin", onClick: () => void removeNode(view.id, ctx) }, svg(ICONS.trash), "Delete"),

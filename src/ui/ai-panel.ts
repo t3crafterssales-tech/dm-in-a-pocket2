@@ -31,9 +31,36 @@ const stateFor = (id: string) => {
   return s;
 };
 
+let hasKey = false;
+
+/** Whether the AI is switched on (a key is saved). With no key, the "draft with AI" buttons stay hidden. */
+export const aiOn = () => hasKey;
+export function noteAi(status: AiStatus | null | undefined) {
+  hasKey = !!status?.hasKey;
+}
+
+/**
+ * "If you can build it by hand, the AI can draft it": opens the AI panel with the start of a
+ * request already written, for the person to finish. Nothing is sent until they press Ask.
+ */
+export function draftWithAi(ctx: PlaceCtx, startsWith: string, about: "world" | "selected" = "world") {
+  const st = stateFor(ctx.view.id);
+  st.open = true;
+  st.draft = startsWith;
+  st.whole = about === "world";
+  void ctx.refresh().then(() => {
+    const box = document.querySelector<HTMLInputElement>('[data-key="ai-prompt"]');
+    if (box && !box.disabled) {
+      box.focus();
+      box.setSelectionRange(box.value.length, box.value.length);
+    }
+  });
+}
+
 export async function aiPanel(ctx: PlaceCtx, selectedName: string | null): Promise<HTMLElement> {
   const st = stateFor(ctx.view.id);
   const status = await attempt(() => api.aiStatus());
+  noteAi(status);
   const view = st.open ? await attempt(() => api.aiView()) : null;
   const place = ctx.view.type;
   const target = !st.whole && ctx.selected && selectedName ? { id: ctx.selected, name: selectedName } : null;
@@ -308,7 +335,7 @@ function showGenerate(ctx: PlaceCtx, st: PanelState) {
   const d = openDialog("Generate a whole system");
   const idea = h("textarea", { class: "text-input notes-box", rows: 4, placeholder: "For example: a cyberpunk game where hackers and street samurai roll pools of d6s, gritty and fast" });
   d.body.append(
-    h("p", { class: "muted" }, "Describe the game in a sentence or two. The AI builds it in seven sections (the core check and abilities, resources and conditions, skills, rules of play, monsters, equipment, lore). You see each section and its cost before anything changes, and you can stop at any point."),
+    h("p", { class: "muted" }, "Describe the game in a sentence or two. The AI builds it in eight sections (the core check and abilities, resources and conditions, skills, rules of play, races, monsters, equipment, places and lore). You see each section and its cost before anything changes, and you can stop at any point."),
     idea,
   );
   d.footer.replaceChildren(

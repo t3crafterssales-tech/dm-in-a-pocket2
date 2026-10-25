@@ -6,7 +6,9 @@ import type { CodexEntry, CodexKey, CodexSection } from "../app/backend.ts";
 import { api } from "./api.ts";
 import { attempt } from "./common.ts";
 import { notice } from "./dialogs.ts";
-import { h } from "./dom.ts";
+import { h, svg } from "./dom.ts";
+import { ICONS } from "./icons.ts";
+import { aiOn, draftWithAi } from "./ai-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 import { askText } from "./pickers.ts";
 
@@ -59,6 +61,7 @@ function tiles(sections: CodexSection[], ctx: PlaceCtx): HTMLElement {
         return h("button", { class: "tile", disabled: ro, onClick: () => ((picking = t.key), (find = ""), void ctx.refresh()) }, h("span", { class: "tile-icon", "aria-hidden": "true" }, s?.icon ?? "📦"), h("b", null, t.title), h("span", null, t.hint));
       }),
     ),
+    aiOn() && !ro ? h("p", null, h("button", { class: "button plain", title: "Describe it and let the AI draft a few versions to pick from", onClick: () => draftWithAi(ctx, "Create a monster that fits this world: ") }, svg(ICONS.spark), "Or describe it and let the AI draft it…")) : null,
     recent.length
       ? h(
           "div",
