@@ -1179,3 +1179,34 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 
 /* Print shop: the small "how many copies" box beside a ticked thing. */
 .count-input { width: 4.5em; padding: 2px 6px; }
+
+/* The character sheet in groups (the sheet designer): the same layout on screen as on paper. */
+.sheet-grid { container-type: inline-size; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.sheet-cell { grid-column: span var(--span, 12); min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+@container (max-width: 560px) { .sheet-cell { grid-column: 1 / -1; } }
+
+.designer .designer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; border-block: 1px solid var(--border, #444); }
+.designer-body { display: flex; gap: 16px; align-items: flex-start; padding: 16px; }
+.designer-grid { flex: 1; min-width: 0; container-type: inline-size; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
+.designer-card { position: relative; grid-column: span var(--span, 6); min-height: 96px; border: 1px solid var(--border, #555); border-radius: 8px; padding: 8px 14px 8px 10px; background: var(--panel-2, rgba(255, 255, 255, 0.04)); cursor: grab; }
+.designer-card.dragging { opacity: 0.4; }
+.designer-card.drop-over { outline: 2px dashed var(--accent, #c9954a); outline-offset: 2px; }
+.designer-card-head { display: flex; align-items: center; gap: 4px; }
+.designer-grip { opacity: 0.6; }
+.designer-lines { margin: 6px 0 0; padding-left: 16px; font-size: 0.85em; }
+.designer-lines .off { text-decoration: line-through; opacity: 0.55; }
+.designer-width { position: absolute; right: 12px; bottom: 4px; }
+.designer-resize { position: absolute; top: 0; right: -2px; bottom: 0; width: 8px; cursor: ew-resize; border-radius: 4px; }
+.designer-resize:hover, .designer-resize:active { background: var(--accent, #c9954a); }
+@container (max-width: 560px) { .designer-card { grid-column: 1 / -1; } }
+
+.print-panel { flex: 0 0 280px; max-width: 40%; border: 1px solid var(--border, #555); border-radius: 8px; }
+.print-panel > summary { cursor: pointer; padding: 8px 12px; font-weight: 600; }
+.print-panel-body { padding: 0 12px 12px; max-height: 70vh; overflow-y: auto; }
+.print-groups, .print-lines { list-style: none; margin: 4px 0; padding: 0; }
+.print-group { margin-top: 8px; }
+.print-lines { padding-left: 18px; }
+.print-line { display: flex; align-items: center; gap: 6px; }
+.hide-switch { white-space: nowrap; }
+@media (max-width: 900px) { .designer-body { flex-direction: column; } .print-panel { flex: 1 1 auto; max-width: none; width: 100%; } }
+.dialog .book-frame { display: block; width: 100%; height: 68vh; border: 0; }

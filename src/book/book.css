@@ -94,3 +94,16 @@ body.preview #pages { zoom: var(--zoom, 0.7); }
 .tent-half.flip { transform: rotate(180deg); }
 .tent-name { font: 700 20pt Georgia, serif; }
 .tent-stats { font-size: 8pt; color: #6f665a; }
+
+/* A character's sheet: groups in twelve columns, always black on white whatever the theme. */
+.sheet .page-foot { visibility: hidden; }
+.sheet, .sheet * { color: #000; }
+.sheet-row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 7pt; margin-bottom: 7pt; align-items: start; }
+.sheet-group { grid-column: span var(--span); border: 1pt solid #000; border-radius: 3pt; padding: 4pt 6pt 5pt; break-inside: avoid; min-width: 0; }
+.sheet-group h3 { margin: 0 0 3pt; font-size: 8pt; text-transform: uppercase; letter-spacing: 1.2px; border-bottom: 0.5pt solid #000; padding-bottom: 2pt; }
+.sheet-line { margin-bottom: 3pt; }
+.sheet-label { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.6px; }
+.sheet-value { font-size: 10pt; line-height: 1.3; overflow-wrap: anywhere; }
+.sheet-name { font-size: 20pt; line-height: 1.1; }
+.sheet-pic { display: block; width: 100%; max-height: 2.2in; object-fit: cover; border: 0.5pt solid #000; }
+.sheet-box { height: calc(var(--rows, 1) * 15pt); border: 0.75pt solid #000; border-radius: 2pt; background: repeating-linear-gradient(to bottom, transparent 0, transparent 14pt, #999 14pt, #999 15pt); }

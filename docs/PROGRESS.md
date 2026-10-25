@@ -41,8 +41,18 @@ Newest first. Every session reads this after `CLAUDE.md`.
   "Print shop" in the Book list: choose standees, round tokens, cards or initiative tent cards, tick
   what to print, set how many copies of each and the inches per square, see the pages, then Save as PDF
   or Print.
-- **Next:** the sheet designer (groups to drag and resize, the print ticks panel, layouts saved in
-  the Codex). Nothing from versions 3, 4 or 5 is being built.
+- **Built, waiting for Jeff to test (October 25):** the sheet designer. On a character's sheet,
+  press "Design the sheet": groups (Name, Portrait, Combat, Abilities, Inventory, Trackers, Features,
+  Appearance, Notes) are cards to drag, or to make wider and narrower by their right edge (or the
+  small arrow buttons). A collapsible "What prints" panel has Check all and Uncheck all, an "Often
+  kept in pencil" list, and a tick for every line; unticked lines print blank to write in, with a
+  "hide" tick to leave them off the paper. Save this layout puts it in the Codex (and can make it the
+  default for the game or world); "Use the system's" goes back. The same layout draws the sheet on
+  screen. Preview, Print and Save as PDF work.
+- **Next:** build the Windows installer so Jeff can download and run it. Nothing from versions 3, 4
+  or 5 is being built.
+- **Not in the sheet designer yet:** skills, saving throws, attacks and spells groups. A character's
+  sheet doesn't carry those yet, so they appear when it does.
 
 ## Milestones to first playable
 
@@ -1019,3 +1029,7 @@ One plain line each. Jeff can overrule any of these at a milestone.
 - 2026-10-22: Dice roller physics, tray and triggered animations designed and written into docs/design.md. Physics: throw strength, gravity, friction, bounciness. Trays: wood, felt, marble, none, custom — each with own sound and physics profile. Visual: animation toggle, tray resize, dice transparency, dice size, lighting and shadow. Triggered animations and sounds per formula: critical hit, critical miss, max damage, min damage, custom number, importable audio files.
 - 2026-10-22: Vision statement updated: app is an organized notebook and sketchbook with AI help, not a virtual tabletop. Foundry VTT export added to version 6: one button exports a completed world/system as an installable Foundry package, feeding Foundry users rather than competing with them. Session recap template added to journal section: DM-filled structured template after each session, no automatic tracking.
 - 2026-10-25: The print shop's pick screen lives in the Rulebook tab as one more choice in the Book list, so it shares the preview, PDF and Print buttons. Its list of printable things reuses the rulebook's contents list (`shopChoices`), and looking at it writes nothing to history. Copies are capped at 50 per thing and the square size is kept between half an inch and two inches.
+- 2026-10-25: The sheet layout is plain data: the groups in order with a width out of twelve, plus the unticked and hidden line keys. It is stored as ordinary fields on a `layout` node (kind "sheet") in the Codex or on the character (`sheetLayout`, `sheetUse`), so no change to the saved-file format was needed beyond the notes added to docs/data-format.md.
+- 2026-10-25: Screen and paper use the same layout, and paper packs groups into rows of twelve the same way the screen grid places them, so they always match. The print ticks only change paper; on screen every value still shows.
+- 2026-10-25: Any stored layout is repaired to fit the character it is shown on (unknown groups dropped, new ones added at the end, widths kept between 3 and 12), so a layout from another game or an older file can never break a sheet.
+- 2026-10-25: Order of which layout applies: the character's own, then one picked from the Codex, then the default layout (marked in the Codex), then the plain layout. Each change is one undoable step.

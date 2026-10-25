@@ -138,6 +138,37 @@ export async function renderBook(data: BookData, opts: { preview?: boolean; zoom
     return 1;
   }
 
+  // A character's sheet (version 2.6): groups packed into rows of twelve columns, black on white.
+  if (data.sheet) {
+    newPage("sheet");
+    const picUrl = (id: string) => `${(window as unknown as { dmPicBase?: string }).dmPicBase ?? "dmpic://pic/"}${encodeURIComponent(id)}`;
+    if (!data.sheet.rows.length) place(el("p", "", "Everything on this sheet is switched off. Tick lines in the panel to print them."));
+    for (const r of data.sheet.rows) {
+      const row = el("div", "sheet-row");
+      for (const g of r) {
+        const box = el("div", "sheet-group");
+        box.style.setProperty("--span", String(g.span));
+        if (g.lines.length > 1 || g.id !== "portrait") box.appendChild(el("h3", "", g.title));
+        for (const l of g.lines) {
+          const ln = el("div", `sheet-line${l.blank ? " blank" : ""}`);
+          ln.style.setProperty("--rows", String(l.rows));
+          if (g.id !== "name" || l.label !== "Character") ln.appendChild(el("div", "sheet-label", l.label));
+          if (l.picture && !l.blank) {
+            const img = el("img", "sheet-pic");
+            img.src = picUrl(l.picture);
+            ln.appendChild(img);
+          } else if (l.blank) ln.appendChild(el("div", "sheet-box"));
+          else for (const v of l.values) ln.appendChild(el("div", g.id === "name" && l.label === "Character" ? "sheet-name" : "sheet-value", v));
+          box.appendChild(ln);
+        }
+        row.appendChild(box);
+      }
+      place(row);
+    }
+    await Promise.all([...document.images].map((img) => (img.complete ? null : new Promise((r) => ((img.onload = r), (img.onerror = r))))));
+    return pages.querySelectorAll(".page").length;
+  }
+
   // The print shop (version 2.6): paper pieces, laid out to fill each page.
   if (data.printshop) {
     const shop = data.printshop;

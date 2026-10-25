@@ -111,6 +111,8 @@ item. Besides `hp`, `ac`, `speed`, `level` and the `score_<ability id>` values e
 | `choices` | `{ <attachment id>: [links] }`: what was picked in each Choices box of the class or race. |
 | `gearPictures` | True to show gear pictures on the sheet and in print. |
 | `approved` | False while a character a player made waits for the DM's OK. |
+| `sheetLayout` | The player's own sheet layout (see Layouts below). Absent means "use the system's"; setting one makes it this character's own (the pencil mark). |
+| `sheetUse` | A link to a `layout` node of kind "sheet" the character follows. Cleared when the character gets its own `sheetLayout`. |
 | `conditions` | A list of `{ id, condition (link), left, unit ("rounds", "minutes", "hours", "save" or "removed"), counter, source }` on the character right now. |
 
 A tracker can also have `lasts`: minutes one lasts once used (a torch burns for 60), which starts a
@@ -121,6 +123,20 @@ A rule's `method` can also be "standard" (with `standardSet`, such as "15, 14, 1
 resource's `recovery` can also be "award": it comes back only when the DM awards it (Inspiration).
 A system can list extra character fields for everyone in a rule with `characterFields`: a list of
 `{ section, label }`. These are ordinary fields; older files without them still open.
+
+### Layouts (version 2, the sheet and book designers)
+
+A `layout` node lives in the Codex under Sheet and book layouts and has `layoutKind`:
+
+| `layoutKind` | Fields |
+| --- | --- |
+| "book" | `request`: the saved book choices (what goes in, front pages, contents and index). |
+| "sheet" | `groups`: a list of `{ id, span }`, in order, where `id` is a sheet group ("name", "portrait", "combat", "abilities", "inventory", "trackers", "features", "appearance", "notes" or "section:<name>") and `span` is its width in twelfths of the page (3 to 12). `unticked`: line keys that print blank to write in. `hidden`: among those, the ones left off the paper completely. `isDefault`: true on the one layout every character without their own follows. |
+
+Line keys are stable words such as "hp", "ac", "ability:<id>", "tracker:<id>" and "extra:<section>:<label>".
+A character's own `sheetLayout` holds the same `groups`, `unticked` and `hidden`. Whatever is stored,
+the program repairs it to fit the character it is shown on (unknown groups dropped, new ones added at
+the end), so older and shared files always open.
 
 ## The DM's table (version 2)
 

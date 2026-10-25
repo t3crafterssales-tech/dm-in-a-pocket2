@@ -3,7 +3,7 @@
 // game: its scores, the race's and class's features up to the character's level, the game's
 // trackers (Inspiration) and the player's own. Empty things are simply not shown.
 
-import type { CharacterView, RosterEntry, TrackerView } from "../app/backend.ts";
+import type { CharacterView, RosterEntry, SheetDesign, TrackerView } from "../app/backend.ts";
 import { api, pictureUrl } from "./api.ts";
 import { attempt } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
@@ -15,6 +15,7 @@ import { askText, stepper } from "./pickers.ts";
 import { openBuilder } from "./character-builder.ts";
 import type { PlaceCtx } from "./place.ts";
 import { playersSection } from "./players-panel.ts";
+import { designerPanel, isDesigning, startDesigning } from "./sheet-designer.ts";
 
 let side: "party" | "codex" = "party";
 /** Characters whose Appearance is folded open. */
@@ -24,7 +25,8 @@ export async function partyPanels(ctx: PlaceCtx): Promise<{ list: HTMLElement; e
   const list = (await attempt(() => api.roster())) ?? [];
   let view: CharacterView | null = null;
   if (ctx.selected && list.some((c) => c.id === ctx.selected)) view = (await attempt(() => api.characterView(ctx.selected!))) ?? null;
-  const editor = view ? sheet(view, ctx) : await overview(list, ctx);
+  const design = view ? ((await attempt(() => api.sheetDesign(view!.id))) ?? null) : null;
+  const editor = view ? (design && isDesigning(view.id) ? await designerPanel(view, design, ctx) : sheet(view, ctx, design)) : await overview(list, ctx);
   const switcher = h(
     "div",
     { class: "switch", role: "tablist", "aria-label": "Show" },
@@ -113,7 +115,7 @@ async function overview(list: RosterEntry[], ctx: PlaceCtx): Promise<HTMLElement
 
 // ---------- The character sheet ----------
 
-function sheet(v: CharacterView, ctx: PlaceCtx): HTMLElement {
+function sheet(v: CharacterView, ctx: PlaceCtx, design: SheetDesign | null): HTMLElement {
   const ro = ctx.view.readOnly;
   const save = async (fn: () => Promise<unknown>) => {
     if ((await attempt(fn)) !== undefined) await ctx.refresh();
@@ -133,15 +135,10 @@ function sheet(v: CharacterView, ctx: PlaceCtx): HTMLElement {
 
   const head = h(
     "div",
-    { class: "sheet-top" },
-    pic,
-    h(
-      "div",
-      { class: "sheet-top-text" },
-      name,
-      h("div", { class: "inline" }, h("span", { class: "muted small" }, "Played by"), player),
-      h("div", { class: "sheet-tags" }, h("span", { class: "tag accent" }, "🧙 Character"), h("span", { class: "tag" }, summary), v.approved ? null : h("span", { class: "tag warn" }, "Waiting for the DM's OK")),
-    ),
+    { class: "sheet-top-text" },
+    name,
+    h("div", { class: "inline" }, h("span", { class: "muted small" }, "Played by"), player),
+    h("div", { class: "sheet-tags" }, h("span", { class: "tag accent" }, "🧙 Character"), h("span", { class: "tag" }, summary), v.approved ? null : h("span", { class: "tag warn" }, "Waiting for the DM's OK")),
   );
 
   // Key numbers: hit points now and most, armour, speed, experience, money.
@@ -153,9 +150,9 @@ function sheet(v: CharacterView, ctx: PlaceCtx): HTMLElement {
     box("Hit points", h("div", { class: "inline" }, hpNow, h("span", { class: "muted" }, "of"), hpMax)),
     box("Armour", stepper(v.ac, (n) => void set("ac", n), { label: "Armour", key: "c-ac", disabled: ro })),
     box("Speed", textBox(v.speed, "30 ft.", ro, (t) => void set("speed", t))),
-    box("Experience", stepper(v.xp, (n) => void set("xp", n), { label: "Experience", key: "c-xp", step: 50, disabled: ro })),
-    box("Money", textBox(v.gold, "15 gp", ro, (t) => void set("gold", t))),
   );
+  const xpBox = h("div", { class: "char-numbers" }, box("Experience", stepper(v.xp, (n) => void set("xp", n), { label: "Experience", key: "c-xp", step: 50, disabled: ro })));
+  const moneyBox = h("div", { class: "char-numbers" }, box("Money", textBox(v.gold, "15 gp", ro, (t) => void set("gold", t))));
 
   const scores = v.scores.length
     ? h(
@@ -275,6 +272,7 @@ function sheet(v: CharacterView, ctx: PlaceCtx): HTMLElement {
         { class: "sheet-actions" },
         v.approved ? null : h("button", { class: "button primary", onClick: () => void set("approved", true) }, "Approve"),
         v.level < 20 ? h("button", { class: "button primary", onClick: () => void levelUp(v, ctx) }, "Level up") : null,
+        h("button", { class: "button plain", title: "Move the groups around and choose what prints", onClick: () => (startDesigning(v.id), void ctx.refresh()) }, "Design the sheet"),
         h(
           "button",
           {
@@ -295,7 +293,30 @@ function sheet(v: CharacterView, ctx: PlaceCtx): HTMLElement {
         ),
       );
 
-  return h("section", { class: "panel editor", "data-scroll": "character" }, h("div", { class: "sheet char-sheet" }, head, missing, numbers, scores, trackers, features, choices, gear, appearance, ...extras, actions));
+  // The groups, placed by the layout: the character's own, one from the Codex, the system's, or the plain one.
+  const cells = new Map<string, (HTMLElement | null)[]>([
+    ["portrait", [pic]],
+    ["name", [head, xpBox]],
+    ["combat", [numbers]],
+    ["abilities", [scores]],
+    ["inventory", [moneyBox, gear]],
+    ["trackers", [trackers]],
+    ["features", [features, choices]],
+    ["appearance", [appearance]],
+  ]);
+  sections.forEach((sec, i) => cells.set(sec === "Notes" ? "notes" : `section:${sec}`, [extras[i] ?? null]));
+  const placed = design?.layout.groups ?? [];
+  const order = [...placed, ...[...cells.keys()].filter((id) => !placed.some((g) => g.id === id)).map((id) => ({ id, span: 12 }))];
+  const grid = h(
+    "div",
+    { class: "sheet-grid" },
+    order.flatMap((g) => {
+      const parts = cells.get(g.id)?.filter((x): x is HTMLElement => !!x);
+      return parts?.length ? [h("div", { class: "sheet-cell", "data-group": g.id, style: `--span:${g.span}` }, ...parts)] : [];
+    }),
+  );
+
+  return h("section", { class: "panel editor", "data-scroll": "character" }, h("div", { class: "sheet char-sheet" }, missing, grid, actions));
 }
 
 function box(label: string, control: HTMLElement): HTMLElement {
