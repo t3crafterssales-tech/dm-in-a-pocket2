@@ -77,8 +77,8 @@ export interface RecycledInfo {
   modules?: { id: Id; name: string }[];
 }
 
-type LibraryDir = "Systems" | "Worlds" | "Modules" | "Imported" | "Backups" | "Snapshots" | ".pictures" | "Recycle bin";
-const LIBRARY_DIRS: LibraryDir[] = ["Systems", "Worlds", "Modules", "Imported", "Backups", "Snapshots", ".pictures", "Recycle bin"];
+type LibraryDir = "Systems" | "Worlds" | "Modules" | "Imported" | "Backups" | "Snapshots" | ".pictures" | "Recycle bin" | "Sounds";
+const LIBRARY_DIRS: LibraryDir[] = ["Systems", "Worlds", "Modules", "Imported", "Backups", "Snapshots", ".pictures", "Recycle bin", "Sounds"];
 
 /** An open world, or an open module (version 2), which works the same way. */
 export interface OpenWorld {
@@ -204,6 +204,54 @@ export class Library {
 
   writePictureIndex(index: Record<Id, unknown>) {
     atomicWrite(join(this.dir(".pictures"), "index.json"), Buffer.from(JSON.stringify(index, null, 1)));
+  }
+
+  // ---------- Sounds (version 3): the user's own files, in a folder they can open in Windows ----------
+
+  /** Every sound file in the Sounds folder and the folders inside it, as forward-slash paths. */
+  listSoundFiles(extensions: string[]): string[] {
+    const root = this.dir("Sounds");
+    const out: string[] = [];
+    const walk = (dir: string, prefix: string) => {
+      if (!existsSync(dir)) return;
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        if (e.name.startsWith(".")) continue;
+        if (e.isDirectory()) walk(join(dir, e.name), `${prefix}${e.name}/`);
+        else if (extensions.includes(extname(e.name).toLowerCase())) out.push(`${prefix}${e.name}`);
+      }
+    };
+    walk(root, "");
+    return out.sort((a, b) => a.localeCompare(b));
+  }
+
+  /** Copies a sound in under a free name and returns its path in the folder. */
+  addSoundFile(name: string, bytes: Buffer): string {
+    const clean = (basename(name.replace(/\\/g, "/")).replace(/[^\p{L}\p{N}._ ()-]/gu, "_").replace(/^\.+/, "") || "sound").slice(0, 120);
+    const ext = extname(clean);
+    const stem = clean.slice(0, clean.length - ext.length) || "sound";
+    let file = `${stem}${ext}`;
+    for (let n = 2; existsSync(join(this.dir("Sounds"), file)); n++) file = `${stem} ${n}${ext}`;
+    atomicWrite(join(this.dir("Sounds"), file), bytes);
+    return file;
+  }
+
+  readSound(path: string): Buffer | null {
+    const parts = path.split("/").filter((x) => x && x !== "." && x !== "..");
+    const full = join(this.dir("Sounds"), ...parts);
+    return parts.length && existsSync(full) && statSync(full).isFile() ? readFileSync(full) : null;
+  }
+
+  readSoundIndex(): Record<string, unknown> {
+    try {
+      const raw = JSON.parse(readFileSync(join(this.dir("Sounds"), "sounds.json"), "utf8")) as unknown;
+      return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  writeSoundIndex(index: Record<string, unknown>) {
+    atomicWrite(join(this.dir("Sounds"), "sounds.json"), Buffer.from(JSON.stringify(index, null, 1)));
   }
 
   readPicture(id: Id): Buffer | null {

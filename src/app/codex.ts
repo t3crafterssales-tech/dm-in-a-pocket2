@@ -97,7 +97,7 @@ export function sectionOfNode(ws: Workspace, layerId: Id, n: NodeRecord): CodexK
   if (n.kind === "map") return "maps";
   if (n.kind === "journal") return ws.resolve(layerId, n.id)?.fields.owner ? null : "journal";
   if (n.kind === "macro") return "macros";
-  if (n.kind === "layout") return "layouts";
+  if (n.kind === "layout") return ws.resolve(layerId, n.id)?.fields.layoutKind === "soundboard" ? null : "layouts";
   const f = ws.resolve(layerId, n.id)?.fields ?? {};
   if (n.kind === "item") return itemSection(ws, layerId, n);
   if (n.kind === "being") return BEING_SECTION[(typeof f[F.beingKind] === "string" ? f[F.beingKind] : "monster") as BeingKind] ?? "monsters";

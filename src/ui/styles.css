@@ -1263,3 +1263,26 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .pic-palette-grid, .pic-recent { display: flex; flex-wrap: wrap; gap: 0.2rem; max-height: 9rem; overflow: auto; align-items: center; }
 .pic-thumb { padding: 0; width: 2.4rem; height: 2.4rem; overflow: hidden; }
 .pic-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* Version 3: the soundboard and floating sound buttons */
+.soundboard { display: grid; gap: 0.5rem; min-width: 0; }
+.soundboard.drop-here { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.sound-volumes { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; }
+.sound-volume { display: inline-flex; gap: 0.3rem; align-items: center; }
+.sound-volume input { width: 5rem; }
+.sound-bar { flex-wrap: wrap; }
+.sound-grid { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.sound-cell { display: inline-flex; align-items: center; }
+.sound-btn { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 8px; padding: 0.4rem 0.7rem; cursor: pointer; font: inherit; display: inline-flex; gap: 0.3rem; align-items: center; min-height: 2.2rem; }
+.sound-btn:hover { border-color: var(--accent); }
+.sound-btn.on { background: var(--accent); color: var(--card); border-color: var(--accent); }
+.sound-btn.missing { border-style: dashed; opacity: 0.6; }
+.sound-loop { font-size: 0.8em; opacity: 0.8; }
+.sound-files { list-style: none; margin: 0.25rem 0; padding: 0; display: grid; gap: 0.2rem; max-height: 12rem; overflow: auto; }
+.sound-file { display: flex; gap: 0.4rem; align-items: center; }
+.sound-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sound-floats { position: fixed; inset: 0; pointer-events: none; z-index: 41; }
+.sound-float { position: fixed; pointer-events: auto; display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.2rem 0.3rem; background: var(--card); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+.sound-float[data-playing="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--card)); }
+.sound-float-grip { cursor: grab; padding: 0 0.2rem; opacity: 0.6; touch-action: none; }
+.sound-float-play { border: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; padding: 0.2rem 0.4rem; }

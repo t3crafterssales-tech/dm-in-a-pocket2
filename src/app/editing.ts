@@ -23,6 +23,8 @@ import { attachMany, attachmentsOf, brickNote, createBrick, dropNeedsAnswers, li
 import type { AttachmentView, BrickType, LibrarySection } from "./library.ts";
 import { attachInside, attachmentDetail, changeParent, editAttachment, familyChecklist } from "./drill.ts";
 import type { AttachmentDetail, AttachmentPatch, FamilyRow } from "./drill.ts";
+import { cleanButtons } from "./sounds.ts";
+import type { SoundButton } from "./sounds.ts";
 import { createLore, loreList, markUsed, rollTable, rowsValue, tableFromList, tableRows, weightedRanges } from "./lore.ts";
 import { tableModeView } from "./tablemode.ts";
 import { STANDARD_CORE_TEXT } from "./codex-lists.ts";
@@ -1434,6 +1436,52 @@ export class Editing {
         return id;
       }),
     );
+  }
+
+  // ---------- The soundboard (version 3) ----------
+
+  private soundboard(): NodeRecord | null {
+    return this.ws.list(this.layer, "layout").find((n) => this.ws.resolve(this.layer, n.id)?.fields.layoutKind === "soundboard") ?? null;
+  }
+
+  soundButtons(): SoundButton[] {
+    const n = this.soundboard();
+    return n ? cleanButtons(this.ws.resolve(this.layer, n.id)?.fields.buttons) : [];
+  }
+
+  /** Every change to the buttons is one undoable step, including Erase all. */
+  private editButtons(label: string, fn: (buttons: SoundButton[]) => SoundButton[]): SoundButton[] {
+    return this.run(() =>
+      this.ws.transact(label, () => {
+        const next = fn(this.soundButtons());
+        const have = this.soundboard();
+        const id = have ? have.id : this.ws.create(this.layer, "layout", "Soundboard", { fields: { layoutKind: "soundboard", buttons: [] } });
+        this.ws.setField(this.layer, id, "buttons", next as unknown as Value);
+        return next;
+      }),
+    );
+  }
+
+  addSoundButton(label: string, sound: string, loop: boolean): Id {
+    const id = newId();
+    this.editButtons(`Added the sound button ${label.trim() || sound}`, (b) => [...b, { id, label: label.trim().slice(0, 40) || String(b.length + 1), sound, loop }]);
+    return id;
+  }
+
+  setSoundButton(id: Id, patch: Partial<Omit<SoundButton, "id">>) {
+    if (!this.soundButtons().some((b) => b.id === id)) throw new LibraryError("That button isn't here any more.");
+    this.editButtons("Changed a sound button", (b) => b.map((x) => (x.id === id ? { ...x, ...(patch.label !== undefined ? { label: patch.label.trim().slice(0, 40) } : {}), ...(patch.sound !== undefined ? { sound: patch.sound } : {}), ...(patch.loop !== undefined ? { loop: patch.loop === true } : {}) } : x)));
+  }
+
+  removeSoundButton(id: Id) {
+    this.editButtons("Removed a sound button", (b) => b.filter((x) => x.id !== id));
+  }
+
+  /** Clears the buttons, never the files. Ctrl+Z brings them back. */
+  eraseSoundButtons(): number {
+    const n = this.soundButtons().length;
+    if (n) this.editButtons(`Erased ${n} sound button${n === 1 ? "" : "s"}`, () => []);
+    return n;
   }
 
   /** The thing exactly as the rulebook prints it. */

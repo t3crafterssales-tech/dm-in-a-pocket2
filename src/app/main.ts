@@ -7,13 +7,18 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { extname, join } from "node:path";
 import { Backend, BACKEND_METHODS, PICTURE_TYPES } from "./backend.ts";
+import { SOUND_TYPES } from "./sounds.ts";
 import type { BackendEvent, BackendMethod, BookRequest } from "./backend.ts";
 import type { AiTransport } from "./ai/job.ts";
 
 const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" };
 
 // Pictures are shown through dmpic://pic/<id>, read straight from the picture store.
-protocol.registerSchemesAsPrivileged([{ scheme: "dmpic", privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+protocol.registerSchemesAsPrivileged([
+  { scheme: "dmpic", privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  // Sounds stream from the Sounds folder (version 3); "stream" lets the player seek and loop.
+  { scheme: "dmsound", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+]);
 
 // "One copy open at a time": a second start just brings the first window forward.
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -98,6 +103,10 @@ void app.whenReady().then(() => {
       const r = await dialog.showOpenDialog(win!, { title: "Choose a picture", properties: ["openFile"], filters: [{ name: "Pictures", extensions: PICTURE_TYPES.map((x) => x.slice(1)) }] });
       return r.canceled ? null : (r.filePaths[0] ?? null);
     },
+    pickSounds: async () => {
+      const r = await dialog.showOpenDialog(win!, { title: "Add sounds", properties: ["openFile", "multiSelections"], filters: [{ name: "Sounds", extensions: SOUND_TYPES.map((x) => x.slice(1)) }] });
+      return r.canceled ? [] : r.filePaths;
+    },
     pickSave: async (defaultName, kind) => {
       const ext = kind === "world" ? "dmworld" : kind === "module" ? "dmmod" : "dmsys";
       const r = await dialog.showSaveDialog(win!, { title: `Share this ${kind}`, defaultPath: join(app.getPath("documents"), defaultName), filters: [{ name: `DM in a Pocket ${kind}`, extensions: [ext] }] });
@@ -134,6 +143,23 @@ void app.whenReady().then(() => {
     const bytes = backend?.picture(id);
     if (!bytes) return new Response(null, { status: 404 });
     return new Response(new Uint8Array(bytes), { headers: { "content-type": MIME[extname(id).toLowerCase()] ?? "application/octet-stream" } });
+  });
+
+  const SOUND_MIME: Record<string, string> = { ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg", ".m4a": "audio/mp4" };
+  protocol.handle("dmsound", (req) => {
+    const path = decodeURIComponent(new URL(req.url).pathname.replace(/^\/+/, ""));
+    const bytes = backend?.sound(path);
+    if (!bytes) return new Response(null, { status: 404 });
+    const type = SOUND_MIME[extname(path).toLowerCase()] ?? "application/octet-stream";
+    // Playing, seeking and looping ask for byte ranges.
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get("range") ?? "");
+    if (range && (range[1] || range[2])) {
+      const start = range[1] ? Number(range[1]) : Math.max(0, bytes.length - Number(range[2]));
+      const end = range[1] && range[2] ? Math.min(Number(range[2]), bytes.length - 1) : bytes.length - 1;
+      if (start > end || start >= bytes.length) return new Response(null, { status: 416, headers: { "content-range": `bytes */${bytes.length}` } });
+      return new Response(new Uint8Array(bytes.subarray(start, end + 1)), { status: 206, headers: { "content-type": type, "accept-ranges": "bytes", "content-range": `bytes ${start}-${end}/${bytes.length}`, "content-length": String(end - start + 1) } });
+    }
+    return new Response(new Uint8Array(bytes), { headers: { "content-type": type, "accept-ranges": "bytes", "content-length": String(bytes.length) } });
   });
 
   ipcMain.handle("dm:call", async (_e, method: BackendMethod, args: unknown[]) => {

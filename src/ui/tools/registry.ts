@@ -14,6 +14,7 @@ import { mapTool } from "./map-tool.ts";
 import { partyTool } from "./party-tool.ts";
 import { playersTool } from "./players-tool.ts";
 import { referenceTool } from "./reference.ts";
+import { soundboardTool } from "./soundboard.ts";
 import { tablesTool } from "./tables-tool.ts";
 
 export interface DeskCtx {
@@ -41,6 +42,7 @@ export const TOOLS: Record<string, Tool> = {
   dice: { render: diceTool, gear: diceGear },
   clock: { render: clockTool, gear: clockGear },
   tables: { render: tablesTool },
+  soundboard: { render: soundboardTool },
   journal: { render: journalTool },
   bookmarks: { render: bookmarksTool },
   party: { render: partyTool },

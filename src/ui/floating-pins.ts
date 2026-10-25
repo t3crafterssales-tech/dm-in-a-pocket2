@@ -10,6 +10,7 @@ import { attempt } from "./common.ts";
 import { notice } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
 import { ICONS } from "./icons.ts";
+import { clearSoundFloats, drawSoundFloats } from "./floating-sounds.ts";
 import { showToPlayers } from "./players-panel.ts";
 
 let layer: HTMLElement | null = null;
@@ -30,6 +31,7 @@ async function save(pins: FloatingPin[]) {
 /** Draws the pins of the open world over whatever screen is showing. */
 export async function drawPins(_view: PlaceView | null, opts: { open: (id: string) => void }) {
   opener = opts.open;
+  void drawSoundFloats();
   const meta = await attempt(() => api.tableMeta());
   const el = host();
   if (!meta) return el.replaceChildren();
@@ -40,6 +42,7 @@ export async function drawPins(_view: PlaceView | null, opts: { open: (id: strin
 /** Takes the pins off the screen (going home). */
 export function clearPins() {
   layer?.replaceChildren();
+  clearSoundFloats();
 }
 
 async function pinCard(p: FloatingPin, all: FloatingPin[]): Promise<HTMLElement | null> {

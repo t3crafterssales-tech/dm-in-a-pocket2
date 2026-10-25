@@ -133,6 +133,8 @@ A `layout` node lives in the Codex under Sheet and book layouts and has `layoutK
 | "book" | `request`: the saved book choices (what goes in, front pages, contents and index). |
 | "sheet" | `groups`: a list of `{ id, span }`, in order, where `id` is a sheet group ("name", "portrait", "combat", "abilities", "inventory", "trackers", "features", "appearance", "notes" or "section:<name>") and `span` is its width in twelfths of the page (3 to 12). `unticked`: line keys that print blank to write in. `hidden`: among those, the ones left off the paper completely. `isDefault`: true on the one layout every character without their own follows. |
 
+| "soundboard" (version 3) | `buttons`: a list of `{ id, label, sound, loop }`. `sound` is a path inside the Sounds folder. It never shows in the Codex; Erase all buttons and every other change to it are ordinary undo steps. |
+
 Line keys are stable words such as "hp", "ac", "ability:<id>", "tracker:<id>" and "extra:<section>:<label>".
 A character's own `sheetLayout` holds the same `groups`, `unticked` and `hidden`. Whatever is stored,
 the program repairs it to fit the character it is shown on (unknown groups dropped, new ones added at
@@ -281,3 +283,14 @@ stamp or a repeating floor. Older apps show an unknown stamp as a plain dot.
 
 Setting `autoPictures` (settings file, default on): new things made from "Start blank" get the first
 picture whose main tag (then any tag) matches a word of the name, then what it is filed as.
+
+
+## Sound (version 3)
+
+Sound files are the person's own, in `<main folder>/Sounds/` (folders inside are packs from others).
+`Sounds/sounds.json` holds each file's category (`music`, `ambience` or `voice`) once it has been set;
+until then the category is guessed from the file's path. Files and categories belong to the person's
+library, not to any world, so a shared world carries its buttons but not the sounds; a button whose file
+is missing shows as missing and everything else works. The soundboard's buttons are one `layout` node
+(see Layouts). Buttons dragged onto the screen are remembered in the table's memory as `soundFloats`:
+`{ id, button, x, y }`, where `button` is a soundboard button's id. They are only copies.

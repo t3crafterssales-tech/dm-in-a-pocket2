@@ -37,6 +37,7 @@ const backend = new Backend({
 
 const shim = `<script>
 window.dmPicBase = "/pic/";
+window.dmSoundBase = "/snd/";
 window.dm = {
   call: (method, args) => fetch("/call", { method: "POST", body: JSON.stringify({ method, args }) }).then(r => r.json()),
   showFolder: async () => "", bookPdf: async () => ({ ok: false, message: "Not in the preview." }),
@@ -74,6 +75,12 @@ createServer(async (req, res) => {
     const bytes = backend.picture(decodeURIComponent(url.pathname.slice(5)));
     if (!bytes) { res.statusCode = 404; return res.end(); }
     res.setHeader("content-type", MIME[extname(url.pathname).toLowerCase()] ?? "application/octet-stream");
+    return res.end(bytes);
+  }
+  if (url.pathname.startsWith("/snd/")) {
+    const bytes = backend.sound(decodeURIComponent(url.pathname.slice(5)));
+    if (!bytes) { res.statusCode = 404; return res.end(); }
+    res.setHeader("content-type", "audio/mpeg");
     return res.end(bytes);
   }
   if (url.pathname === "/rebuild") { await bundle(); return res.end("ok"); }

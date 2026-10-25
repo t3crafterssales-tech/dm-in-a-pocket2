@@ -35,6 +35,8 @@ import { ensureCategories } from "./sheets.ts";
 import { buildD20Starter } from "./starters/d20.ts";
 import { allTags, cleanInfo, cleanTags, entriesOf, hintsFor, matchPictures, suggestTags } from "./piclib.ts";
 import type { PicEntry, PicIndex, PicInfo } from "./piclib.ts";
+import { SOUND_TYPES, categoryOf, guessCategory, soundName, soundPack } from "./sounds.ts";
+import type { SoundButton, SoundEntry } from "./sounds.ts";
 import { LIBRARY_STARTS, buildLibraryStart, isLibraryStart } from "./starters/library.ts";
 import type { LibraryStart } from "./starters/library.ts";
 import { QUICK_QUESTIONS } from "./quickstart.ts";
@@ -236,6 +238,8 @@ export interface BackendOptions {
   machine: string;
   /** Show the picture chooser; resolves to a file path or null. */
   pickPicture: () => Promise<string | null>;
+  /** Show an Open dialog for sound files (several at once); resolves to paths, empty if cancelled. */
+  pickSounds?: () => Promise<string[]>;
   /** Show the folder chooser; resolves to a folder path or null. */
   pickFolder: () => Promise<string | null>;
   /** Show a Save dialog for a file to share; resolves to a path or null. */
@@ -273,6 +277,7 @@ export interface SnapshotView {
 
 const AUTO_SNAPSHOT = /^Before restoring/;
 
+const MAX_SOUND_BYTES = 200 * 1024 * 1024;
 export const PICTURE_TYPES = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
 const MAX_PICTURE_BYTES = 25 * 1024 * 1024;
 const MAX_NAME = 200;
@@ -495,6 +500,16 @@ export const BACKEND_METHODS = [
   "setUnits",
   "setTheme",
   "setTextSize",
+  "soundLibrary",
+  "addSounds",
+  "addSoundData",
+  "setSoundCategory",
+  "soundButtons",
+  "addSoundButton",
+  "setSoundButton",
+  "removeSoundButton",
+  "eraseSoundButtons",
+  "soundsFolder",
   "setAutoPictures",
   "pictureLibrary",
   "pictureTags",
@@ -2220,6 +2235,74 @@ export class Backend {
   }
 
   /** For the window's picture loader. */
+  // ---------- Sound (version 3) ----------
+
+  /** Every sound in the Sounds folder, with its category (a first guess from its folder and name until it's set). */
+  soundLibrary(): SoundEntry[] {
+    const index = this.lib.readSoundIndex();
+    return this.lib.listSoundFiles(SOUND_TYPES).map((id) => ({ id, name: soundName(id), pack: soundPack(id), category: (index[id] as { category?: unknown } | undefined)?.category ? categoryOf((index[id] as { category?: unknown }).category) : guessCategory(id) }));
+  }
+
+  soundsFolder(): string {
+    return this.lib.dir("Sounds");
+  }
+
+  private checkSound(name: string, size: number) {
+    if (!SOUND_TYPES.includes(extname(name).toLowerCase())) throw new LibraryError("That isn't a sound the app can play. Use MP3, WAV, OGG or M4A.");
+    if (size > MAX_SOUND_BYTES) throw new LibraryError("That sound is over 200 MB. Try a shorter copy of it.");
+  }
+
+  /** The Add sounds button: pick files and copy them into the Sounds folder. Returns their paths there. */
+  async addSounds(): Promise<string[]> {
+    const picked = this.opts.pickSounds ? await this.opts.pickSounds() : [];
+    return picked.map((path) => {
+      this.checkSound(path, statSync(path).size);
+      return this.lib.addSoundFile(basename(path), readFileSync(path));
+    });
+  }
+
+  /** Drag and drop: the window hands over the file's bytes. */
+  addSoundData(name: string, data: Uint8Array): string {
+    this.checkSound(name, data.byteLength);
+    return this.lib.addSoundFile(name, Buffer.from(data));
+  }
+
+  setSoundCategory(id: string, category: string): SoundEntry {
+    const entry = this.soundLibrary().find((x) => x.id === id);
+    if (!entry) throw new LibraryError("That sound isn't in the Sounds folder.");
+    const index = this.lib.readSoundIndex();
+    index[id] = { category: categoryOf(category) };
+    this.lib.writeSoundIndex(index);
+    return { ...entry, category: categoryOf(category) };
+  }
+
+  soundButtons(): SoundButton[] {
+    return this.editing.soundButtons();
+  }
+  addSoundButton(label: string, sound: string, loop = false): Id {
+    return this.editing.addSoundButton(label, sound, loop);
+  }
+  setSoundButton(id: Id, patch: Partial<Omit<SoundButton, "id">>): true {
+    this.editing.setSoundButton(id, patch);
+    return true;
+  }
+  removeSoundButton(id: Id): true {
+    this.editing.removeSoundButton(id);
+    return true;
+  }
+  eraseSoundButtons(): number {
+    return this.editing.eraseSoundButtons();
+  }
+
+  /** The bytes of a sound, for playing it (main.ts serves them as dmsound://). */
+  sound(path: string): Buffer | null {
+    try {
+      return this.lib.readSound(path);
+    } catch {
+      return null;
+    }
+  }
+
   picture(id: Id): Buffer | null {
     try {
       return this.lib.readPicture(id);

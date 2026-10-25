@@ -3,6 +3,7 @@
 // "Combat" or "Town"), bookmarks, floating pins, journal category order and each tool's settings.
 
 import type { Id } from "../engine/index.ts";
+import type { FloatingButton } from "./sounds.ts";
 
 export interface ChatLine {
   id: Id;
@@ -103,6 +104,8 @@ export interface TableMeta {
   arrangements: { name: string; places: ToolPlace[] }[];
   bookmarks: Bookmark[];
   pins: FloatingPin[];
+  /** Sound buttons dragged off the soundboard onto the screen (version 3). */
+  soundFloats: FloatingButton[];
   journalCategories: { name: string; priority: number }[];
   /** Each tool's own settings (its gear), by tool name. */
   settings: Record<string, Record<string, unknown>>;
@@ -131,6 +134,7 @@ export const TOOL_NAMES: Record<string, string> = {
   dice: "Dice tray",
   clock: "Clock and timers",
   tables: "Roll tables",
+  soundboard: "Soundboard",
   journal: "Journal",
   bookmarks: "Bookmarks",
   party: "Party",
@@ -149,6 +153,7 @@ export function tableMetaFrom(v: unknown): TableMeta {
     arrangements: Array.isArray(o.arrangements) ? o.arrangements : [],
     bookmarks: Array.isArray(o.bookmarks) ? o.bookmarks : [],
     pins: Array.isArray(o.pins) ? o.pins : [],
+    soundFloats: Array.isArray(o.soundFloats) ? o.soundFloats.filter((f): f is FloatingButton => !!f && typeof f.id === "string" && typeof f.button === "string" && typeof f.x === "number" && typeof f.y === "number") : [],
     journalCategories: Array.isArray(o.journalCategories) ? o.journalCategories : [],
     settings: o.settings && typeof o.settings === "object" ? o.settings : {},
     glances: Array.isArray(o.glances) ? o.glances : [],
