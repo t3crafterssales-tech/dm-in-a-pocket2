@@ -1152,7 +1152,96 @@ drag in and resize come in a later version.
 - **An index and contents are made automatically**; a tick decides whether they print.
 - Book selections and front pages can be saved to the Codex and reused, like anything else.
 
-### Open questions for version 2
+### Navigation and flow pass (Jeff, October 25, 2026) — DRAFT, nothing built yet
+
+Jeff likes version 2 as it is. Before versions 4 and 5, this pass makes the program feel less clunky to move around in. It adds no new game features. **This is a draft for Jeff to mark up; nothing below is built until he approves it.** Anything that changes how the app looks or works stops and asks him first (CLAUDE.md, Part 9).
+
+### 1. The first minutes (Jeff's answers, October 25)
+
+- **After naming a system or world made from a ready-made start** (d20 and the others), the six Quick start questions do NOT appear. Instead a **"Where do you want to start?"** screen offers three big choices: **Look at the rules**, **Make a monster or item**, **Start a world**. The six questions appear only when the person chose to start from scratch, and are then framed as "Build the basics for me".
+- **A short "What next?" card** sits in the empty middle of the Rules tab, and of the empty Beings, Items, Lore, Maps and Journal tabs. It goes away once the person has done something there.
+- **The First steps checklist is tied to the real screens:** clicking a step takes the person to the right place and points at the button.
+- **To check:** why the six questions appeared after picking d20 (the code should only offer them for "Bare bones"). Trace it before designing anything.
+
+### 2. Bricks that look like bricks
+
+- Every Codex entry (Strength, Ray of Frost, Greatsword) is drawn as its own **box with a slight shadow**, like a block sitting on a shelf, instead of a line in a list.
+- One colour per kind (rules, beings, items, lore) so the kind shows at a glance.
+- Jeff to see a picture of a few versions before the real screens change.
+
+### 3. Open bricks are windows
+
+- Opening a brick from the Codex opens it as a **window** that can be **moved, resized, and brought to the front** by clicking it. Several can be open and visible side by side (for example five at once, flipping between them to compare).
+- Each window has **minimise and close buttons in its top-right corner**, always visible; the keys are a shortcut and never required.
+- **Minimise** tucks the window into a **tray along the bottom**, like minimised windows in a browser. **Close** closes it. Edits already save within a second or two, so neither can lose work.
+- **No hard cap.** A polite warning appears around 20 open or tucked windows; the real limit is what fits on the screen.
+- An **Arrange** button tidies the open windows into a grid or a cascade, and **Tuck all away** clears a crowded screen.
+- A window remembers its position and size the next time that brick opens.
+- Same mechanism as the floating panels of version 3.
+- **Open question for Jeff:** does a click on a Codex brick always open a window, or does the middle area stay as the "main thing" being built (the goblin) while the bricks being compared float over it? And: double-click opens, single-click selects (like files on a desktop), which also protects dragging a brick onto a sheet.
+
+### 4. Back and forward (never an undo)
+
+- **Back and Forward buttons** next to Undo and Redo, clearly different from them. They move only the view (screen, tab, open thing), never the work.
+- A trail of where the person has been: goblin sheet, then the "What do you want to make?" screen, then wherever before that.
+- **Familiar shortcuts:** Alt+Left and Alt+Right, and the mouse side buttons.
+- A **"Make another" button** on a freshly made sheet, and a **"Back to Beings" link** at the top of every sheet.
+- **To decide:** does the trail remember tabs as well as sheets, and does it reset when leaving a world?
+
+### 5. Left-hand hotkeys (proposed; Jeff has not changed any)
+
+| Key | Does |
+|---|---|
+| Q | Tuck the open window away to the tray (soft close) |
+| W | Close it for good (hard close) |
+| E | Bring back the last one closed for good (like Ctrl+Shift+T) |
+| A | Back |
+| S | Forward |
+| Z / X | Previous / next window in the tray |
+
+- **While the cursor is in any text box, the letters just type** and the shortcuts are off (Jeff's rule). Esc or a click outside returns to shortcuts. A faint hint says "Press Esc for shortcuts".
+- Press **?** for a cheat sheet. Hover tips show each button's key. A Settings checkbox turns the letter shortcuts off, and keys can be changed later.
+- None clash with Ctrl+Z, Ctrl+Y, Ctrl+C, Ctrl+V or Ctrl+X.
+
+### 6. The Codex follows the work, but never limits it
+
+- Built October 25: clicking into a sheet section opens the matching Codex list (Settings checkbox turns it off).
+- **To add:** that list is only a suggestion. A "Suggested" tab comes first, with an always-visible strip of all sections beside it, and anything can still be dragged onto any section of a sheet. Dynamic filtering in the Codex so what you need is a click away.
+
+### 7. Journal pages: blocks must be easy to move and resize
+
+- Today moving and resizing exist but are hidden: a 20-pixel handle at the top-left and a 12-pixel square at the bottom-right, only on hover, and photos ignore the mouse.
+- **Change:** clicking a block selects it, with a clear outline and handles on all four corners and four sides that stay visible while selected. A photo can be dragged anywhere on it. A text block has a visible handle bar along the top. Arrow keys nudge a selected block, Delete sends it to the recycle bin, clicking empty page deselects.
+- **The pointer changes shape:** a diagonal arrow on a corner, a left-right or up-down arrow on a side, a four-way cross on a movable body (a grabbing hand while dragging), and back to normal the moment the mouse leaves. Edge and corner targets are larger than the visible handles. The same applies to window edges.
+- A photo arrives where it is dropped.
+
+### 8. Other ideas Jeff approved
+
+- **Breadcrumb line** at the top ("Greyhollow › Beings › Goblin"), every part clickable.
+- **Recent list** (last 10 things opened) on the Home screen and in search.
+- **Reopen where you left off:** the tab, the sheet and the tucked windows.
+- **Plain-word names on buttons** where the app uses insider words, with a short "what's this?" hover.
+- **Command palette (Ctrl+K):** type "new monster", "open Strength" or "print" and press Enter.
+- **Right-click menus on every brick:** Open, Open beside, Duplicate, Make a variant, Add to current sheet, Delete.
+- **Multi-select in the Codex** (Shift-click and Ctrl-click) with one bar of actions.
+- **Drag target glow:** the matching sheet section lights up while a brick is dragged over it.
+- **Calm, consistent confirmations** with Undo, and a "Show me" button after bulk or AI changes that highlights everything touched.
+- **A quiet "Saved just now" line** in the footer beside the logo glow.
+- **Bigger click targets and clearer focus outlines.**
+- **Confirm only what cannot be undone;** everything else just happens with an Undo.
+- **A "Why is this greyed out?" hover** on every disabled button.
+
+### Suggested order to build (Jeff to approve)
+
+1. Back and forward, breadcrumb, Recent, reopen where you left off.
+2. Brick boxes, then brick windows with the tray and the hotkeys.
+3. "Where do you want to start?" and the "What next?" cards.
+4. Journal block handles and pointer shapes.
+5. Command palette, right-click menus, multi-select bar, and the smaller polish items.
+
+Jeff has said there is one more item still to come; it will be added here.
+
+## Open questions for version 2
 
 - Remote play: run a relay for players in other houses (small monthly cost, maybe an optional
   extra), or start with same-network play only?
