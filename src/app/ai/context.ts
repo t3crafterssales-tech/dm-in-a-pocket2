@@ -40,12 +40,16 @@ function gist(text: string): string {
 
 export function buildContext(ws: Workspace, layerId: Id, placeName: string, placeType: string, notes: { text: string }[], about: string): WorldContext {
   const all = ws.list(layerId).filter((n) => !n.template);
+  // Variants are folded into their parent ("Elf, 3 variants") so the summary stays short.
+  const kids = new Map<string, number>();
+  for (const n of all) if (n.parent) kids.set(n.parent.link, (kids.get(n.parent.link) ?? 0) + 1);
   const named = (pick: (n: (typeof all)[number], f: Record<string, unknown>) => boolean, withGist = false) =>
     all
-      .filter((n) => pick(n, ws.resolve(layerId, n.id)!.fields))
+      .filter((n) => !n.parent && pick(n, ws.resolve(layerId, n.id)!.fields))
       .map((n) => {
         const g = withGist ? gist(n.text) : "";
-        return g ? `${n.name} (${g})` : n.name;
+        const v = kids.get(n.id);
+        return `${n.name}${g ? ` (${g})` : ""}${v ? `, ${v} variant${v === 1 ? "" : "s"}` : ""}`;
       });
   const beings = (kind: string) => named((n, f) => n.kind === "being" && f[F.beingKind] === kind, true);
   const lore = (kind: string) => named((n, f) => n.kind === "lore" && loreKindOf(n, f as never) === kind, true);

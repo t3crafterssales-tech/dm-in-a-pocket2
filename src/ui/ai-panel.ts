@@ -169,6 +169,35 @@ function conversation(view: AiView | null | undefined, ctx: PlaceCtx, st: PanelS
       { class: `ai-msg ai${c.status ? ` ${c.status}` : ""}` },
       h("p", null, c.text),
       c.lines?.length ? h("ul", { class: "ai-changes" }, c.lines.map((l) => h("li", null, l))) : null,
+      c.versions?.length
+        ? h(
+            "div",
+            { class: "ai-versions" },
+            c.versions.map((v, n) =>
+              h(
+                "div",
+                { class: "ai-version" },
+                h("strong", null, `${n + 1}. ${v.label}`),
+                v.lines.length ? h("ul", { class: "ai-changes" }, v.lines.map((l) => h("li", null, l))) : null,
+                last && c.status === "waiting" && view.waiting
+                  ? h(
+                      "button",
+                      {
+                        class: "button primary small-button",
+                        disabled: ctx.view.readOnly,
+                        onClick: async () => {
+                          const r = await attempt(() => api.aiAccept(n));
+                          if (r) notice(`Done: ${r.label}.`, "green", { label: "Undo", run: () => void attempt(() => api.undo()).then(() => ctx.refresh()) }, 6000);
+                          await ctx.refresh();
+                        },
+                      },
+                      "Use this one",
+                    )
+                  : null,
+              ),
+            ),
+          )
+        : null,
       c.suggestions?.length ? h("ul", { class: "ai-suggest" }, c.suggestions.map((l) => h("li", null, l, h("span", { class: "muted small" }, " Only you can delete things."))) ) : null,
       c.status === "accepted" ? h("p", { class: "muted small" }, "Accepted. Ctrl+Z or History can undo it.") : null,
       c.status === "rejected" ? h("p", { class: "muted small" }, "Rejected: nothing was changed.") : null,
@@ -179,7 +208,9 @@ function conversation(view: AiView | null | undefined, ctx: PlaceCtx, st: PanelS
         h(
           "div",
           { class: "ai-actions" },
-          h(
+          c.versions?.length
+            ? h("button", { class: "button plain small-button", disabled: st.busy, title: "Fresh ideas, added after these. Nothing you've seen is lost.", onClick: () => void createMore(ctx, st) }, "Create more")
+            : h(
             "button",
             {
               class: "button primary small-button",
@@ -227,6 +258,28 @@ function buildStrip(view: AiView, ctx: PlaceCtx, st: PanelState): HTMLElement {
     view.waiting ? h("span", { class: "muted small" }, "Accept or reject this section first.") : h("button", { class: "button primary small-button", disabled: st.busy, onClick: () => void runBuildStep(ctx, st) }, "Build next section"),
     h("button", { class: "button plain small-button", disabled: st.busy, onClick: async () => (await attempt(() => api.aiBuildStop()), await ctx.refresh()) }, "Stop"),
   );
+}
+
+/** Create more: new versions after the ones shown. */
+async function createMore(ctx: PlaceCtx, st: PanelState, confirmed = false): Promise<void> {
+  st.busy = true;
+  await ctx.refresh();
+  try {
+    const r = await api.aiMore(confirmed);
+    if (r.status === "estimate") {
+      st.busy = false;
+      const go = await ask("This could cost more than usual", [r.estimate, "Small jobs just run; this one is over the cost warning set in Settings."], [
+        { label: "Cancel", value: false },
+        { label: "Go ahead", value: true, kind: "primary" },
+      ]);
+      if (go) return createMore(ctx, st, true);
+    }
+  } catch (e) {
+    notice(e instanceof Error ? e.message : String(e), "blue", undefined, 9000);
+  } finally {
+    st.busy = false;
+    await ctx.refresh();
+  }
 }
 
 async function runBuildStep(ctx: PlaceCtx, st: PanelState, confirmed = false): Promise<void> {
@@ -422,6 +475,8 @@ function aiSettingsBody(s: AiStatus, redraw: () => void): HTMLElement[] {
   );
   model.addEventListener("change", () => void attempt(() => api.setAiOptions({ model: model.value as AiStatus["model"] })));
   const threshold = h("input", { class: "text-input number-input", type: "number", min: 0, step: 0.1, value: String(s.threshold), "aria-label": "Cost warning in dollars" });
+  const versions = h("input", { class: "text-input number-input", type: "number", min: 1, max: 6, step: 1, value: String(s.versions), "aria-label": "Versions to offer" });
+  versions.addEventListener("change", () => void attempt(() => api.setAiOptions({ versions: Number(versions.value) })));
   const live = h("input", { type: "checkbox", checked: s.live });
   live.addEventListener("change", () => void attempt(() => api.setAiLive(live.checked)));
   threshold.addEventListener("change", () => void attempt(() => api.setAiOptions({ threshold: Number(threshold.value) })));
@@ -432,6 +487,8 @@ function aiSettingsBody(s: AiStatus, redraw: () => void): HTMLElement[] {
     model,
     h("label", { class: "field-label spaced" }, "Warn me before a job that may cost more than ($)"),
     threshold,
+    h("label", { class: "field-label spaced" }, "How many versions to offer when you ask it to create something (1 to 6)"),
+    versions,
     h("label", { class: "check spaced" }, live, "Live AI checking: the AI checks each change as you make it (with the quick model; a little cost each time)"),
     h("p", { class: "muted small" }, `Small jobs just run. ${s.spent}, worked out from what Claude reports. Your Anthropic account shows the real bill.`),
   ];

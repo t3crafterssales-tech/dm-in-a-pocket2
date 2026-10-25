@@ -4,7 +4,7 @@
 
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Id, Workspace } from "../../engine/index.ts";
-import { ActionError, CHANGE_TOOLS, READ_TOOLS, REPORT_TOOL, TOOLS, applyActions, placeholderFor, runReadTool } from "./actions.ts";
+import { ActionError, CHANGE_TOOLS, READ_TOOLS, REPORT_TOOL, TOOLS, VERSION_TOOL, applyActions, placeholderFor, runReadTool } from "./actions.ts";
 import type { Applied, ChangeAction, ChangeTool } from "./actions.ts";
 import { CAREFUL, costOf } from "./models.ts";
 import type { ModelInfo } from "./models.ts";
@@ -43,6 +43,8 @@ export interface JobRequest {
   /** Extra instructions for special jobs (Check for errors, create from a document). */
   extra?: string;
   maxRounds?: number;
+  /** Version 4: offer this many alternative versions of what is asked (2 or more). */
+  versions?: number;
   /** "check": the AI may only look things up, report problems and update its World Notes. */
   mode?: "change" | "check";
 }
@@ -54,7 +56,15 @@ export interface Report {
   detail: string;
 }
 
+export interface Version {
+  label: string;
+  actions: ChangeAction[];
+  preview: Applied;
+}
+
 export interface JobResult {
+  /** Version 4: the alternatives, when several were asked for. Then `actions` is empty. */
+  versions?: Version[];
   reply: string;
   /** Check for errors: the problems found. */
   reports: Report[];
@@ -83,6 +93,7 @@ function systemPrompt(req: JobRequest): Anthropic.Beta.Messages.BetaTextBlockPar
     req.workingOn ? `The user is working on: ${req.workingOn.name} (id ${req.workingOn.id}).` : "The user is working on the whole " + req.placeType + ".",
     req.world ? `What you know about this world (use it so what you make fits; do not repeat it back):\n${req.world}` : "",
     `World Notes:\n${notes}`,
+    req.versions && req.versions > 1 ? `Offer exactly ${req.versions} alternative versions. Look things up first, then for each version call start_version with a short label for how it feels, and queue that version's create actions. Make the versions clearly different in feel, not small tweaks. Each version must work on its own; its new ids start again from new-1.` : "",
     req.extra ?? "",
   ]
     .filter(Boolean)
@@ -104,7 +115,9 @@ export async function runJob(send: AiTransport, ws: Workspace, layerId: Id, req:
   const actions: ChangeAction[] = [];
   const reports: Report[] = [];
   const check = req.mode === "check";
-  const tools = check ? [...TOOLS.filter((t) => (READ_TOOLS as readonly string[]).includes(t.name) || t.name === "update_world_notes"), REPORT_TOOL] : TOOLS;
+  const many = !check && (req.versions ?? 1) > 1;
+  const drafts: { label: string; actions: ChangeAction[] }[] = [];
+  const tools = many ? [...TOOLS, VERSION_TOOL] : check ? [...TOOLS.filter((t) => (READ_TOOLS as readonly string[]).includes(t.name) || t.name === "update_world_notes"), REPORT_TOOL] : TOOLS;
   let cost = 0;
   let reply = "";
   const rounds = req.maxRounds ?? 12;
@@ -153,11 +166,19 @@ export async function runJob(send: AiTransport, ws: Workspace, layerId: Id, req:
           throw new ActionError("This is a check: report problems with report_problem; don't change anything.");
         } else if ((READ_TOOLS as readonly string[]).includes(u.name)) {
           results.push({ type: "tool_result", tool_use_id: u.id, content: JSON.stringify(runReadTool(ws, layerId, u.name, input)) });
+        } else if (many && u.name === "start_version") {
+          if (drafts.length >= (req.versions ?? 2)) throw new ActionError(`That is already ${req.versions} versions. Finish up.`);
+          drafts.push({ label: String(input.label ?? "").trim().slice(0, 60) || `Version ${drafts.length + 1}`, actions: [] });
+          results.push({ type: "tool_result", tool_use_id: u.id, content: `Version ${drafts.length} started. Its new ids start again from new-1.` });
         } else if ((CHANGE_TOOLS as string[]).includes(u.name)) {
-          const next = [...actions, { tool: u.name as ChangeTool, input }];
+          // If it forgot start_version, what it queues becomes the first version.
+          if (many && !drafts.length) drafts.push({ label: "Version 1", actions: [] });
+          const into = many ? drafts.at(-1) : null;
+          const list = into ? into.actions : actions;
+          const next = [...list, { tool: u.name as ChangeTool, input }];
           const tried = tryOut(ws, layerId, next);
-          actions.push(next.at(-1)!);
-          const made = u.name === "create_node" ? ` It will be called ${placeholderFor(actions)}; use that id in later actions.` : "";
+          list.push(next.at(-1)!);
+          const made = u.name === "create_node" ? ` It will be called ${placeholderFor(list)}; use that id in later actions.` : "";
           results.push({ type: "tool_result", tool_use_id: u.id, content: `Queued: ${tried.lines.at(-1) ?? tried.suggestions.at(-1) ?? "done"}.${made}` });
         } else throw new ActionError(`There is no action called ${u.name}.`);
       } catch (e) {
@@ -167,6 +188,12 @@ export async function runJob(send: AiTransport, ws: Workspace, layerId: Id, req:
     }
     // Every answer goes back in one message.
     messages.push({ role: "user", content: results });
+  }
+  if (many) {
+    const versions: Version[] = drafts.filter((d) => d.actions.length).map((d) => ({ label: d.label, actions: d.actions, preview: tryOut(ws, layerId, d.actions) }));
+    // Only one came back: it is just the answer, with nothing to choose between.
+    if (versions.length === 1) return { reply: reply || "Here is what I propose.", reports, actions: versions[0]!.actions, preview: versions[0]!.preview, costUsd: cost, modelName: req.model.name };
+    return { versions, reply: reply || (versions.length ? "Here are some versions to choose from." : "I have nothing to change."), reports, actions: [], preview: versions[0]?.preview ?? { lines: [], suggestions: [], notes: null, touched: 0 }, costUsd: cost, modelName: req.model.name };
   }
   const preview = actions.length ? tryOut(ws, layerId, actions) : { lines: [], suggestions: [], notes: null, touched: 0 };
   return { reply: reply || (actions.length ? "Here is what I propose." : "I have nothing to change."), reports, actions, preview, costUsd: cost, modelName: req.model.name };

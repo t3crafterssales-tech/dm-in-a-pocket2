@@ -12,7 +12,7 @@ import type { ChangeAction } from "./actions.ts";
 import { applyActions, runReadTool } from "./actions.ts";
 import { splitDocument } from "./documents.ts";
 import { AiError, runJob } from "./job.ts";
-import type { AiTransport, JobResult } from "./job.ts";
+import type { AiTransport, JobResult, Version } from "./job.ts";
 import { dollars, estimateCost, pickModel } from "./models.ts";
 import type { JobSize, ModelChoice } from "./models.ts";
 import { toPlain } from "../../engine/richtext.ts";
@@ -32,6 +32,8 @@ export interface ChatEntry {
   /** For the AI's answers: the proposal in plain words, and what became of it. */
   lines?: string[];
   suggestions?: string[];
+  /** Version 4: the alternatives offered for a creative request, with what each would do. */
+  versions?: { label: string; lines: string[] }[];
   status?: "waiting" | "accepted" | "rejected";
   costUsd?: number;
   model?: string;
@@ -47,6 +49,11 @@ export interface AiMemory {
 interface Pending {
   label: string;
   actions: ChangeAction[];
+  /** Version 4: the alternatives; Accept takes the one the user picked. */
+  versions?: Version[];
+  /** What was asked, so Create more can ask again for different ones. */
+  prompt?: string;
+  workingOn?: Id | null;
   notes: string[] | null;
   /** The chat entry showing this proposal. */
   entry: number;
@@ -197,6 +204,14 @@ export interface AskOptions {
   shown?: string;
   /** The History label, if not "AI: <the request>". */
   label?: string;
+  /** Version 4: how many alternatives to offer of a creative request (1 means just one answer). */
+  versions?: number;
+}
+
+/** A request to make something new, not to change what is there: these get several versions to choose from. */
+export function wantsVersions(prompt: string): boolean {
+  if (/\b(all|every|each|whole|entire)\b/i.test(prompt)) return false;
+  return /\b(create|invent|come up with|brainstorm|design|draft|generate|help me (create|make|design))\b|\bmake (me )?(a|an|some|two|three|four|five|\d+)\b|\bmake (a )?variant\b/i.test(prompt);
 }
 
 export type AskResult = { status: "estimate"; estimate: string; model: string } | { status: "done"; view: AiView; costUsd: number };
@@ -228,6 +243,7 @@ export async function ask(s: Session, send: AiTransport, opts: AskOptions, recor
       placeType: s.type,
       model,
       extra: opts.extra,
+      versions: opts.versions && opts.versions > 1 && !opts.extra && !opts.label && wantsVersions(prompt) ? opts.versions : undefined,
       world: buildContext(s.ws, s.id, s.name, s.type, m.notes, m.about).summary,
     });
   } catch (e) {
@@ -237,23 +253,26 @@ export async function ask(s: Session, send: AiTransport, opts: AskOptions, recor
   record(result.costUsd);
   const time = now();
   m.chat.push({ role: "user", text: opts.shown ?? prompt, time });
-  const hasChanges = result.actions.some((a) => a.tool !== "suggest_delete");
-  const entry: ChatEntry = { role: "ai", text: result.reply, time, lines: result.preview.lines, suggestions: result.preview.suggestions, status: hasChanges ? "waiting" : undefined, costUsd: result.costUsd, model: result.modelName };
+  const offered = result.versions ?? [];
+  const hasChanges = offered.length > 0 || result.actions.some((a) => a.tool !== "suggest_delete");
+  const entry: ChatEntry = { role: "ai", text: result.reply, time, lines: offered.length ? undefined : result.preview.lines, suggestions: result.preview.suggestions, versions: offered.length ? offered.map((v) => ({ label: v.label, lines: v.preview.lines })) : undefined, status: hasChanges ? "waiting" : undefined, costUsd: result.costUsd, model: result.modelName };
   m.chat.push(entry);
   writeMemory(s, m);
   const words = opts.shown ?? prompt;
   const label = opts.label ?? `AI: ${words.length > 80 ? `${words.slice(0, 77)}…` : words}`;
-  if (hasChanges) pending.set(s, { label, actions: result.actions, notes: result.preview.notes, entry: m.chat.length - 1 });
+  if (hasChanges) pending.set(s, { label, actions: result.actions, versions: offered.length ? offered : undefined, prompt: offered.length ? prompt : undefined, workingOn: target ? target.id : null, notes: result.preview.notes, entry: m.chat.length - 1 });
   return { status: "done", view: aiView(s), costUsd: result.costUsd };
 }
 
 /** Accept: the whole proposal as one undo step. If it can no longer be done, nothing changes. */
-export function accept(s: Session): { label: string; view: AiView } {
+export function accept(s: Session, version = 0): { label: string; view: AiView } {
   if (s.readOnly) throw new LibraryError(`${s.readOnlyReason ?? "This is read-only."} Nothing can be changed here.`);
   const p = pending.get(s);
   if (!p) throw new LibraryError("There is nothing waiting to accept.");
-  const label = p.label;
-  const world = p.actions.filter((a) => a.tool !== "update_world_notes" && a.tool !== "suggest_delete");
+  const picked = p.versions ? p.versions[version] : null;
+  if (p.versions && !picked) throw new LibraryError("Pick one of the versions.");
+  const label = picked ? `${p.label} (${picked.label})` : p.label;
+  const world = (picked ? picked.actions : p.actions).filter((a) => a.tool !== "update_world_notes" && a.tool !== "suggest_delete");
   try {
     if (world.length) s.ws.transact(label, () => applyActions(s.ws, s.id, world), "ai");
   } catch (e) {
@@ -265,6 +284,46 @@ export function accept(s: Session): { label: string; view: AiView } {
   if (m.chat[p.entry]) m.chat[p.entry]!.status = "accepted";
   writeMemory(s, m);
   return { label, view: aiView(s) };
+}
+
+/** Version 4, "Create more": fresh alternatives, added after the ones already shown. */
+export async function more(s: Session, send: AiTransport, opts: { choice: ModelChoice; threshold: number; versions: number; confirmed?: boolean }, record: (usd: number) => void, now: () => number): Promise<AskResult> {
+  const p = pending.get(s);
+  if (!p?.versions || !p.prompt) throw new LibraryError("There are no versions to add to.");
+  const m = readMemory(s);
+  const target = p.workingOn ? s.ws.peek(s.id, p.workingOn) : null;
+  const model = pickModel(opts.choice, "big");
+  const guess = estimateCost(model, p.prompt.length + 12000);
+  if (!opts.confirmed && guess > opts.threshold) return { status: "estimate", estimate: `About ${dollars(guess)} with ${model.name}. Estimates are approximate.`, model: model.name };
+  const shown = p.versions.map((v) => v.label).join(", ");
+  let result: JobResult;
+  try {
+    result = await runJob(send, s.ws, s.id, {
+      prompt: `${p.prompt}\n\nI have already seen these versions: ${shown}. Offer new ones that are clearly different from all of them.`,
+      workingOn: target ? { id: target.id, name: target.name } : null,
+      notes: m.notes,
+      history: [],
+      placeName: s.name,
+      placeType: s.type,
+      model,
+      versions: Math.max(2, opts.versions),
+      world: buildContext(s.ws, s.id, s.name, s.type, m.notes, m.about).summary,
+    });
+  } catch (e) {
+    if (e instanceof AiError) throw new LibraryError(e.message);
+    throw e;
+  }
+  record(result.costUsd);
+  const fresh: Version[] = result.versions ?? (result.actions.length ? [{ label: "Another idea", actions: result.actions, preview: result.preview }] : []);
+  if (!fresh.length) throw new LibraryError("The AI had no new ideas. Try rewording the request.");
+  p.versions.push(...fresh);
+  const e = m.chat[p.entry];
+  if (e) {
+    e.versions = [...(e.versions ?? []), ...fresh.map((v) => ({ label: v.label, lines: v.preview.lines }))];
+    e.costUsd = (e.costUsd ?? 0) + result.costUsd;
+  }
+  writeMemory(s, m);
+  return { status: "done", view: aiView(s), costUsd: result.costUsd };
 }
 
 export function reject(s: Session): AiView {

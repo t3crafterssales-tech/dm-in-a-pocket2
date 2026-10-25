@@ -51,6 +51,8 @@ export interface Settings {
   autoPictures: boolean;
   /** The Codex opens the list that fits what you are working on (version 3). On by default. */
   autoCodex: boolean;
+  /** How many versions the AI offers of anything creative (version 4): 1 to 6, default 2. */
+  aiVersions: number;
   /** How the panels are arranged, and the arrangements the user saved (version 3). Screen only. */
   layout: Layout;
   layoutPresets: Record<string, Layout>;
@@ -60,7 +62,7 @@ export interface Settings {
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, autoCodex: true, layout: defaultLayout(), layoutPresets: {}, recent: [], where: {} };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, autoCodex: true, aiVersions: 2, layout: defaultLayout(), layoutPresets: {}, recent: [], where: {} };
 }
 
 export class SettingsFile {
@@ -98,6 +100,7 @@ export class SettingsFile {
         textSize: textSizeFor(raw.textSize),
         autoPictures: raw.autoPictures !== false,
         autoCodex: raw.autoCodex !== false,
+        aiVersions: typeof raw.aiVersions === "number" && Number.isFinite(raw.aiVersions) ? Math.min(6, Math.max(1, Math.round(raw.aiVersions))) : 2,
         recent: cleanRecent(raw.recent),
         where: cleanWhere(raw.where),
         layout: cleanLayout(raw.layout),

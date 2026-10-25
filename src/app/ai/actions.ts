@@ -89,6 +89,13 @@ export const TOOLS: ToolDef[] = [
   },
 ];
 /** Check for errors only: the AI reports problems; it changes nothing. */
+/** Version 4: for a creative request the AI offers several complete alternatives, each started with this. */
+export const VERSION_TOOL: ToolDef = {
+  name: "start_version",
+  description: "Start one complete alternative version of what the user asked for. Give it a short label that says how it feels, such as 'ruined and forgotten' or 'busy trade post'. Everything you queue after this belongs to this version until you call start_version again. Each version must work on its own, and its new ids start again from new-1.",
+  input_schema: obj({ label: S("A few words on how this version feels.") }, ["label"]),
+};
+
 export const REPORT_TOOL: ToolDef = {
   name: "report_problem",
   description: "Report one problem you found, as a yellow flag for the user. Only for real problems in the categories you were asked to check; say plainly what looks wrong and why.",

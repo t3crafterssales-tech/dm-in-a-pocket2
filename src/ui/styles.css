@@ -1364,3 +1364,6 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .ai-knows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 40vh; overflow: auto; }
 .ai-knows-part { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
 .ai-knows-part p { margin: 2px 0 0; }
+.ai-versions { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.ai-version { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.ai-version .ai-changes { margin: 0; }

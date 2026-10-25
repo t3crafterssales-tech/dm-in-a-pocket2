@@ -206,6 +206,8 @@ export interface AiStatus {
   model: ModelChoice;
   models: { quick: string; careful: string };
   threshold: number;
+  /** How many versions the AI offers of anything creative (version 4). */
+  versions: number;
   /** This month's AI spending in words ("$1.24 this month"). */
   spent: string;
   /** Live AI checking is on. */
@@ -553,6 +555,7 @@ export const BACKEND_METHODS = [
   "aiSetAbout",
   "aiAsk",
   "aiAccept",
+  "aiMore",
   "aiReject",
   "setWorldNotes",
   "updateWorldNotes",
@@ -936,7 +939,7 @@ export class Backend {
     const key = this.opts.secrets?.read() ?? null;
     const d = this.settingsFile.data;
     const spent = d.aiSpend.month === this.month() ? d.aiSpend.usd : 0;
-    return { hasKey: !!key, keyEnd: key ? key.slice(-4) : null, online: this.opts.isOnline?.() ?? true, model: d.aiModel, models: { quick: QUICK.name, careful: CAREFUL.name }, threshold: d.aiThreshold, spent: `${spent > 0 ? dollars(spent) : "$0.00"} this month`, live: d.aiLive, tip: !!key && !d.aiTipShown };
+    return { hasKey: !!key, keyEnd: key ? key.slice(-4) : null, online: this.opts.isOnline?.() ?? true, model: d.aiModel, models: { quick: QUICK.name, careful: CAREFUL.name }, threshold: d.aiThreshold, versions: d.aiVersions, spent: `${spent > 0 ? dollars(spent) : "$0.00"} this month`, live: d.aiLive, tip: !!key && !d.aiTipShown };
   }
 
   /** Settings → AI: paste a key (kept in the operating system's protected storage), or remove it. */
@@ -948,10 +951,11 @@ export class Backend {
     return this.aiStatus();
   }
 
-  setAiOptions(o: { model?: ModelChoice; threshold?: number }): AiStatus {
+  setAiOptions(o: { model?: ModelChoice; threshold?: number; versions?: number }): AiStatus {
     this.settingsFile.update((s) => {
       if (o.model === "auto" || o.model === "quick" || o.model === "careful") s.aiModel = o.model;
       if (typeof o.threshold === "number" && Number.isFinite(o.threshold) && o.threshold >= 0) s.aiThreshold = Math.min(1000, o.threshold);
+      if (typeof o.versions === "number" && Number.isFinite(o.versions)) s.aiVersions = Math.min(6, Math.max(1, Math.round(o.versions)));
     });
     return this.aiStatus();
   }
@@ -990,11 +994,17 @@ export class Backend {
   /** A request in the AI panel. Big jobs over the cost threshold first return an estimate. */
   async aiAsk(prompt: string, workingOn: Id | null, confirmed = false): Promise<AskResult> {
     const s = this.aiSession();
-    return assistant.ask(s, this.transport(), { prompt, workingOn, choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, confirmed }, (usd) => this.recordSpend(usd), this.now);
+    return assistant.ask(s, this.transport(), { prompt, workingOn, choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, confirmed, versions: this.settingsFile.data.aiVersions }, (usd) => this.recordSpend(usd), this.now);
   }
 
-  aiAccept(): { label: string; view: AiView } {
-    return assistant.accept(this.aiSession());
+  /** Accept the waiting proposal; when it offered several versions, the one picked (counting from 0). */
+  aiAccept(version = 0): { label: string; view: AiView } {
+    return assistant.accept(this.aiSession(), version);
+  }
+
+  /** "Create more": fresh alternatives added after the ones shown (version 4). */
+  async aiMore(confirmed = false): Promise<AskResult> {
+    return assistant.more(this.aiSession(), this.transport(), { choice: this.settingsFile.data.aiModel, threshold: this.settingsFile.data.aiThreshold, versions: this.settingsFile.data.aiVersions, confirmed }, (usd) => this.recordSpend(usd), this.now);
   }
 
   aiReject(): AiView {
