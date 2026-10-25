@@ -1245,3 +1245,21 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .quick-cond:hover, .quick-cond:focus-visible { opacity: 1; }
 .quick-cond.on { opacity: 1; background: color-mix(in srgb, var(--c) 22%, transparent); }
 .import-friend { margin-top: 1rem; padding: 0.75rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; gap: 0.5rem; justify-items: start; }
+
+/* Version 3: the picture chooser */
+.pic-filters { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.pic-filters .text-input { flex: 1 1 12rem; min-width: 0; }
+.pic-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.5rem 0; max-height: 5.5rem; overflow: auto; }
+.pic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: 0.5rem; }
+.pic-grid .pic-grid { grid-column: 1 / -1; }
+.pic-heading { grid-column: 1 / -1; margin: 0.25rem 0 0; }
+.pic-tile { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0.1rem; }
+.pic-pick { grid-column: 1 / -1; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--card); aspect-ratio: 1; overflow: hidden; cursor: pointer; }
+.pic-pick:hover, .pic-pick:focus-visible { border-color: var(--accent); }
+.pic-pick img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pic-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pic-extras { display: grid; gap: 0.25rem; margin-top: 0.25rem; }
+.pic-palette { display: grid; gap: 0.35rem; min-width: 0; }
+.pic-palette-grid, .pic-recent { display: flex; flex-wrap: wrap; gap: 0.2rem; max-height: 9rem; overflow: auto; align-items: center; }
+.pic-thumb { padding: 0; width: 2.4rem; height: 2.4rem; overflow: hidden; }
+.pic-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }

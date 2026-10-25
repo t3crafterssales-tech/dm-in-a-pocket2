@@ -4,6 +4,7 @@
 
 import type { BuilderOptions, CharacterInput, Method, OptionChoice } from "../app/backend.ts";
 import { api, pictureUrl } from "./api.ts";
+import { choosePicture } from "./picture-chooser.ts";
 import { attempt } from "./common.ts";
 import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -100,7 +101,7 @@ function whoStep(input: CharacterInput, redraw: () => void): HTMLElement {
     input.picture ? h("img", { src: pictureUrl(input.picture), alt: "" }) : [h("span", { class: "portrait-icon" }, "🧙"), h("span", null, "Add picture")],
   );
   pic.addEventListener("click", async () => {
-    const id = await attempt(() => api.pickPicture());
+    const id = await choosePicture();
     if (id) ((input.picture = id), redraw());
   });
   return h(

@@ -5,6 +5,7 @@
 
 import type { CharacterView, RosterEntry, SheetDesign, TrackerView } from "../app/backend.ts";
 import { api, pictureUrl } from "./api.ts";
+import { choosePicture } from "./picture-chooser.ts";
 import { attempt } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -124,7 +125,7 @@ function sheet(v: CharacterView, ctx: PlaceCtx, design: SheetDesign | null): HTM
 
   const pic = h("button", { class: `portrait${v.picture ? "" : " empty"}`, disabled: ro, title: "Change the picture" }, v.picture ? h("img", { src: pictureUrl(v.picture), alt: "" }) : [h("span", { class: "portrait-icon" }, "🧙"), h("span", null, "Add picture")]);
   pic.addEventListener("click", async () => {
-    const id = await attempt(() => api.pickPicture());
+    const id = await choosePicture();
     if (id) await save(() => api.setPicture(v.id, id));
   });
   const name = h("input", { class: "sheet-name", value: v.name, disabled: ro, "aria-label": "Character name", maxlength: 200 });

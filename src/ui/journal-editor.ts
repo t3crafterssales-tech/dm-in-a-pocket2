@@ -8,6 +8,7 @@ import { showToPlayers } from "./players-panel.ts";
 import type { Block, PageEntry, PageView } from "../app/backend.ts";
 import { DEFAULT_CATEGORIES, FONTS, PAGE_WIDTH } from "../app/journal-lists.ts";
 import { api, pictureUrl } from "./api.ts";
+import { choosePicture } from "./picture-chooser.ts";
 import { attempt } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -127,7 +128,7 @@ export function pageEditor(v: PageView, host: JournalHost, opts: { compact?: boo
           {
             class: "button plain small-button",
             onClick: async () => {
-              const pic = await attempt(() => api.pickPicture());
+              const pic = await choosePicture();
               if (pic) await done(() => api.addBlock(v.id, "image", pic));
             },
           },

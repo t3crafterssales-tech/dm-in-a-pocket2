@@ -6,6 +6,8 @@ import type { CategoryOption, Choices, NodeView, QuickView } from "../app/backen
 import { CHALLENGES, CODEX_SECTIONS, HIT_DICE } from "../app/codex-lists.ts";
 import type { CodexKey } from "../app/codex-lists.ts";
 import { api, pictureUrl } from "./api.ts";
+import { hintsFor } from "../app/piclib.ts";
+import { choosePicture } from "./picture-chooser.ts";
 import { attempt } from "./common.ts";
 import { notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -52,7 +54,7 @@ export async function beingSheet(view: NodeView, categories: CategoryOption[], c
     view.picture ? h("img", { src: pictureUrl(view.picture), alt: "" }) : [h("span", { class: "portrait-icon", "aria-hidden": "true" }, section?.icon ?? "🐉"), h("span", null, "Add picture")],
   );
   pic.addEventListener("click", async () => {
-    const id = await attempt(() => api.pickPicture());
+    const id = await choosePicture({ hints: hintsFor(view.name, section?.one ?? "", kind) });
     if (id) save(() => api.setPicture(view.id, id));
   });
   const name = h("input", { class: "sheet-name", value: view.name, "data-key": "f-name", "aria-label": "Name", disabled: locked, maxlength: 200 });

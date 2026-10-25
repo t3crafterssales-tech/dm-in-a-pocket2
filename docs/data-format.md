@@ -266,3 +266,18 @@ Files and folders use permanent IDs as names, so renaming a world never moves a 
 - A bulk change is one undo step.
 - Saving writes a new file beside the old one and swaps it in, so a crash mid-save leaves the old
   file whole.
+
+
+## The picture library (version 3)
+
+Pictures stay stored once, by content, in `<main folder>/.pictures/`. Beside them sits `index.json`:
+one entry per picture id with `name`, `tags` (single lowercase words; the first is the main tag),
+`style` and `favourite`. It belongs to the person's library, not to any world or system file, so it
+is never shared with a world (a world carries only the pictures it uses) and a missing or damaged
+index just means "no tags yet". Nodes still hold a plain `picture` id; nothing in `types.ts` changed.
+
+On a map, a shape's `stamp` or `texture` can be `pic:<picture id>` to use a library picture as a
+stamp or a repeating floor. Older apps show an unknown stamp as a plain dot.
+
+Setting `autoPictures` (settings file, default on): new things made from "Start blank" get the first
+picture whose main tag (then any tag) matches a word of the name, then what it is filed as.

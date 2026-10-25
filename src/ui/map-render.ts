@@ -44,11 +44,32 @@ function gridDefs(v: MapView): string {
   return "";
 }
 
+// Pictures from the library can be stamps ("pic:<id>") or floors and fills (a texture "pic:<id>").
+// While a map is drawn, `hrefs` says where each picture's data is (export needs data addresses).
+let hrefs: Record<string, string> | null = null;
+const PIC = "pic:";
+const picHref = (id: string) => hrefs?.[id] ?? `${(globalThis as unknown as { dmPicBase?: string }).dmPicBase ?? "dmpic://pic/"}${encodeURIComponent(id)}`;
+const texId = (t: string) => `tx-${t.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+/** The picture ids a map uses as stamps or fills, so an export can fetch their data. */
+export function mapPictureIds(v: MapView): string[] {
+  const ids = new Set<string>();
+  for (const sh of v.shapes) {
+    if (sh.stamp?.startsWith(PIC)) ids.add(sh.stamp.slice(PIC.length));
+    if (sh.texture?.startsWith(PIC)) ids.add(sh.texture.slice(PIC.length));
+  }
+  return [...ids];
+}
+
 /** A stamp at x, y, size units across. */
 export function stampSvg(kind: string, x: number, y: number, size: number, color: string): string {
   const s = size / 2;
   const at = `transform="translate(${x} ${y})"`;
   const c = esc(color);
+  if (kind.startsWith(PIC)) {
+    const href = esc(picHref(kind.slice(PIC.length)));
+    return `<g ${at}><image href="${href}" xlink:href="${href}" x="${-s}" y="${-s}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/></g>`;
+  }
   switch (kind) {
     case "door":
       return `<g ${at}><rect x="${-s}" y="${-s / 4}" width="${size}" height="${s / 2}" fill="#9a6a3a" stroke="${c}" stroke-width="2"/><path d="M${-s} ${-s / 4} A ${size} ${size} 0 0 1 ${s} ${-s / 4}" fill="none" stroke="${c}" stroke-width="1" stroke-dasharray="3 3"/></g>`;
@@ -74,7 +95,7 @@ export function stampSvg(kind: string, x: number, y: number, size: number, color
 export function shapeSvg(sh: Shape, interactive: boolean): string {
   const p = sh.points;
   const data = interactive ? ` data-shape="${esc(sh.id)}"` : "";
-  const fill = sh.texture ? `url(#tx-${esc(sh.texture)})` : sh.fill ? esc(sh.fill) : "none";
+  const fill = sh.texture ? `url(#${texId(sh.texture)})` : sh.fill ? esc(sh.fill) : "none";
   const dm = sh.layer === "dm" ? ` stroke-dasharray="8 5" opacity=".85"` : "";
   const c = esc(sh.layer === "dm" ? sh.color || "#7b3fa0" : sh.color);
   switch (sh.tool) {
@@ -101,13 +122,27 @@ export function shapeSvg(sh: Shape, interactive: boolean): string {
 }
 
 /** The whole map as SVG text. `pictureHref` gives the picture's address (a data address for export). */
-export function mapSvg(v: MapView, opts: { pictureHref: string | null; show?: MapShow; interactive?: boolean; selected?: Set<string>; pinScale?: number; numbers?: boolean }): string {
+export function mapSvg(v: MapView, opts: { pictureHref: string | null; show?: MapShow; interactive?: boolean; selected?: Set<string>; pinScale?: number; numbers?: boolean; pictureHrefs?: Record<string, string> }): string {
+  hrefs = opts.pictureHrefs ?? null;
+  try {
+    return drawMap(v, opts);
+  } finally {
+    hrefs = null;
+  }
+}
+
+function drawMap(v: MapView, opts: { pictureHref: string | null; show?: MapShow; interactive?: boolean; selected?: Set<string>; pinScale?: number; numbers?: boolean }): string {
   const show = opts.show ?? SHOW_ALL;
   const sel = opts.selected ?? new Set<string>();
   const ps = (opts.pinScale ?? 1) * Math.max(14, Math.min(v.width, v.height) / 45);
   const parts: string[] = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${v.width} ${v.height}" width="${v.width}" height="${v.height}" class="map-svg">`);
-  parts.push(`<defs>${textureDefs()}${gridDefs(v)}</defs>`);
+  const tile = v.grid.kind === "square" ? v.grid.size * 2 : 128;
+  const pics = [...new Set(v.shapes.map((x) => x.texture).filter((t): t is string => !!t && t.startsWith(PIC)))].map((t) => {
+    const href = esc(picHref(t.slice(PIC.length)));
+    return `<pattern id="${texId(t)}" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse"><image href="${href}" xlink:href="${href}" width="${tile}" height="${tile}" preserveAspectRatio="xMidYMid slice"/></pattern>`;
+  });
+  parts.push(`<defs>${textureDefs()}${pics.join("")}${gridDefs(v)}</defs>`);
   parts.push(`<rect width="${v.width}" height="${v.height}" fill="${esc(v.background)}"/>`);
   if (opts.pictureHref) parts.push(`<image href="${esc(opts.pictureHref)}" xlink:href="${esc(opts.pictureHref)}" x="0" y="0" width="${v.width}" height="${v.height}" preserveAspectRatio="none"/>`);
   const visible = (s: Shape) => (s.layer === "dm" ? show.dm : s.layer === "labels" ? show.labels : show.drawing);

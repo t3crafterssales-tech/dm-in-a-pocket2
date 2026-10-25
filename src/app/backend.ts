@@ -22,6 +22,7 @@ export type { PaperGroup, PaperLine, PaperSheet, SheetDesign, SheetGroup, SheetL
 import { BOOK_CHAPTERS, BOOK_TITLES, CHAPTER_TITLES } from "../engine/index.ts";
 import type { RulesSection } from "./rules.ts";
 import type { BeingKind, CategoryOption, ListEntry, SourceFilter, TemplateEntry } from "./sheets.ts";
+import { CODEX_SECTIONS } from "./codex-lists.ts";
 import type { CodexKey, CodexSection, QuickView } from "./codex.ts";
 import type { EncounterNode } from "./encounters.ts";
 import type { BrickType, LibrarySection } from "./library.ts";
@@ -32,6 +33,8 @@ import type { FlagPanelView, MissingDetail } from "./flagpanel.ts";
 import { Session } from "./session.ts";
 import { ensureCategories } from "./sheets.ts";
 import { buildD20Starter } from "./starters/d20.ts";
+import { allTags, cleanInfo, cleanTags, entriesOf, hintsFor, matchPictures, suggestTags } from "./piclib.ts";
+import type { PicEntry, PicIndex, PicInfo } from "./piclib.ts";
 import { LIBRARY_STARTS, buildLibraryStart, isLibraryStart } from "./starters/library.ts";
 import type { LibraryStart } from "./starters/library.ts";
 import { QUICK_QUESTIONS } from "./quickstart.ts";
@@ -186,6 +189,7 @@ export interface SettingsView {
   /** The colour theme and the size of the interface text (version 3). */
   theme: string;
   textSize: "small" | "normal" | "large";
+  autoPictures: boolean;
 }
 
 /** Settings → AI, and the corner of the AI panel. */
@@ -491,6 +495,12 @@ export const BACKEND_METHODS = [
   "setUnits",
   "setTheme",
   "setTextSize",
+  "setAutoPictures",
+  "pictureLibrary",
+  "pictureTags",
+  "pictureSuggestions",
+  "importPictureTagged",
+  "tagPicture",
   "importFile",
   "share",
   "snapshots",
@@ -607,13 +617,69 @@ export class Backend {
     }
   }
 
-  /** Asks for a picture file and stores it once in the picture store. Null if cancelled. */
-  async pickPicture(): Promise<Id | null> {
+  private pictureIndex(): PicIndex {
+    const raw = this.lib.readPictureIndex();
+    const out: PicIndex = {};
+    for (const id of Object.keys(raw)) out[id] = cleanInfo(raw[id] as Partial<PicInfo>, "Picture");
+    return out;
+  }
+
+  private savePictureInfo(id: Id, info: PicInfo) {
+    const index = this.lib.readPictureIndex();
+    index[id] = info;
+    this.lib.writePictureIndex(index);
+  }
+
+  /** Reads, checks and stores a picked file once. Null if cancelled. */
+  private async takePicture(): Promise<{ id: Id; fileName: string } | null> {
     const path = await this.opts.pickPicture();
     if (!path) return null;
     if (!PICTURE_TYPES.includes(extname(path).toLowerCase())) throw new LibraryError("That isn't a picture the app can show. Use PNG, JPG, GIF or WebP.");
     if (statSync(path).size > MAX_PICTURE_BYTES) throw new LibraryError("That picture is over 25 MB. Try a smaller copy of it.");
-    return this.lib.addPicture(readFileSync(path), basename(path));
+    return { id: this.lib.addPicture(readFileSync(path), basename(path)), fileName: basename(path) };
+  }
+
+  /** Asks for a picture file and stores it once in the picture store. Null if cancelled. */
+  async pickPicture(): Promise<Id | null> {
+    const got = await this.takePicture();
+    if (!got) return null;
+    if (!this.lib.readPictureIndex()[got.id]) this.savePictureInfo(got.id, cleanInfo({ name: got.fileName.replace(/\.[^.]+$/, "") }, "Picture"));
+    return got.id;
+  }
+
+  /** Every picture in the library with its name, tags and style (version 3). */
+  pictureLibrary(): PicEntry[] {
+    return entriesOf(this.lib.listPictureIds(), this.pictureIndex());
+  }
+
+  /** Tag suggestions for one tag line: what's typed narrows, words that go with the main tag lead. */
+  pictureTags(main = "", typed = "", already: string[] = []): { all: string[]; suggested: string[] } {
+    const index = this.pictureIndex();
+    return { all: allTags(index), suggested: suggestTags(index, main, typed, already) };
+  }
+
+  /** Browse-and-import in one: picks a file and gives it a name, tags and a style. Null if cancelled. */
+  async importPictureTagged(input: { name: string; tags: string[]; style: string }): Promise<Id | null> {
+    const got = await this.takePicture();
+    if (!got) return null;
+    const old = this.pictureIndex()[got.id];
+    const tags = cleanTags([...cleanTags(input.tags), ...(old?.tags ?? [])]);
+    this.savePictureInfo(got.id, cleanInfo({ name: input.name.trim() || old?.name || got.fileName.replace(/\.[^.]+$/, ""), tags, style: input.style || old?.style, favourite: old?.favourite }, "Picture"));
+    return got.id;
+  }
+
+  /** Renames, retags, restyles or stars a picture. Library bookkeeping, not part of any world. */
+  tagPicture(id: Id, patch: Partial<PicInfo>): PicEntry {
+    if (!this.lib.listPictureIds().includes(id)) throw new LibraryError("That picture isn't in the library.");
+    const old = this.pictureIndex()[id] ?? cleanInfo(undefined, "Picture");
+    const next = cleanInfo({ ...old, ...patch }, old.name);
+    this.savePictureInfo(id, next);
+    return { id, ...next };
+  }
+
+  /** Pictures that fit, for the "Suggested" row in the picture chooser. */
+  pictureSuggestions(hints: string[]): PicEntry[] {
+    return matchPictures(this.pictureLibrary(), Array.isArray(hints) ? hints.map(String) : []);
   }
 
   createSystem(input: { name: string; picture: Id | null; start: StartingPoint["id"] }): Id {
@@ -734,7 +800,7 @@ export class Backend {
   // ---------- Settings ----------
 
   settings(): SettingsView {
-    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units, theme: this.settingsFile.data.theme, textSize: this.settingsFile.data.textSize };
+    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units, theme: this.settingsFile.data.theme, textSize: this.settingsFile.data.textSize, autoPictures: this.settingsFile.data.autoPictures };
   }
 
   /** Pounds or kilograms for the weight pickers. */
@@ -746,6 +812,12 @@ export class Backend {
   /** The colour theme (version 3); anything unknown means Default. */
   setTheme(id: string): SettingsView {
     this.settingsFile.update((s) => (s.theme = themeFor(id).id));
+    return this.settings();
+  }
+
+  /** Whether new things get a fitting picture by themselves (version 3). */
+  setAutoPictures(on: boolean): SettingsView {
+    this.settingsFile.update((s) => (s.autoPictures = on === true));
     return this.settings();
   }
 
@@ -1194,8 +1266,16 @@ export class Backend {
     return this.editing.printPreview(id);
   }
   newInSection(key: CodexKey, name: string): Id {
-    return this.stepFor(this.editing.newInSection(key, name), false);
+    return this.stepFor(this.editing.newInSection(key, name, this.autoPicture(key, name)), false);
   }
+  /** A fitting picture for something new, or null (setting off, nothing tagged to fit). Same choice every time. */
+  private autoPicture(key: CodexKey, name: string): Id | null {
+    if (!this.settingsFile.data.autoPictures) return null;
+    const sec = CODEX_SECTIONS.find((x) => x.key === key);
+    const found = matchPictures(this.pictureLibrary(), hintsFor(name, sec?.one ?? "", key));
+    return found[0]?.id ?? null;
+  }
+
   encounterTree(): EncounterNode[] {
     return this.editing.encounterTree();
   }

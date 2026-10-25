@@ -4,6 +4,7 @@
 import type { HomeData, ModuleCard, RecycledInfo, SystemCard, WorldCard } from "../app/backend.ts";
 import { count, whenLabel } from "../app/words.ts";
 import { api, pictureUrl } from "./api.ts";
+import { choosePicture } from "./picture-chooser.ts";
 import { app, attempt, brand, iconButton, nav, pulseLogo, typingIn } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -270,7 +271,7 @@ function pictureStep(state: { picture: string | null }): Step {
         {
           class: "button plain",
           onClick: async () => {
-            const id = await attempt(() => api.pickPicture());
+            const id = await choosePicture();
             if (id) {
               state.picture = id;
               draw();
@@ -628,6 +629,15 @@ async function showSettings() {
       h("h3", null, "Look"),
       h("p", { class: "muted" }, "Pick a theme and a text size. They change only what you see on screen; printed pages and PDFs are always black on white."),
       lookSettings(s, () => void draw()),
+      h("h3", null, "Pictures"),
+      (() => {
+        const box = h("input", { type: "checkbox", checked: s.autoPictures });
+        box.addEventListener("change", async () => {
+          await attempt(() => api.setAutoPictures(box.checked));
+          notice(box.checked ? "New things will get a fitting picture from the library." : "New things will start with no picture.", "green", undefined, 3500);
+        });
+        return h("label", { class: "inline" }, box, "Add pictures automatically to new things (when the library has one that fits)");
+      })(),
       h("h3", null, "AI"),
       aiSettings(() => void draw()),
     );

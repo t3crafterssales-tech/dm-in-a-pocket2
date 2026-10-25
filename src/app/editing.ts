@@ -1425,9 +1425,15 @@ export class Editing {
   }
 
   /** "Start blank" on the start screen. */
-  newInSection(key: CodexKey, name: string): Id {
+  newInSection(key: CodexKey, name: string, picture: Id | null = null): Id {
     const n = cleanName(name);
-    return this.run(() => this.ws.transact(`Added ${n}`, () => newInSection(this.ws, this.layer, key, n)));
+    return this.run(() =>
+      this.ws.transact(`Added ${n}`, () => {
+        const id = newInSection(this.ws, this.layer, key, n);
+        if (picture) this.ws.edit(this.layer, id, (r) => void (r.picture = picture));
+        return id;
+      }),
+    );
   }
 
   /** The thing exactly as the rulebook prints it. */

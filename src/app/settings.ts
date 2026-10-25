@@ -46,10 +46,12 @@ export interface Settings {
   /** The colour theme (version 3) and the size of the interface text. Screen only. */
   theme: string;
   textSize: "small" | "normal" | "large";
+  /** New things get a fitting picture from the library by themselves (version 3). On by default. */
+  autoPictures: boolean;
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal" };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true };
 }
 
 export class SettingsFile {
@@ -85,6 +87,7 @@ export class SettingsFile {
         stepsClosed: raw.welcomed === undefined ? true : raw.stepsClosed === true,
         theme: themeFor(raw.theme).id,
         textSize: textSizeFor(raw.textSize),
+        autoPictures: raw.autoPictures !== false,
       };
     } catch {
       return defaultSettings();

@@ -5,6 +5,7 @@
 
 import type { EncounterNode, NodeView } from "../app/backend.ts";
 import { api, pictureUrl } from "./api.ts";
+import { choosePicture } from "./picture-chooser.ts";
 import { attempt } from "./common.ts";
 import { ask, notice } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -260,7 +261,7 @@ async function encounterEditor(view: NodeView, all: EncounterNode[], ctx: PlaceC
     view.picture ? h("img", { src: pictureUrl(view.picture), alt: "" }) : [h("span", { class: "portrait-icon", "aria-hidden": "true" }, "🗺️"), h("span", null, "Add picture")],
   );
   pic.addEventListener("click", async () => {
-    const id = await attempt(() => api.pickPicture());
+    const id = await choosePicture();
     if (id) save(() => api.setPicture(view.id, id));
   });
   const parent = me?.inside ? all.find((x) => x.id === me.inside) : null;

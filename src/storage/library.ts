@@ -186,6 +186,26 @@ export class Library {
     return id;
   }
 
+  /** Every picture in the store, as ids (the index file is not one). */
+  listPictureIds(): Id[] {
+    const dir = this.dir(".pictures");
+    return existsSync(dir) ? readdirSync(dir).filter((f) => /\.(png|jpe?g|gif|webp)$/i.test(f)).sort() : [];
+  }
+
+  /** The tags and names of pictures (version 3). A missing or damaged file means no tags yet. */
+  readPictureIndex(): Record<Id, unknown> {
+    try {
+      const raw = JSON.parse(readFileSync(join(this.dir(".pictures"), "index.json"), "utf8")) as unknown;
+      return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<Id, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  writePictureIndex(index: Record<Id, unknown>) {
+    atomicWrite(join(this.dir(".pictures"), "index.json"), Buffer.from(JSON.stringify(index, null, 1)));
+  }
+
   readPicture(id: Id): Buffer | null {
     const path = join(this.dir(".pictures"), safeName(id));
     return existsSync(path) ? readFileSync(path) : null;

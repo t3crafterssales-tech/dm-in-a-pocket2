@@ -5,6 +5,7 @@
 
 import type { MapTreeNode, MapView, PinView, Shape } from "../app/backend.ts";
 import { api, pictureUrl } from "./api.ts";
+import { choosePicture } from "./picture-chooser.ts";
 import { attempt } from "./common.ts";
 import { ask, notice, openDialog } from "./dialogs.ts";
 import { h, svg } from "./dom.ts";
@@ -13,7 +14,7 @@ import { DRAG_TYPE } from "./library-panel.ts";
 import { NODE_DRAG, codexPanel } from "./codex-panel.ts";
 import { askText } from "./pickers.ts";
 import type { PlaceCtx } from "./place.ts";
-import { PIN_GLYPH, PIN_NAMES, mapSvg, shapeSvg, stampSvg } from "./map-render.ts";
+import { PIN_GLYPH, PIN_NAMES, mapPictureIds, mapSvg, shapeSvg, stampSvg } from "./map-render.ts";
 import type { MapShow } from "./map-render.ts";
 
 type Tool = "select" | "pin" | "room" | "line" | "brush" | "fill" | "stamp" | "text" | "eraser" | "ruler";
@@ -50,6 +51,55 @@ const TEXTURE_LIST = [
   ["sand", "Sand"],
   ["lava", "Lava"],
 ];
+
+// ---------- The picture palette (version 3) ----------
+
+/** Library pictures picked this time round, newest first. */
+const recentPics: string[] = [];
+const palette = { text: "", tag: "", style: "", stars: false, open: false };
+
+/** Pictures from the shared library: search, tag, style, favourites and recents. Click to stamp, or use as a floor. */
+function picturePalette(refresh: () => Promise<void> | void, asStamp: boolean): HTMLElement {
+  const box = h("div", { class: "pic-palette" });
+  const pick = (id: string) => {
+    if (asStamp) stamp = `pic:${id}`;
+    else texture = `pic:${id}`;
+    const at = recentPics.indexOf(id);
+    if (at >= 0) recentPics.splice(at, 1);
+    recentPics.unshift(id);
+    recentPics.length = Math.min(recentPics.length, 12);
+    void refresh();
+  };
+  const toggle = h("button", { class: "link small", "aria-expanded": palette.open ? "true" : "false", onClick: () => ((palette.open = !palette.open), void draw()) }, palette.open ? "Hide the picture library" : "Pictures from the library…");
+  const draw = async () => {
+    toggle.textContent = palette.open ? "Hide the picture library" : "Pictures from the library…";
+    toggle.setAttribute("aria-expanded", palette.open ? "true" : "false");
+    box.replaceChildren(toggle);
+    if (!palette.open) return;
+    const all = (await attempt(() => api.pictureLibrary())) ?? [];
+    const q = palette.text.trim().toLowerCase();
+    const shown = all.filter((e) => (!palette.stars || e.favourite) && (!palette.style || e.style === palette.style) && (!palette.tag || e.tags.includes(palette.tag)) && (!q || e.name.toLowerCase().includes(q) || e.tags.some((t) => t.includes(q))));
+    const tags = [...new Set(all.flatMap((e) => e.tags))].sort();
+    const styles = [...new Set(all.map((e) => e.style).filter(Boolean))].sort();
+    const search = h("input", { class: "text-input small-select", type: "search", value: palette.text, placeholder: "Search…", "aria-label": "Search pictures" });
+    search.addEventListener("input", () => ((palette.text = search.value), void draw().then(() => box.querySelector<HTMLInputElement>("input[type=search]")?.focus())));
+    const tag = h("select", { class: "text-input select small-select", "aria-label": "Category" }, h("option", { value: "" }, "Any category"), tags.map((t) => h("option", { value: t, selected: t === palette.tag }, t)));
+    tag.addEventListener("change", () => ((palette.tag = tag.value), void draw()));
+    const style = h("select", { class: "text-input select small-select", "aria-label": "Style" }, h("option", { value: "" }, "Any style"), styles.map((t) => h("option", { value: t, selected: t === palette.style }, t)));
+    style.addEventListener("change", () => ((palette.style = style.value), void draw()));
+    const stars = h("input", { type: "checkbox", checked: palette.stars });
+    stars.addEventListener("change", () => ((palette.stars = stars.checked), void draw()));
+    const thumb = (e: (typeof all)[number]) => h("button", { class: "stamp-pick pic-thumb", title: `${e.name}${asStamp ? "" : " (as a floor)"}`, "aria-label": e.name, onClick: () => pick(e.id) }, h("img", { src: pictureUrl(e.id), alt: "" }));
+    const recent = recentPics.map((id) => all.find((e) => e.id === id)).filter((e): e is (typeof all)[number] => !!e);
+    box.append(
+      h("div", { class: "inline small" }, search, tag, style, h("label", { class: "inline small" }, stars, "★")),
+      ...(recent.length ? [h("div", { class: "pic-recent" }, h("span", { class: "muted tiny" }, "Recent"), recent.map(thumb))] : []),
+      h("div", { class: "pic-palette-grid" }, shown.length ? shown.map(thumb) : h("span", { class: "muted small" }, all.length ? "Nothing matches." : "The library is empty. Add pictures from any picture slot: Upload your own.")),
+    );
+  };
+  void draw();
+  return box;
+}
 
 // What the tools remember while the app is open.
 let side: "maps" | "codex" = "maps";
@@ -124,7 +174,7 @@ async function newMap(ctx: PlaceCtx) {
   const pic = h("button", { class: "button plain" }, svg(ICONS.image), "Bring in a picture…");
   const note = h("p", { class: "muted small" }, "Or leave it blank to draw from scratch.");
   pic.addEventListener("click", async () => {
-    const id = await attempt(() => api.pickPicture());
+    const id = await choosePicture();
     if (id) {
       picture = id;
       note.replaceChildren(h("img", { class: "map-new-pic", src: pictureUrl(id), alt: "" }));
@@ -446,10 +496,11 @@ async function mapEditor(v: MapView, ctx: PlaceCtx): Promise<HTMLElement> {
     options.push(h("label", { class: "inline small" }, "Thickness", w));
   }
   if (!ro && (tool === "fill" || tool === "room")) {
-    const t = h("select", { class: "text-input select small-select", "aria-label": "Fill with" }, TEXTURE_LIST.map(([k, l]) => h("option", { value: k, selected: k === texture }, l)));
+    const t = h("select", { class: "text-input select small-select", "aria-label": "Fill with" }, [...TEXTURE_LIST, ...(texture.startsWith("pic:") ? [["" + texture, "Library picture"]] : [])].map(([k, l]) => h("option", { value: k, selected: k === texture }, l)));
     t.addEventListener("change", () => (texture = t.value));
     options.push(h("label", { class: "inline small" }, tool === "room" ? "Floor" : "Fill with", t));
   }
+  if (!ro && (tool === "stamp" || tool === "fill" || tool === "room")) options.push(picturePalette(refresh, tool === "stamp"));
   if (!ro && tool === "stamp") {
     options.push(
       h(
@@ -626,7 +677,12 @@ async function mapSettings(v: MapView, ctx: PlaceCtx) {
 /** Draws the map into a picture in the window: SVG, then a canvas, then PNG or JPEG data. */
 export async function renderMapImage(v: MapView, opts: { show: MapShow; type: "image/png" | "image/jpeg"; maxSide?: number }): Promise<string> {
   const href = v.picture ? await attempt(() => api.pictureData(v.picture!)) : null;
-  const text = mapSvg(v, { pictureHref: href ?? null, show: opts.show });
+  const pictureHrefs: Record<string, string> = {};
+  for (const id of mapPictureIds(v)) {
+    const data = await attempt(() => api.pictureData(id));
+    if (data) pictureHrefs[id] = data;
+  }
+  const text = mapSvg(v, { pictureHref: href ?? null, show: opts.show, pictureHrefs });
   const img = new Image();
   const url = URL.createObjectURL(new Blob([text], { type: "image/svg+xml" }));
   try {
