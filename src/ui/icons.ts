@@ -41,12 +41,15 @@ export const ICONS = {
   globe: icon(`<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z"/>`),
 };
 
-/** The logo: a d20 tucked in a pocket. Its glow is the save indicator. */
+/** The logo: the top half of the Earth in a blue jean pocket. Its glow is the save indicator. */
 export const LOGO = `<svg class="logo" viewBox="0 0 64 64" width="34" height="34" aria-hidden="true">
-  <g class="logo-die" fill="#fffdf8" stroke="#2b2620" stroke-width="2.4" stroke-linejoin="round">
-    <path d="M32 4 L45 11.5 V26.5 L32 34 L19 26.5 V11.5 Z"/>
-    <path d="M32 11 L39.5 24 H24.5 Z M32 4 V11 M45 11.5 L39.5 24 M19 11.5 L24.5 24 M45 26.5 L39.5 24 M19 26.5 L24.5 24 M32 34 L39.5 24 M32 34 L24.5 24" fill="none" stroke-width="1.8"/>
+  <defs><clipPath id="logo-top"><rect x="0" y="0" width="64" height="25"/></clipPath></defs>
+  <g class="logo-die" clip-path="url(#logo-top)">
+    <circle cx="32" cy="25" r="19" fill="#2f8fd8" stroke="#2b2620" stroke-width="2.4"/>
+    <path d="M20 17 Q24 9 31 11 Q33 15 29 18 Q31 22 26 25 Q21 24 18 21 Z M36 10 Q43 8 47 13 Q46 18 41 19 Q42 23 38 25 Q35 20 37 16 Q34 13 36 10 Z" fill="#4fae5a"/>
+    <path d="M24 8 Q32 4 40 8" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round"/>
   </g>
-  <path class="logo-pocket" d="M9 22 H55 V43 Q55 46 52.5 47.5 L33.5 58.5 Q32 59.3 30.5 58.5 L11.5 47.5 Q9 46 9 43 Z" fill="#8a4b2a" stroke="#2b2620" stroke-width="2.4" stroke-linejoin="round"/>
-  <path d="M13.5 26.5 H50.5 V42 Q50.5 43.6 49 44.5 L32 54.3 L15 44.5 Q13.5 43.6 13.5 42 Z" fill="none" stroke="#f3d9b8" stroke-width="1.4" stroke-dasharray="3 2.6"/>
+  <path class="logo-pocket" d="M9 22 H55 V43 Q55 46 52.5 47.5 L33.5 58.5 Q32 59.3 30.5 58.5 L11.5 47.5 Q9 46 9 43 Z" fill="#2b5fa3" stroke="#2b2620" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M9 22 H55 V27 H9 Z" fill="#234f8c" stroke="#2b2620" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M13.5 31 H50.5 V42 Q50.5 43.6 49 44.5 L32 54.3 L15 44.5 Q13.5 43.6 13.5 42 Z" fill="none" stroke="#f1c46b" stroke-width="1.4" stroke-dasharray="3 2.6"/>
 </svg>`;
