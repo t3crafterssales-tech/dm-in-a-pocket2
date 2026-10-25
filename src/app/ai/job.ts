@@ -38,6 +38,8 @@ export interface JobRequest {
   placeName: string;
   placeType: "world" | "system" | "module";
   model: ModelInfo;
+  /** What the AI knows about this world (version 4): the world context summary. */
+  world?: string;
   /** Extra instructions for special jobs (Check for errors, create from a document). */
   extra?: string;
   maxRounds?: number;
@@ -79,6 +81,7 @@ function systemPrompt(req: JobRequest): Anthropic.Beta.Messages.BetaTextBlockPar
   const context = [
     `This is the ${req.placeType} "${req.placeName}".`,
     req.workingOn ? `The user is working on: ${req.workingOn.name} (id ${req.workingOn.id}).` : "The user is working on the whole " + req.placeType + ".",
+    req.world ? `What you know about this world (use it so what you make fits; do not repeat it back):\n${req.world}` : "",
     `World Notes:\n${notes}`,
     req.extra ?? "",
   ]

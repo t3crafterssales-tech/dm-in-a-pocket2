@@ -1361,3 +1361,6 @@ body.touring .tip-box, body.touring .steps-card { display: none; }
 .next-card:hover:not(:disabled), .next-card:focus-visible { border-color: var(--accent); box-shadow: 0 4px 10px rgb(0 0 0 / 0.14); }
 .next-card:disabled { opacity: 0.55; cursor: default; }
 .next-icon { font-size: 28px; line-height: 1; }
+.ai-knows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 40vh; overflow: auto; }
+.ai-knows-part { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.ai-knows-part p { margin: 2px 0 0; }

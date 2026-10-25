@@ -16,6 +16,8 @@ import type { AiTransport, JobResult } from "./job.ts";
 import { dollars, estimateCost, pickModel } from "./models.ts";
 import type { JobSize, ModelChoice } from "./models.ts";
 import { toPlain } from "../../engine/richtext.ts";
+import { buildContext } from "./context.ts";
+import type { WorldContext } from "./context.ts";
 
 export interface Note {
   text: string;
@@ -38,6 +40,8 @@ export interface ChatEntry {
 export interface AiMemory {
   notes: Note[];
   chat: ChatEntry[];
+  /** What the user wrote by hand about the world: tone, themes, anything the AI should keep in mind (version 4). */
+  about: string;
 }
 
 interface Pending {
@@ -57,11 +61,11 @@ export function readMemory(s: Session): AiMemory {
   const raw = (s.ai ?? {}) as Partial<AiMemory>;
   const notes = Array.isArray(raw.notes) ? raw.notes.filter((n): n is Note => !!n && typeof n.text === "string").map((n) => ({ text: n.text, pinned: !!n.pinned })) : [];
   const chat = Array.isArray(raw.chat) ? raw.chat.filter((c): c is ChatEntry => !!c && (c.role === "user" || c.role === "ai") && typeof c.text === "string") : [];
-  return { notes, chat };
+  return { notes, chat, about: typeof raw.about === "string" ? raw.about.slice(0, 4000) : "" };
 }
 
 function writeMemory(s: Session, m: AiMemory) {
-  s.setAi({ notes: m.notes, chat: m.chat.slice(-CHAT_KEEP) });
+  s.setAi({ notes: m.notes, chat: m.chat.slice(-CHAT_KEEP), about: m.about });
 }
 
 export interface AiView {
@@ -71,6 +75,19 @@ export interface AiView {
   waiting: boolean;
   /** A job done section by section (a document, or a whole system), if one is under way. */
   build: { title: string; done: number; total: number; next: string | null } | null;
+}
+
+/** What the AI knows about the world: built from the world each time, plus the user's own words. */
+export function worldContext(s: Session): { context: WorldContext; about: string } {
+  const m = readMemory(s);
+  return { context: buildContext(s.ws, s.id, s.name, s.type, m.notes, m.about), about: m.about };
+}
+
+export function setAbout(s: Session, text: string): { context: WorldContext; about: string } {
+  const m = readMemory(s);
+  m.about = String(text ?? "").slice(0, 4000);
+  writeMemory(s, m);
+  return worldContext(s);
 }
 
 export function aiView(s: Session): AiView {
@@ -211,6 +228,7 @@ export async function ask(s: Session, send: AiTransport, opts: AskOptions, recor
       placeType: s.type,
       model,
       extra: opts.extra,
+      world: buildContext(s.ws, s.id, s.name, s.type, m.notes, m.about).summary,
     });
   } catch (e) {
     if (e instanceof AiError) throw new LibraryError(e.message);
@@ -359,7 +377,7 @@ export async function check(s: Session, send: AiTransport, opts: CheckOptions, r
 
   let result: JobResult;
   try {
-    result = await runJob(send, s.ws, s.id, { prompt: live ? "Check what I just changed." : "Check for errors.", workingOn: null, notes: m.notes, history: [], placeName: s.name, placeType: s.type, model, extra, mode: "check", maxRounds: live ? 4 : 10 });
+    result = await runJob(send, s.ws, s.id, { prompt: live ? "Check what I just changed." : "Check for errors.", workingOn: null, notes: m.notes, history: [], placeName: s.name, placeType: s.type, model, extra, world: buildContext(s.ws, s.id, s.name, s.type, m.notes, m.about).summary, mode: "check", maxRounds: live ? 4 : 10 });
   } catch (e) {
     if (e instanceof AiError) throw new LibraryError(e.message);
     throw e;

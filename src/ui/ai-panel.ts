@@ -117,6 +117,7 @@ export async function aiPanel(ctx: PlaceCtx, selectedName: string | null): Promi
     h(
       "div",
       { class: "ai-tools" },
+      h("button", { class: "button plain small-button", title: "What the AI reads about your world before it makes anything, and a place to add your own words", onClick: () => void showWorldKnows(ctx) }, "What the AI knows"),
       h("button", { class: "button plain small-button", onClick: () => void showWorldNotes(ctx, !unavailable) }, "World Notes"),
       h(
         "button",
@@ -333,6 +334,28 @@ export async function checkForErrors(ctx: PlaceCtx, confirmed = false): Promise<
 }
 
 /** World Notes: what the AI remembers about this world. Lines you write are pinned and kept. */
+/** "What the AI knows about your world": the summary it reads, and your own words added to it. */
+async function showWorldKnows(ctx: PlaceCtx) {
+  const w = await attempt(() => api.aiWorld());
+  if (!w) return;
+  const d = openDialog(`What the AI knows about ${ctx.view.name}`, { wide: true });
+  const about = h("textarea", { class: "text-input notes-box", rows: 5, "aria-label": "In your own words", disabled: ctx.view.readOnly, placeholder: "For example: Grim and windswept. Magic is rare and costs something. The north is ruled by the Vethkari." }, w.about);
+  d.body.append(
+    h("p", { class: "muted" }, "Before the AI makes anything, it reads this short summary of your world so what it makes fits. It is built from your own races, factions, places and notes, and only this summary is sent, never your whole world."),
+    w.context.parts.length
+      ? h("div", { class: "ai-knows" }, w.context.parts.map((p) => h("div", { class: "ai-knows-part" }, h("strong", null, p.title), h("p", { class: "small" }, p.items.join("; "), p.more ? ` and ${p.more} more` : ""))))
+      : h("p", { class: "muted small" }, "Nothing here yet: no races, factions or places. Add some and the AI will know about them."),
+    h("label", { class: "field-label spaced" }, "In your own words"),
+    about,
+    h("p", { class: "muted small" }, "Tone, themes, what makes this world different. The AI reads this with every request."),
+  );
+  d.footer.replaceChildren(
+    h("span", { class: "spacer" }),
+    h("button", { class: "button plain", onClick: () => d.close() }, "Close"),
+    h("button", { class: "button primary", disabled: ctx.view.readOnly, onClick: async () => ((await attempt(() => api.aiSetAbout(about.value))) && notice("Saved. The AI will keep this in mind.", "green", undefined, 3000), d.close()) }, "Save"),
+  );
+}
+
 async function showWorldNotes(ctx: PlaceCtx, canUpdate: boolean) {
   const view = await attempt(() => api.aiView());
   if (!view) return;

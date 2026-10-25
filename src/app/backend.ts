@@ -549,6 +549,8 @@ export const BACKEND_METHODS = [
   "setAiKey",
   "setAiOptions",
   "aiView",
+  "aiWorld",
+  "aiSetAbout",
   "aiAsk",
   "aiAccept",
   "aiReject",
@@ -973,6 +975,16 @@ export class Backend {
 
   aiView(): AiView {
     return assistant.aiView(this.aiSession());
+  }
+
+  /** "What the AI knows about your world" (version 4). */
+  aiWorld() {
+    return assistant.worldContext(this.aiSession());
+  }
+
+  /** The user's own words about the world, kept with the AI's memory of it. */
+  aiSetAbout(text: string) {
+    return assistant.setAbout(this.aiSession(), text);
   }
 
   /** A request in the AI panel. Big jobs over the cost threshold first return an estimate. */
