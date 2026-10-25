@@ -638,6 +638,15 @@ async function showSettings() {
         });
         return h("label", { class: "inline" }, box, "Add pictures automatically to new things (when the library has one that fits)");
       })(),
+      h("h3", null, "Codex"),
+      (() => {
+        const box = h("input", { type: "checkbox", checked: s.autoCodex });
+        box.addEventListener("change", async () => {
+          await attempt(() => api.setAutoCodex(box.checked));
+          notice(box.checked ? "The Codex will open the list that fits what you're working on." : "The Codex will stay on the list you picked.", "green", undefined, 3500);
+        });
+        return h("label", { class: "inline" }, box, "Open the Codex list that fits what I'm working on (for example, Traits when I click in a monster's traits)");
+      })(),
       h("h3", null, "AI"),
       aiSettings(() => void draw()),
     );

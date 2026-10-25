@@ -240,7 +240,7 @@ function moreBody(view: NodeView, categories: CategoryOption[], quick: QuickView
     sections.map((s) =>
       h(
         "div",
-        { class: "more-section" },
+        { class: "more-section", "data-codex": codexFor[s] ?? null },
         h("div", { class: "section-h" }, s),
         (bySection.get(s) ?? []).map((a) => brickCard(view, a, ctx)),
         locked

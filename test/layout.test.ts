@@ -39,3 +39,10 @@ test("layouts and own presets are kept, applied and removed", async () => {
   assert.throws(() => backend.applyLayoutPreset("Nope"), /isn't there/);
   assert.ok(!backend.deleteLayoutPreset("Wide and quiet").some((p) => p.name === "Wide and quiet"));
 });
+
+test("the Codex follows your work unless switched off in settings", () => {
+  const backend = makeBackend();
+  assert.equal(backend.settings().autoCodex, true);
+  assert.equal(backend.setAutoCodex(false).autoCodex, false);
+  assert.equal(backend.setAutoCodex(true).autoCodex, true);
+});

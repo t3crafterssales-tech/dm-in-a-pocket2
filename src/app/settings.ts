@@ -49,13 +49,15 @@ export interface Settings {
   textSize: "small" | "normal" | "large";
   /** New things get a fitting picture from the library by themselves (version 3). On by default. */
   autoPictures: boolean;
+  /** The Codex opens the list that fits what you are working on (version 3). On by default. */
+  autoCodex: boolean;
   /** How the panels are arranged, and the arrangements the user saved (version 3). Screen only. */
   layout: Layout;
   layoutPresets: Record<string, Layout>;
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, layout: defaultLayout(), layoutPresets: {} };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, autoCodex: true, layout: defaultLayout(), layoutPresets: {} };
 }
 
 export class SettingsFile {
@@ -92,6 +94,7 @@ export class SettingsFile {
         theme: themeFor(raw.theme).id,
         textSize: textSizeFor(raw.textSize),
         autoPictures: raw.autoPictures !== false,
+        autoCodex: raw.autoCodex !== false,
         layout: cleanLayout(raw.layout),
         layoutPresets: Object.fromEntries(Object.entries(raw.layoutPresets && typeof raw.layoutPresets === "object" ? raw.layoutPresets : {}).flatMap(([k, v]) => { const n = cleanPresetName(k); return n ? [[n, cleanLayout(v)]] : []; })),
       };

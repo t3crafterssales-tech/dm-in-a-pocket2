@@ -39,7 +39,30 @@ export function codexOpen(): CodexKey | null {
   return state.open;
 }
 
+let lastCtx: PlaceCtx | null = null;
+let autoOpen = true;
+
+/** Touching a part of a sheet that takes things from the Codex (traits, attacks, spells...) opens that list. */
+function followWork(e: Event) {
+  if (!autoOpen || !lastCtx) return;
+  const key = (e.target as HTMLElement | null)?.closest?.<HTMLElement>("[data-codex]")?.dataset.codex as CodexKey | undefined;
+  if (!key || key === state.open) return;
+  const old = document.querySelector<HTMLElement>(".side-list.codex");
+  if (!old) return; // this tab has no Codex on the side
+  showCodexSection(key);
+  const ctx = lastCtx;
+  // Only the side list is redrawn, so a box you're typing in keeps the cursor.
+  void codexPanel(ctx).then((fresh) => {
+    fresh.classList.add("side-list");
+    document.querySelector(".side-list.codex")?.replaceWith(fresh);
+  });
+}
+document.addEventListener("pointerdown", followWork, true);
+document.addEventListener("focusin", followWork, true);
+
 export async function codexPanel(ctx: PlaceCtx): Promise<HTMLElement> {
+  lastCtx = ctx;
+  autoOpen = (await attempt(() => api.settings()))?.autoCodex !== false;
   const sections = (await attempt(() => api.codex())) ?? [];
   const head = h(
     "div",

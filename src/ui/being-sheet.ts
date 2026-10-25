@@ -104,7 +104,7 @@ export async function beingSheet(view: NodeView, categories: CategoryOption[], c
     sheetSections.map((s) =>
       h(
         "div",
-        { class: "more-section" },
+        { class: "more-section", "data-codex": CODEX_FOR[s] ?? null },
         h("div", { class: "section-h" }, s),
         s === "Choices" ? choicesHint(view, locked, ctx) : null,
         (bySection.get(s) ?? []).map((a) => brickCard(view, a, ctx)),

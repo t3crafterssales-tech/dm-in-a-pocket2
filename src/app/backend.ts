@@ -194,6 +194,7 @@ export interface SettingsView {
   theme: string;
   textSize: "small" | "normal" | "large";
   autoPictures: boolean;
+  autoCodex: boolean;
 }
 
 /** Settings → AI, and the corner of the AI panel. */
@@ -513,6 +514,7 @@ export const BACKEND_METHODS = [
   "eraseSoundButtons",
   "soundsFolder",
   "setAutoPictures",
+  "setAutoCodex",
   "layoutState",
   "setLayout",
   "saveLayoutPreset",
@@ -822,7 +824,7 @@ export class Backend {
   // ---------- Settings ----------
 
   settings(): SettingsView {
-    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units, theme: this.settingsFile.data.theme, textSize: this.settingsFile.data.textSize, autoPictures: this.settingsFile.data.autoPictures };
+    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units, theme: this.settingsFile.data.theme, textSize: this.settingsFile.data.textSize, autoPictures: this.settingsFile.data.autoPictures, autoCodex: this.settingsFile.data.autoCodex };
   }
 
   /** Pounds or kilograms for the weight pickers. */
@@ -872,6 +874,12 @@ export class Backend {
   deleteLayoutPreset(name: string): ReturnType<Backend["layoutState"]>["presets"] {
     this.settingsFile.update((s) => delete s.layoutPresets[name]);
     return this.layoutState().presets;
+  }
+
+  /** Whether the Codex opens the list that fits what you are working on (version 3). */
+  setAutoCodex(on: boolean): SettingsView {
+    this.settingsFile.update((s) => (s.autoCodex = on === true));
+    return this.settings();
   }
 
   /** Small, Normal or Large interface text (version 3). */
