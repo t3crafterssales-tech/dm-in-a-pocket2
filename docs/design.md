@@ -1976,6 +1976,23 @@ How it is meant to work (still to confirm with Jeff where marked):
 - Open worries Jeff may overrule: "Library" for Codex clashes a little with the existing picture library; "Shelf" for Category is the least certain choice.
 - About a day of careful work, text only.
 
+### Change 2: "What am I missing?" help button (PROPOSED, from Jeff's idea, October 26)
+
+- A Help button that is only ever pressed, never pops up. For a person who is stuck or thinks they are done.
+- **Free version, no AI and no key:** checks the game against the usual parts (core roll, abilities, skills, combat with initiative/turns/actions, movement, health and dying, conditions, magic, currency and prices, equipment, races or classes, monsters, a first adventure) and shows each as done, missing, or "not for my game" (so it never nags). It must adapt to the starting system (a dice-pool game may have no classes). To be checked: what the rules categories already hold, so each check is exact.
+- **With an AI key (optional):** "Ask the AI to draft it" on each missing item, using the usual preview and accept, and suggestions based on the whole world ("gold prices but no carrying weight"). Nothing changes until accepted.
+- Fits the promises: only acts when asked (Part 7), nothing blocks (Part 1).
+- Suggested to build before the character in Change 3, because it needs no art.
+
+### Change 3: The guide character and the guided first build (PROPOSED)
+
+- A character who moves around the screen and points at real buttons (the tour already exists to build on), with a few poses (idle, pointing, thinking, cheering) and speech bubbles. Turn-off switch in Settings; permanent "Don't show me again"; never appears on its own after the first run; reduced-motion and keyboard/screen-reader friendly; the text must stand alone without the animation.
+- A first question, "Do you need my help?", and one question about experience (sets Words plain or designer, and the help level). No personality profile is stored.
+- Guided build for people who say yes: pick a dice system with fixed written explanations (the five starting systems, no AI needed: "what is a d6?"), then rules, characters, movement, each result shown as it is made. At the end it opens the finished world and does NOT restart the questions (the old six-questions bug). Always skippable, remembers where it stopped, never a gate (Promise 6).
+- Optional AI only for off-script questions, and only with a key.
+- Targets are tagged and a test checks every tagged target still exists, so the guide cannot point at nothing after a screen change.
+- **Open:** who draws the character (Jeff may); a pocket creature that peeks out of the logo's pocket was suggested; original character only, nothing resembling Clippy or Mr. DNA. Build in layers: scripted bubbles first, then the character, then the guided build, then optional AI.
+
 ### Still to be turned into list items (from the ranked review, in order)
 1. The product has no single clear purpose (the DM's table is about 11% of the code and contradicts "not a virtual tabletop").
 2. Almost nobody has used it, and the screens have no automated tests.
