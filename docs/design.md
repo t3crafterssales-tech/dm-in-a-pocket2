@@ -1953,7 +1953,7 @@ Use the plain words from the table below on every screen. Jeff's note on "Advent
 
 | Today | Plain word | Designer word (kept) |
 |---|---|---|
-| Codex | **Library** | Codex |
+| Codex | **Codex** (stays; see Change 6, where "Library" gets a bigger meaning) | Codex |
 | Variant ("Make a variant") | **Linked copy** (follows the original) | Variant |
 | Parent / child | **Original / copies** | Parent / child |
 | Edit parent | **Edit the original** | Edit parent |
@@ -1973,7 +1973,7 @@ How it is meant to work (still to confirm with Jeff where marked):
 - A "Words" setting: Plain or Designer. **(Open: which one is the default for new installs, and whether there is a first-run question "Have you built a game before?". Claude suggests Plain by default plus the question.)**
 - The first time a word appears, a short "What's this?" hover explains it. A glossary page in Help lists every term in both versions.
 - A test checks that no old word is left on screen in Plain mode.
-- Open worries Jeff may overrule: "Library" for Codex clashes a little with the existing picture library; "Shelf" for Category is the least certain choice.
+- Revised October 26: the Codex keeps its name, because "Library" now means the whole catalog of everything the person owns (Change 6). "Shelf" for Category is the least certain choice.
 - About a day of careful work, text only.
 
 ### Change 2: "What am I missing?" help button (PROPOSED, from Jeff's idea, October 26)
@@ -2007,6 +2007,20 @@ How it is meant to work (still to confirm with Jeff where marked):
 - The answers choose presets (Newcomer, Comfortable, Expert) that set Words (plain or designer), tips and tooltips, the First steps card, whether the guide character and guided build are offered, the start screen and highlighted tabs, and the AI switch. Every individual switch stays in Settings; "Redo this setup" is there too.
 - Stored in app settings on the computer only (not in any world file); no account, no profile, no data-format change.
 - It can only set switches that exist, so it is built after (or alongside) the plain-words setting, Simple mode, the guide and the AI hide switch.
+
+### Change 6: Library (everything you own) and Codex (what this game uses) (PROPOSED, Jeff's idea, October 26)
+
+- **Library** = everything the person has ever downloaded or opened, kept on their computer, with every monster, weapon, spell and feature from every kind of game (long swords, laser guns, revolvers, blasters), used in a game or not. Filters: genre, level, type (guns, melee, ranged...), which kind of game it works with, and source. The picture library already behaves this way (shared by all worlds), so pictures live under Library too.
+- **Codex** = what has been drawn in from the Library for this game or world. Picking "a d20 game in space" fills the Codex with space things; the person can still go into the Library and pull in metal swords.
+- **Two separate choices at the start:** how it plays (d20, d6 pool, percentile, 2d6 moves, d10) and what it is about (fantasy, space, western...). Today "Generic d20" fuses them.
+- **Pulling in COPIES the thing into the game** (the world file stays self-contained and shareable), remembering its origin and pack version so credits are added automatically (Part 8) and "a newer version exists" can be shown. Pulling a thing brings the things it depends on (attacks, traits, conditions) and says so ("this brings 4 other things").
+- **Works-with tag:** each Library entry says which stat model it fits (a d20 monster does not fit a dice-pool game); pulling across shows a warning, and the AI can offer a conversion through the usual preview.
+- **AI as librarian (optional):** "pull in everything for a pirate game" picks from the Library (no inventing), shown as a preview.
+- **Storage:** packs are JSON files in a Library folder inside the main folder, offline, no account. A later step allows importing packs from friends.
+- **Content and licences are the real work:** only generic or open-licensed content ships (no Star Wars, Star Trek or Colt-branded items; generic "blaster", "revolver" is fine); each licence is checked before use; original generic packs (space, western, modern) can be written with Jeff's review.
+- **Needs Jeff's OK before building:** this changes the data format (an "origin" on copied things, and the new Library storage), so CLAUDE.md and docs/data-format.md are updated first (Part 9).
+- Suggested slices: (1) split mechanics from content in the starters and ask both questions; (2) Library browser with filters and the pick bar, three first genres (fantasy SRD, space, western); (3) pull with dependencies and origin; (4) later: friend packs, AI librarian, conversion.
+- **Open:** copy-into-game confirmed? Which genres first? Ship the first bundle inside the installer or download later?
 
 ### Still to be turned into list items (from the ranked review, in order)
 1. The product has no single clear purpose (the DM's table is about 11% of the code and contradicts "not a virtual tabletop").
