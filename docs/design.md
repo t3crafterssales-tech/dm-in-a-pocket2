@@ -2000,6 +2000,14 @@ How it is meant to work (still to confirm with Jeff where marked):
 - **Napkin sketch to map** (last, shakiest): the sketch itself becomes the map background, and the AI proposes labelled pins for the rooms it sees. A true traced layout needs walls and paths, which are not built.
 - Rules: only on a button press, the dialog says the picture is sent to Anthropic, preview and accept, uses the person's own key, costs about a cent or less per picture, and with no key the person still picks what a picture is by hand. This is not the AI pictures (4.6) idea, which makes pictures; this one reads them.
 
+### Change 5: First-run setup, "get to know you" (PROPOSED, Jeff's idea, October 26)
+
+- One quick screen on first use (about 20 seconds), skippable from the first screen, ending by taking the person somewhere useful (never by restarting a flow).
+- Questions: (1) what to call you (fills the author-name setting; it says the name is stamped on things you share); (2) played tabletop RPGs: never, a little, years, I'm a DM; (3) built your own game or world: no, on paper, in another program; (4) comfort learning new programs, 1 to 5; (5) what you are here to do: make a game's rules, build a world, run a game night, just look; (6) AI help: yes, ask me later, no thanks ("no thanks" is the master "hide all AI" switch).
+- The answers choose presets (Newcomer, Comfortable, Expert) that set Words (plain or designer), tips and tooltips, the First steps card, whether the guide character and guided build are offered, the start screen and highlighted tabs, and the AI switch. Every individual switch stays in Settings; "Redo this setup" is there too.
+- Stored in app settings on the computer only (not in any world file); no account, no profile, no data-format change.
+- It can only set switches that exist, so it is built after (or alongside) the plain-words setting, Simple mode, the guide and the AI hide switch.
+
 ### Still to be turned into list items (from the ranked review, in order)
 1. The product has no single clear purpose (the DM's table is about 11% of the code and contradicts "not a virtual tabletop").
 2. Almost nobody has used it, and the screens have no automated tests.
