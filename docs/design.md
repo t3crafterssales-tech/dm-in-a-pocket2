@@ -2020,7 +2020,8 @@ How it is meant to work (still to confirm with Jeff where marked):
 - **Content and licences are the real work:** only generic or open-licensed content ships (no Star Wars, Star Trek or Colt-branded items; generic "blaster", "revolver" is fine); each licence is checked before use; original generic packs (space, western, modern) can be written with Jeff's review.
 - **Needs Jeff's OK before building:** this changes the data format (an "origin" on copied things, and the new Library storage), so CLAUDE.md and docs/data-format.md are updated first (Part 9).
 - Suggested slices: (1) split mechanics from content in the starters and ask both questions; (2) Library browser with filters and the pick bar, three first genres (fantasy SRD, space, western); (3) pull with dependencies and origin; (4) later: friend packs, AI librarian, conversion.
-- **Open:** copy-into-game confirmed? Which genres first? Ship the first bundle inside the installer or download later?
+- **Scope note (Jeff, October 26):** to start, stick to SRD (open-licensed) lists only, which also keeps everything in the d20 family so stat models do not clash. A "How do you want to bring these in?" step offers everything, by level or type, or hand-picked, and entries are classed. The SRD is fantasy only, so space and western packs wait for later. Jeff is still thinking about the rest of Change 6; nothing is decided beyond this.
+- **Open:** copy-into-game confirmed? Ship the first bundle inside the installer or download later?
 
 ### Still to be turned into list items (from the ranked review, in order)
 1. The product has no single clear purpose (the DM's table is about 11% of the code and contradicts "not a virtual tabletop").
