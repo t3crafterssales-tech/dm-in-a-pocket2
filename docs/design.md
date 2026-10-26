@@ -1993,6 +1993,13 @@ How it is meant to work (still to confirm with Jeff where marked):
 - Targets are tagged and a test checks every tagged target still exists, so the guide cannot point at nothing after a screen change.
 - **Open:** who draws the character (Jeff may); a pocket creature that peeks out of the logo's pocket was suggested; original character only, nothing resembling Clippy or Mr. DNA. Build in layers: scripted bubbles first, then the character, then the guided build, then optional AI.
 
+### Change 4: Pictures the AI can read (PROPOSED, later; Jeff's idea from last year, October 26)
+
+- **Notebook page to journal page** (do first; also answers criticism #8): photo of handwritten notes becomes editable text blocks with the picture kept. A no-AI version, dropping a photo onto a journal page, comes with it (the drop already works).
+- **"What is this?" on an imported picture:** the AI guesses monster / item / character / place, the person confirms, the picture becomes that thing's picture, and stats can be suggested using the world's context, all through preview and accept.
+- **Napkin sketch to map** (last, shakiest): the sketch itself becomes the map background, and the AI proposes labelled pins for the rooms it sees. A true traced layout needs walls and paths, which are not built.
+- Rules: only on a button press, the dialog says the picture is sent to Anthropic, preview and accept, uses the person's own key, costs about a cent or less per picture, and with no key the person still picks what a picture is by hand. This is not the AI pictures (4.6) idea, which makes pictures; this one reads them.
+
 ### Still to be turned into list items (from the ranked review, in order)
 1. The product has no single clear purpose (the DM's table is about 11% of the code and contradicts "not a virtual tabletop").
 2. Almost nobody has used it, and the screens have no automated tests.
