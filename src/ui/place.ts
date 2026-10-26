@@ -22,6 +22,8 @@ import { journalPanels } from "./journal-tab.ts";
 import { drawDesk, leaveDesk } from "./desk.ts";
 import { forgetReference } from "./tools/reference.ts";
 import { clearPins, drawPins, pinThing } from "./floating-pins.ts";
+import { clearWindows, hideWindows, initWindows, refreshWindows, windowKey } from "./brick-windows.ts";
+import { buildWindowContent } from "./window-content.ts";
 import { macroBuilder } from "./tools/dice.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
@@ -104,6 +106,15 @@ function tabFor(kind: string): Tab {
 
 /** After making a copy, its name box takes the cursor with the name selected, ready to type over. */
 let focusName = false;
+
+/** A context for sheets drawn outside the middle (brick windows). */
+function windowCtx(): PlaceCtx {
+  return { view: current!, selected: null, select: () => {}, refresh: () => renderPlace(), go: (t) => goTab(t), open: (x, o) => openNode(x, o) };
+}
+initWindows({
+  build: async (id) => (current ? buildWindowContent(id, windowCtx()) : null),
+  middle: (id) => void openNode(id),
+});
 
 async function openNode(id: string, opts: { focusName?: boolean } = {}) {
   const n = await attempt(() => api.node(id));
@@ -215,6 +226,7 @@ async function draw() {
   const view = current;
   if (!view) return;
   if (tableMode) void tipOnce("desk");
+  hideWindows(tableMode);
   if (tableMode) return drawDesk(view, () => ((tableMode = false), leaveDesk(), forgetTableData(), forgetReference(), void renderPlace()), () => void goHome());
   const focusKey = (document.activeElement as HTMLElement | null)?.dataset?.key ?? null;
   const caret = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement ? document.activeElement.selectionStart : null;
@@ -302,6 +314,7 @@ async function draw() {
   const { workspace, ai: aiFrame } = arrange({ editor, codex: list, flags, ai, refresh: () => void renderPlace() });
   app.replaceChildren(top, crumbs, ...(banner ? [banner] : []), ...(changes ? [changes] : []), workspace, ...(aiFrame ? [aiFrame] : []));
   void drawPins(view, { open: (x) => void openNode(x) });
+  void refreshWindows();
   void drawSteps();
   void tipOnce(tab);
 
@@ -490,10 +503,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (typing || document.querySelector(".overlay") || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   const k = e.key.toLowerCase();
-  if (k !== "a" && k !== "s") return;
+  if (!"asqwezx".includes(k) || k.length !== 1) return;
   void api.settings().then((s) => {
-    if (s.letterKeys === false || !current) return;
-    void walk(k === "a" ? "back" : "forward");
+    if (s.letterKeys === false || !current || tableMode) return;
+    if (k === "a" || k === "s") void walk(k === "a" ? "back" : "forward");
+    else windowKey(k);
   });
 });
 document.addEventListener("mouseup", (e) => {
@@ -574,6 +588,11 @@ function showShortcuts() {
     ["Alt-click", "Edit the parent of the sheet you are on"],
     ["Delete", "Delete what is picked in a list (it goes to the recycle bin)"],
     ["A, S", "Back and Forward through where you have been (when you are not typing in a box)"],
+    ["Q", "Tuck the front brick window away to the tray (soft close)"],
+    ["W", "Close the front brick window for good (your changes are already saved)"],
+    ["E", "Bring back the window you closed last"],
+    ["Z, X", "Step to the previous or next brick window, tucked ones included"],
+    ["Double-click (Codex)", "Open a brick in a window. A single click just picks it."],
     ["Alt+Left, Alt+Right", "Back and Forward, even from a box"],
     ["Escape", "Close a pop-up, or leave a text box so the letter shortcuts work"],
     ["?", "This list"],
@@ -587,6 +606,7 @@ function showShortcuts() {
 async function goHome() {
   const id = current?.id;
   clearPins();
+  clearWindows();
   leaveDesk();
   tableMode = false;
   await attempt(() => api.goHome());

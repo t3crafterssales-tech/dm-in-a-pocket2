@@ -11,6 +11,16 @@ import { h } from "./dom.ts";
 import { DRAG_TYPE } from "./library-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 import { pinThing } from "./floating-pins.ts";
+import { openWindow } from "./brick-windows.ts";
+
+/** Which colour a Codex box gets: rules, beings, items or lore, so the kind shows at a glance. */
+export function brickGroup(key: CodexKey): "item" | "being" | "rule" | "lore" {
+  const what = CODEX_SECTIONS.find((c) => c.key === key)?.what;
+  if (what === "item") return "item";
+  if (what === "being" || what === "encounter") return "being";
+  if (what === "brick" || key === "conditions" || key === "macros") return "rule";
+  return "lore";
+}
 
 /** Dragging things themselves (to refile them), as opposed to bricks to attach. */
 export const NODE_DRAG = "application/x-dm-nodes";
@@ -173,12 +183,13 @@ function entry(e: CodexEntry, s: CodexSection, sections: CodexSection[], visible
   return h(
     "div",
     {
-      class: `codex-entry${e.id === ctx.selected ? " open" : ""}${picked.has(e.id) ? " picked" : ""}`,
+      class: `codex-entry brick-box${e.id === ctx.selected ? " open" : ""}${picked.has(e.id) ? " picked" : ""}`,
+      "data-group": brickGroup(s.key),
       tabindex: 0,
       draggable: ro ? "false" : "true",
       "data-key": `cx-${e.id}`,
       "data-node": e.id,
-      title: "Click to open. Drag onto a sheet to add it. Ctrl-click or Shift-click to pick several.",
+      title: "Double-click to open in a window. Drag onto a sheet to add it. Click to pick it; Ctrl-click or Shift-click to pick several.",
       onClick: (ev: MouseEvent) => {
         if ((ev.target as HTMLElement).closest("select")) return;
         if (ev.ctrlKey || ev.metaKey) {
@@ -193,11 +204,23 @@ function entry(e: CodexEntry, s: CodexSection, sections: CodexSection[], visible
           if (a >= 0 && b >= 0) for (const x of visible.slice(Math.min(a, b), Math.max(a, b) + 1)) picked.add(x.id);
           return void ctx.refresh();
         }
+        // A single click only picks it (so it can be dragged); double-click or Enter opens a window.
         picked.clear();
+        picked.add(e.id);
         anchor = e.id;
-        void ctx.open(e.id);
+        const box = ev.currentTarget as HTMLElement;
+        for (const x of box.parentElement?.querySelectorAll(".codex-entry.picked") ?? []) x.classList.remove("picked");
+        box.classList.add("picked");
       },
-      onKeydown: (ev: KeyboardEvent) => ev.key === "Enter" && void ctx.open(e.id),
+      onDblclick: (ev: MouseEvent) => {
+        if ((ev.target as HTMLElement).closest("select, button")) return;
+        picked.clear();
+        void openWindow(e.id);
+      },
+      onKeydown: (ev: KeyboardEvent) => {
+        if ((ev.target as HTMLElement).closest("select, button")) return;
+        if (ev.key === "Enter") void openWindow(e.id);
+      },
       onDragstart: (ev: DragEvent) => {
         if (!picked.has(e.id)) {
           picked.clear();

@@ -666,9 +666,9 @@ async function showSettings() {
         const box = h("input", { type: "checkbox", checked: s.letterKeys });
         box.addEventListener("change", async () => {
           await attempt(() => api.setLetterKeys(box.checked));
-          notice(box.checked ? "A goes back and S goes forward when you're not typing." : "Letter shortcuts are off. Alt+Left and Alt+Right still work.", "green", undefined, 3500);
+          notice(box.checked ? "Letter shortcuts are on when you're not typing." : "Letter shortcuts are off. Alt+Left and Alt+Right still work.", "green", undefined, 3500);
         });
-        return h("label", { class: "inline" }, box, "Letter shortcuts: A goes back, S goes forward (only when you're not typing in a box)");
+        return h("label", { class: "inline" }, box, "Letter shortcuts: A back, S forward, Q tuck a window away, W close it, E bring it back, Z and X step through windows (only when you're not typing in a box)");
       })(),
       h("h3", null, "AI"),
       aiSettings(() => void draw()),
