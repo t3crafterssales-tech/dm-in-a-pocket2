@@ -301,6 +301,9 @@ button { font: inherit; color: inherit; }
 /* ---------- Lists, editor and flags inside a world or system ---------- */
 
 .top-button.icon-only { padding: 7px 8px; }
+.top-button.big-nav { padding: 8px 14px; border: 1px solid var(--line-strong, var(--line)); border-radius: 8px; }
+.top-button.big-nav .icon { width: 26px; height: 26px; }
+.top-button.big-nav:not(:disabled):hover { border-color: var(--accent); }
 .panel-head { display: flex; align-items: baseline; gap: 8px; position: sticky; top: 0; background: var(--card); z-index: 1; }
 .head-count { margin-left: auto; font-weight: 400; }
 .list-panel { padding-bottom: 12px; }
@@ -657,14 +660,14 @@ body.dragging-bricks .drop-hint { border-color: var(--accent); color: var(--acce
 .codex-section-text small { color: var(--muted); }
 .codex-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--paper); font-size: 17px; flex: none; }
 .codex-icon.small { width: 26px; height: 26px; font-size: 14px; }
-.codex-pills { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 8px; }
+.codex-pills { display: flex; flex-wrap: nowrap; gap: 4px; padding: 0 10px 8px; overflow-x: auto; flex: none; scrollbar-width: thin; }
 .codex-pill { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 2px 9px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .codex-pill:hover { border-color: var(--line-strong); }
 .codex-pill.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .codex-view { display: flex; gap: 6px; padding: 0 10px 8px; }
 .codex-find { flex: 1; min-width: 0; }
 .codex-view .small-select { width: auto; }
-.codex-entries { flex: 1; overflow: auto; padding: 0 6px 6px; min-height: 0; }
+.codex-entries { flex: 1; overflow: auto; padding: 0 6px 6px; min-height: 120px; }
 .codex-entry { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: grab; }
 .codex-entry:hover { background: var(--paper); }
 .codex-entry.open { background: var(--accent-soft); }

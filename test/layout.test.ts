@@ -45,6 +45,9 @@ test("the Codex follows your work unless switched off in settings", () => {
   assert.equal(backend.settings().autoCodex, true);
   assert.equal(backend.setAutoCodex(false).autoCodex, false);
   assert.equal(backend.setAutoCodex(true).autoCodex, true);
+  assert.equal(backend.settings().letterKeys, true);
+  assert.equal(backend.setLetterKeys(false).letterKeys, false);
+  assert.equal(backend.setLetterKeys(true).letterKeys, true);
 });
 
 test("Recent keeps ten things with no repeats, and each place remembers where you left it", () => {

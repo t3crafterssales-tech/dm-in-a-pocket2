@@ -102,7 +102,7 @@ export interface Panels {
   editor: HTMLElement;
   codex: HTMLElement;
   flags: HTMLElement;
-  ai: HTMLElement;
+  ai: HTMLElement | null;
   refresh: () => void;
 }
 
@@ -120,7 +120,7 @@ export function arrange(panels: Panels): { workspace: HTMLElement; ai: HTMLEleme
   };
   const codex = make("codex", p.codex, true);
   const flags = make("flags", p.flags);
-  const ai = make("ai", p.ai);
+  const ai = p.ai ? make("ai", p.ai) : null;
 
   const docked = [codex, flags].filter((x): x is HTMLElement => !!x);
   const workspace = h("div", { class: `workspace two arranged${layout.sideFolded || !docked.length ? " side-folded" : ""}` }, p.editor);

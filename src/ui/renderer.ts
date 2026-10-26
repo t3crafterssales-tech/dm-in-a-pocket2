@@ -661,6 +661,15 @@ async function showSettings() {
         });
         return h("label", { class: "inline" }, box, "Open the Codex list that fits what I'm working on (for example, Traits when I click in a monster's traits)");
       })(),
+      h("h3", null, "Keyboard"),
+      (() => {
+        const box = h("input", { type: "checkbox", checked: s.letterKeys });
+        box.addEventListener("change", async () => {
+          await attempt(() => api.setLetterKeys(box.checked));
+          notice(box.checked ? "A goes back and S goes forward when you're not typing." : "Letter shortcuts are off. Alt+Left and Alt+Right still work.", "green", undefined, 3500);
+        });
+        return h("label", { class: "inline" }, box, "Letter shortcuts: A goes back, S goes forward (only when you're not typing in a box)");
+      })(),
       h("h3", null, "AI"),
       aiSettings(() => void draw()),
     );

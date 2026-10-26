@@ -29,7 +29,7 @@ import { changelogCard } from "./changelog-card.ts";
 import { rulesPanels } from "./rules-tab.ts";
 import { sheetPanels } from "./sheets-tab.ts";
 import { arrange, layoutDialog, loadLayout } from "./layout.ts";
-import { aiOn, draftWithAi, noteAi } from "./ai-panel.ts";
+import { aiOn, draftWithAi, noteAi, showAiSettings } from "./ai-panel.ts";
 import { Trail } from "../app/trail.ts";
 import { focusTableSearch, forgetTableData } from "./table-mode.ts";
 import { aiPanel } from "./ai-panel.ts";
@@ -253,8 +253,8 @@ async function draw() {
       aiOn() && !view.readOnly && draftStart[tab] ? iconButton(ICONS.spark, "Draft with AI", () => draftWithAi(ctx, draftStart[tab]!), { title: "Describe what you want and let the AI draft it for you to preview. Nothing is made until you accept." }) : null,
       iconButton(ICONS.dice, "DM's table", () => ((tableMode = true), void renderPlace()), { title: "The DM's table: run a game night with initiative, dice, the clock, the journal and more" }),
       iconButton(ICONS.layout, "Layout", () => void layoutDialog(() => void renderPlace()), { iconOnly: true, title: "Panel layout: Builder, Game night, Writer, Dual monitor, or your own" }),
-      iconButton(ICONS.back, "Back", () => void walk("back"), { iconOnly: true, title: "Back to where you were (Alt+Left). This only moves your view; it never undoes anything.", disabled: !trail.canBack }),
-      iconButton(ICONS.forward, "Forward", () => void walk("forward"), { iconOnly: true, title: "Forward again (Alt+Right)", disabled: !trail.canForward }),
+      iconButton(ICONS.back, "Back", () => void walk("back"), { iconOnly: true, big: true, title: "Back to where you were (A, or Alt+Left). This only moves your view; it never undoes anything.", disabled: !trail.canBack }),
+      iconButton(ICONS.forward, "Forward", () => void walk("forward"), { iconOnly: true, big: true, title: "Forward again (S, or Alt+Right)", disabled: !trail.canForward }),
       iconButton(ICONS.undo, "Undo", () => void undo(), { iconOnly: true, title: "Undo (Ctrl+Z)", disabled: view.readOnly }),
       iconButton(ICONS.redo, "Redo", () => void redo(), { iconOnly: true, title: "Redo (Ctrl+Y)", disabled: view.readOnly }),
       iconButton(ICONS.clock, "History", () => void showHistory(ctx), { iconOnly: true, title: "History: every change, and rolling back to any of them" }),
@@ -281,7 +281,10 @@ async function draw() {
   const changes = await changelogCard(view.id, () => renderPlace());
   const flags = await flagStrip(ctx);
   const selectedName = ctx.selected ? ((await api.node(ctx.selected).catch(() => null))?.name ?? null) : null;
-  const ai = await aiPanel(ctx, selectedName);
+  const aiStatus = await attempt(() => api.aiStatus());
+  noteAi(aiStatus);
+  // With no key saved the AI is simply not on screen; the key lives in Settings.
+  const ai = aiStatus?.hasKey ? await aiPanel(ctx, selectedName) : null;
   if (current !== view) return; // went home while loading
   // Remember where this is: for Back and Forward, for Recent, and for reopening here next time.
   trail.record({ tab, sel: ctx.selected });
@@ -476,6 +479,23 @@ document.addEventListener("keydown", (e) => {
     void walk(e.key === "ArrowLeft" ? "back" : "forward");
   }
 });
+// Plain letters (A back, S forward) work only when no text box is active; Esc leaves a box.
+document.addEventListener("keydown", (e) => {
+  if (!current) return;
+  const t = e.target as HTMLElement | null;
+  const typing = !!t && (t.matches?.("input, textarea, select") || t.isContentEditable);
+  if (e.key === "Escape" && typing && !document.querySelector(".overlay")) {
+    t!.blur();
+    return;
+  }
+  if (typing || document.querySelector(".overlay") || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k !== "a" && k !== "s") return;
+  void api.settings().then((s) => {
+    if (s.letterKeys === false || !current) return;
+    void walk(k === "a" ? "back" : "forward");
+  });
+});
 document.addEventListener("mouseup", (e) => {
   if (!current || document.querySelector(".overlay") || (e.button !== 3 && e.button !== 4)) return;
   e.preventDefault();
@@ -553,7 +573,9 @@ function showShortcuts() {
     ["Ctrl-click, Shift-click", "Pick several things in the Codex to drag together"],
     ["Alt-click", "Edit the parent of the sheet you are on"],
     ["Delete", "Delete what is picked in a list (it goes to the recycle bin)"],
-    ["Escape", "Close a pop-up"],
+    ["A, S", "Back and Forward through where you have been (when you are not typing in a box)"],
+    ["Alt+Left, Alt+Right", "Back and Forward, even from a box"],
+    ["Escape", "Close a pop-up, or leave a text box so the letter shortcuts work"],
     ["?", "This list"],
   ];
   d.body.append(h("table", { class: "shortcuts" }, rows.map(([k, v]) => h("tr", null, h("td", null, h("kbd", null, k)), h("td", null, v)))));
@@ -582,6 +604,12 @@ async function placeSettings(view: PlaceView) {
       h("dl", { class: "facts" }, h("dt", null, "Name"), h("dd", null, view.name), ...(view.worldName ? [h("dt", null, "World"), h("dd", null, view.worldName)] : []), ...(isWorld ? [h("dt", null, "Game system"), h("dd", null, view.systemName ?? "")] : [])),
       h("p", { class: "muted small" }, "Renaming and the card picture arrive here in a later milestone."),
     ];
+
+    parts.push(
+      h("h3", null, "AI (optional)"),
+      h("p", { class: "muted" }, "Your Claude key, the model and the cost warning live here. With no key saved, the AI stays out of sight and everything else works as normal."),
+      h("button", { class: "button", onClick: () => void showAiSettings(() => void draw()) }, "AI settings…"),
+    );
 
     // Share: a copy to send. Always the world, its system and its pictures; never your settings.
     const history = h("input", { type: "checkbox" });

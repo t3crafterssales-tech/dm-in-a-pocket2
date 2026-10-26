@@ -195,6 +195,7 @@ export interface SettingsView {
   textSize: "small" | "normal" | "large";
   autoPictures: boolean;
   autoCodex: boolean;
+  letterKeys: boolean;
 }
 
 /** Settings → AI, and the corner of the AI panel. */
@@ -517,6 +518,7 @@ export const BACKEND_METHODS = [
   "soundsFolder",
   "setAutoPictures",
   "setAutoCodex",
+  "setLetterKeys",
   "layoutState",
   "noteRecent",
   "recentThings",
@@ -833,7 +835,7 @@ export class Backend {
   // ---------- Settings ----------
 
   settings(): SettingsView {
-    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units, theme: this.settingsFile.data.theme, textSize: this.settingsFile.data.textSize, autoPictures: this.settingsFile.data.autoPictures, autoCodex: this.settingsFile.data.autoCodex };
+    return { folder: this.folder, defaultFolder: this.opts.defaultFolder, isDefault: this.settingsFile.data.mainFolder === null, author: this.settingsFile.data.author, units: this.settingsFile.data.units, theme: this.settingsFile.data.theme, textSize: this.settingsFile.data.textSize, autoPictures: this.settingsFile.data.autoPictures, autoCodex: this.settingsFile.data.autoCodex, letterKeys: this.settingsFile.data.letterKeys };
   }
 
   /** Pounds or kilograms for the weight pickers. */
@@ -908,6 +910,12 @@ export class Backend {
   deleteLayoutPreset(name: string): ReturnType<Backend["layoutState"]>["presets"] {
     this.settingsFile.update((s) => delete s.layoutPresets[name]);
     return this.layoutState().presets;
+  }
+
+  /** Whether plain letters (A, S) work as shortcuts when no text box is active. */
+  setLetterKeys(on: boolean): SettingsView {
+    this.settingsFile.update((s) => (s.letterKeys = on === true));
+    return this.settings();
   }
 
   /** Whether the Codex opens the list that fits what you are working on (version 3). */

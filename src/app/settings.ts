@@ -51,6 +51,8 @@ export interface Settings {
   autoPictures: boolean;
   /** The Codex opens the list that fits what you are working on (version 3). On by default. */
   autoCodex: boolean;
+  /** Plain-letter shortcuts (A back, S forward) while no text box is active. */
+  letterKeys: boolean;
   /** How many versions the AI offers of anything creative (version 4): 1 to 6, default 2. */
   aiVersions: number;
   /** How the panels are arranged, and the arrangements the user saved (version 3). Screen only. */
@@ -62,7 +64,7 @@ export interface Settings {
 }
 
 export function defaultSettings(): Settings {
-  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, autoCodex: true, aiVersions: 2, layout: defaultLayout(), layoutPresets: {}, recent: [], where: {} };
+  return { mainFolder: null, opened: {}, place: null, author: null, aiModel: "auto", aiThreshold: 0.5, aiSpend: { month: "", usd: 0 }, aiLive: false, aiTipShown: false, units: "lb", welcomed: false, tips: true, tipsSeen: [], stepsDone: [], stepsClosed: false, theme: "default", textSize: "normal", autoPictures: true, autoCodex: true, letterKeys: true, aiVersions: 2, layout: defaultLayout(), layoutPresets: {}, recent: [], where: {} };
 }
 
 export class SettingsFile {
@@ -100,6 +102,7 @@ export class SettingsFile {
         textSize: textSizeFor(raw.textSize),
         autoPictures: raw.autoPictures !== false,
         autoCodex: raw.autoCodex !== false,
+        letterKeys: raw.letterKeys !== false,
         aiVersions: typeof raw.aiVersions === "number" && Number.isFinite(raw.aiVersions) ? Math.min(6, Math.max(1, Math.round(raw.aiVersions))) : 2,
         recent: cleanRecent(raw.recent),
         where: cleanWhere(raw.where),

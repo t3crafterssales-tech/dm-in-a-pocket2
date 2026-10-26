@@ -29,10 +29,10 @@ export function brand(): HTMLElement {
   return h("div", { class: "brand", title: "The logo glows each time your work is saved" }, logo, h("span", { class: "brand-name" }, "DM in a Pocket"));
 }
 
-export function iconButton(icon: string, label: string, onClick: () => void, opts: { disabled?: boolean; title?: string; badge?: number; iconOnly?: boolean } = {}) {
+export function iconButton(icon: string, label: string, onClick: () => void, opts: { disabled?: boolean; title?: string; badge?: number; iconOnly?: boolean; big?: boolean } = {}) {
   return h(
     "button",
-    { class: `top-button${opts.iconOnly ? " icon-only" : ""}`, disabled: !!opts.disabled, title: opts.title ?? label, "aria-label": label, onClick },
+    { class: `top-button${opts.iconOnly ? " icon-only" : ""}${opts.big ? " big-nav" : ""}`, disabled: !!opts.disabled, title: opts.title ?? label, "aria-label": label, onClick },
     svg(icon),
     opts.iconOnly ? null : h("span", null, label),
     opts.badge ? h("span", { class: "count-badge", "aria-label": `${opts.badge} in the bin` }, opts.badge) : null,
