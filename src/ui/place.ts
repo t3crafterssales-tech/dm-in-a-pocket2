@@ -22,8 +22,16 @@ import { journalPanels } from "./journal-tab.ts";
 import { drawDesk, leaveDesk } from "./desk.ts";
 import { forgetReference } from "./tools/reference.ts";
 import { clearPins, drawPins, pinThing } from "./floating-pins.ts";
-import { clearWindows, hideWindows, initWindows, refreshWindows, windowKey } from "./brick-windows.ts";
+import { clearWindows, hideWindows, initWindows, refreshWindows, tuckAll, useWindowPlace, windowKey } from "./brick-windows.ts";
 import { buildWindowContent } from "./window-content.ts";
+import { openPalette, paletteOpen } from "./palette.ts";
+import { askText } from "./pickers.ts";
+import { showMenu } from "./context-menu.ts";
+import type { MenuItem } from "./context-menu.ts";
+import { drop } from "./library-panel.ts";
+import type { PaletteCommand } from "./palette.ts";
+import { CODEX_SECTIONS } from "../app/codex-lists.ts";
+import { openWindow } from "./brick-windows.ts";
 import { macroBuilder } from "./tools/dice.ts";
 import { showQuickStart } from "./quickstart-dialog.ts";
 import { rulebookPanels } from "./rulebook-tab.ts";
@@ -314,7 +322,7 @@ async function draw() {
   const { workspace, ai: aiFrame } = arrange({ editor, codex: list, flags, ai, refresh: () => void renderPlace() });
   app.replaceChildren(top, crumbs, ...(banner ? [banner] : []), ...(changes ? [changes] : []), workspace, ...(aiFrame ? [aiFrame] : []));
   void drawPins(view, { open: (x) => void openNode(x) });
-  void refreshWindows();
+  void useWindowPlace(view.id).then(() => refreshWindows());
   void drawSteps();
   void tipOnce(tab);
 
@@ -478,6 +486,88 @@ async function redo() {
   await renderPlace();
 }
 
+/** Ctrl+K: every command the screens already have, found by typing. */
+function startPalette() {
+  if (!current) return;
+  const view = current;
+  const ctx = windowCtx();
+  const cmds: PaletteCommand[] = [];
+  if (!view.readOnly) {
+    for (const s of CODEX_SECTIONS) {
+      if (!["item", "being", "brick"].includes(s.what)) continue;
+      cmds.push({
+        label: `New ${s.one}`,
+        words: `make create add ${s.title}`,
+        hint: "Make something new",
+        run: async () => {
+          const name = await askText(`New ${s.one}`, "", "Name");
+          if (!name) return;
+          const id = await attempt(() => api.newInSection(s.key, name));
+          if (id) await openNode(id, { focusName: false });
+        },
+      });
+    }
+    cmds.push({ label: "Undo", hint: "Ctrl+Z", run: () => undo() }, { label: "Redo", hint: "Ctrl+Y", run: () => redo() });
+  }
+  for (const t of tabsOf(view)) cmds.push({ label: `Go to ${t}`, words: t === "Rulebook" ? "print book pdf" : "", hint: "Tab", run: () => goTab(t) });
+  cmds.push(
+    { label: "Print the rulebook", words: "print pdf book export", hint: "Rulebook tab", run: () => goTab("Rulebook") },
+    { label: "Back", hint: "A, or Alt+Left", run: () => void walk("back") },
+    { label: "Forward", hint: "S, or Alt+Right", run: () => void walk("forward") },
+    { label: "History", words: "changes roll back", hint: "Every change", run: () => void showHistory(ctx) },
+    { label: "Recycle bin", words: "deleted restore trash", hint: "Restore deleted things", run: () => void showNodeBin(ctx) },
+    { label: "Help", words: "tour tips first steps", hint: "The tour and tips", run: () => void showHelp() },
+    { label: "Panel layout", words: "arrange workspace presets", hint: "Builder, Game night…", run: () => void layoutDialog(() => void renderPlace()) },
+    { label: "Keyboard shortcuts", words: "keys hotkeys cheat sheet", hint: "?", run: () => showShortcuts() },
+    { label: "DM's table", words: "game night play run", hint: "Run a game night", run: () => ((tableMode = true), void renderPlace()) },
+    { label: "Tuck all windows away", hint: "Tray", run: () => tuckAll() },
+    { label: "Settings for this " + view.type, words: "options", hint: "Settings", run: () => void placeSettings(view) },
+    { label: "Home", words: "worlds systems", hint: "The home screen", run: () => void goHome() },
+  );
+  if (aiOn() && !view.readOnly) cmds.push({ label: "Draft with AI", words: "ai claude create", hint: "Describe it and preview", run: () => draftWithAi(ctx, "Create something that fits this world: ") });
+  openPalette({ commands: cmds, open: (id) => void openNode(id), window: (id) => void openWindow(id) });
+}
+
+/** Right-click on anything that stands for a brick: the choices that make sense for it. */
+document.addEventListener("contextmenu", (e) => {
+  if (!current || tableMode || document.querySelector(".overlay")) return;
+  const target = e.target as HTMLElement;
+  if (target.closest("input, textarea, select, [contenteditable]")) return;
+  const id = target.closest<HTMLElement>("[data-node]")?.dataset.node;
+  if (!id) return;
+  e.preventDefault();
+  void (async () => {
+    const n = await attempt(() => api.node(id));
+    if (!n || !current) return;
+    const ctx = windowCtx();
+    const view = current;
+    const ro = view.readOnly;
+    const sheet = tab === "Beings" || tab === "Items" ? (selected[tab] ?? null) : null;
+    const items: MenuItem[] = [
+      { label: "Open in the middle", run: () => void openNode(id) },
+      { label: "Open beside (in a window)", run: () => void openWindow(id) },
+      { label: "Pin to the screen", run: () => void pinThing(id) },
+      { label: "Add to the open sheet", divider: true, why: ro ? "This is read-only." : n.kind !== "brick" ? "Only bricks (attacks, spells, traits…) can be added to a sheet." : !sheet || sheet === id ? "Open a monster or item in the middle first." : undefined, run: () => void drop([sheet!], [id], ctx) },
+      { label: "Make a variant (keeps following it)", why: ro ? "This is read-only." : undefined, run: () => void variantOf(id, ctx) },
+      { label: "Make my own copy (goes its own way)", why: ro ? "This is read-only." : undefined, run: () => void separateCopy(id, ctx) },
+      {
+        label: "Delete (to the recycle bin)",
+        danger: true,
+        divider: true,
+        why: ro ? "This is read-only." : undefined,
+        run: async () => {
+          const r = await attempt(() => api.deleteNode(id));
+          if (!r) return;
+          if (selected[tab] === id) selected[tab] = null;
+          notice(`${r.label}. It's in the recycle bin; anything that used it is flagged.`, "blue", { label: "Undo", run: async () => (await attempt(() => api.undo()), await renderPlace()) });
+          await renderPlace();
+        },
+      },
+    ];
+    showMenu(e.clientX, e.clientY, items);
+  })();
+});
+
 /** What the mouse is over, for Ctrl+D. */
 let hovered: string | null = null;
 document.addEventListener("mouseover", (e) => {
@@ -525,6 +615,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (!(e.ctrlKey || e.metaKey)) return;
   const k = e.key.toLowerCase();
+  if (k === "k") {
+    e.preventDefault();
+    if (!tableMode && !paletteOpen()) startPalette();
+    return;
+  }
   if (tableMode) {
     // At the DM's table: Ctrl+Z undoes the last table step; Ctrl+F finds things in the reference.
     if (k === "f" && focusTableSearch()) e.preventDefault();
@@ -582,6 +677,7 @@ function showShortcuts() {
     ["Ctrl+Shift+P", "Pin what the mouse is over to the screen, as a card that stays while you work"],
     ["Ctrl+Z", "Undo"],
     ["Ctrl+Y", "Redo (Ctrl+Shift+Z works too)"],
+    ["Ctrl+K", "The command palette: type new monster, open Strength, undo, go to Lore…"],
     ["Ctrl+F", "Search everything"],
     ["Ctrl+C, Ctrl+V", "Copy and paste text, as in Word"],
     ["Ctrl-click, Shift-click", "Pick several things in the Codex to drag together"],

@@ -29,6 +29,8 @@ export interface JournalHost {
 
 const BLOCK_COLOURS = ["#2b2620", "#8a4b2a", "#2f6fb0", "#3c8a4a", "#b93a2e", "#7b3fa0"];
 let activeBlock: string | null = null;
+/** After a redraw, the block that should get the keyboard back (so arrow keys keep working). */
+let focusBlock: string | null = null;
 
 export function journalTreePanel(tree: { category: string; pages: PageEntry[] }[], host: JournalHost, head: HTMLElement | null): HTMLElement {
   return h(
@@ -99,14 +101,34 @@ export function pageEditor(v: PageView, host: JournalHost, opts: { compact?: boo
     // Drop a picture file straight onto the page (it goes where it lands).
     sheet.addEventListener("dragover", (e) => e.dataTransfer?.types.includes("Files") && e.preventDefault());
     sheet.addEventListener("drop", (e) => {
-      if (!e.dataTransfer?.files.length) return;
+      const files = [...(e.dataTransfer?.files ?? [])];
+      if (!files.length) return;
       e.preventDefault();
-      notice("Use + Add → Picture to bring in a picture file.", "blue", undefined, 4000);
+      // A picture arrives where it is dropped.
+      const box = sheet.getBoundingClientRect();
+      const k = box.width / PAGE_WIDTH || 1;
+      let at = { x: (e.clientX - box.left) / k, y: (e.clientY - box.top) / k };
+      void (async () => {
+        for (const f of files) {
+          if (!f.type.startsWith("image/")) {
+            notice(`${f.name} isn't a picture the app can show.`, "blue", undefined, 4000);
+            continue;
+          }
+          const bytes = new Uint8Array(await f.arrayBuffer());
+          let bin = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          const pic = await attempt(() => api.addPictureFile(f.name, btoa(bin)));
+          if (!pic) continue;
+          await attempt(() => api.addBlock(v.id, "image", pic, { x: Math.max(0, Math.round(at.x - 120)), y: Math.max(0, Math.round(at.y - 60)) }));
+          at = { x: at.x + 30, y: at.y + 30 };
+        }
+        await host.refresh();
+      })();
     });
     sheet.addEventListener("click", (e) => {
       if (e.target === sheet && activeBlock) {
         activeBlock = null;
-        void host.refresh();
+        for (const o of sheet.querySelectorAll(".jblock.active")) o.classList.remove("active");
       }
     });
   }
@@ -205,38 +227,119 @@ function blockEl(b: Block, v: PageView, ro: boolean, done: (fn: () => Promise<un
     el.appendChild(t);
   }
   if (ro) return el;
-  // Move by the grip, resize by the corner; one undo step each.
-  const grip = h("div", { class: "jgrip", title: "Drag to move" }, "⠿");
-  const corner = h("div", { class: "jcorner", title: "Drag to resize" });
-  const drag = (mode: "move" | "size") => (e: PointerEvent) => {
+  // Click a block to select it; a selected block shows a top bar to move it and a handle on every
+  // corner and side to resize it. A picture can also be dragged by its body. Arrow keys nudge a
+  // selected block (Shift for bigger steps), Delete removes it, Esc leaves the text.
+  el.tabIndex = -1;
+  const select = () => {
+    if (activeBlock === b.id) return;
+    activeBlock = b.id;
+    for (const o of el.parentElement?.querySelectorAll(".jblock.active") ?? []) o.classList.remove("active");
+    el.classList.add("active");
+  };
+  el.addEventListener("pointerdown", select, true);
+  const grip = h("div", { class: "jgrip", title: "Drag to move" }, "⠿ drag to move");
+  type Mode = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+  const MIN_W = 60;
+  const MIN_H = 40;
+  const drag = (mode: Mode) => (e: PointerEvent) => {
+    if (e.button !== 0) return;
     e.preventDefault();
+    e.stopPropagation();
+    select();
     const page = el.parentElement!;
     const k = page.clientWidth / PAGE_WIDTH || 1;
     const sx = e.clientX;
     const sy = e.clientY;
     const start = { x: b.x, y: b.y, w: b.w, h: b.h };
+    el.classList.add("dragging");
+    const set = (r: { x: number; y: number; w: number; h: number }) => {
+      el.style.setProperty("--x", String(r.x));
+      el.style.setProperty("--y", String(r.y));
+      el.style.setProperty("--w", String(r.w));
+      el.style.setProperty("--h", String(r.h));
+    };
     const move = (ev: PointerEvent) => {
       const dx = (ev.clientX - sx) / k;
       const dy = (ev.clientY - sy) / k;
+      const r = { ...start };
       if (mode === "move") {
-        el.style.setProperty("--x", String(Math.max(0, start.x + dx)));
-        el.style.setProperty("--y", String(Math.max(0, start.y + dy)));
+        r.x = Math.min(Math.max(0, start.x + dx), Math.max(0, PAGE_WIDTH - start.w));
+        r.y = Math.max(0, start.y + dy);
       } else {
-        el.style.setProperty("--w", String(Math.max(60, start.w + dx)));
-        el.style.setProperty("--h", String(Math.max(40, start.h + dy)));
+        if (mode.includes("e")) r.w = Math.min(Math.max(MIN_W, start.w + dx), Math.max(MIN_W, PAGE_WIDTH - start.x));
+        if (mode.includes("s")) r.h = Math.max(MIN_H, start.h + dy);
+        if (mode.includes("w")) {
+          r.w = Math.max(MIN_W, start.w - dx);
+          r.x = Math.max(0, start.x + start.w - r.w);
+        }
+        if (mode.includes("n")) {
+          r.h = Math.max(MIN_H, start.h - dy);
+          r.y = Math.max(0, start.y + start.h - r.h);
+        }
       }
+      set(r);
     };
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      const n = (p: string) => Number(el.style.getPropertyValue(p));
-      void done(() => api.setBlock(v.id, b.id, mode === "move" ? { x: n("--x"), y: n("--y") } : { w: n("--w"), h: n("--h") }));
+      el.classList.remove("dragging");
+      const n = (p: string) => Math.round(Number(el.style.getPropertyValue(p)));
+      const now = { x: n("--x"), y: n("--y"), w: n("--w"), h: n("--h") };
+      if (now.x === Math.round(start.x) && now.y === Math.round(start.y) && now.w === Math.round(start.w) && now.h === Math.round(start.h)) return;
+      focusBlock = b.id;
+      void done(() => api.setBlock(v.id, b.id, mode === "move" ? { x: now.x, y: now.y } : now));
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   };
   grip.addEventListener("pointerdown", drag("move"));
-  corner.addEventListener("pointerdown", drag("size"));
+  // A picture has no text to click into, so its whole body moves it.
+  if (b.type === "image") el.addEventListener("pointerdown", (e) => ((e.target as HTMLElement).closest(".jbar, .jhandle, .jgrip") ? null : drag("move")(e)));
+  const handles = (["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const).map((m) => {
+    const hd = h("div", { class: `jhandle ${m}`, title: "Drag to resize", "aria-hidden": "true" });
+    hd.addEventListener("pointerdown", drag(m));
+    return hd;
+  });
+  // Arrow keys nudge, Delete removes, Esc steps out of the text. A burst of nudges is saved once.
+  let nudge: { x: number; y: number; timer: ReturnType<typeof setTimeout> | null } | null = null;
+  el.addEventListener("keydown", (e) => {
+    const inText = (e.target as HTMLElement).tagName === "TEXTAREA";
+    if (e.key === "Escape") {
+      (e.target as HTMLElement).blur();
+      el.focus();
+      return;
+    }
+    if (inText || (e.target as HTMLElement).closest("select, input")) return;
+    const step = e.shiftKey ? 10 : 1;
+    const dir: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (dir[e.key]) {
+      e.preventDefault();
+      const [dx, dy] = dir[e.key]!;
+      const cur = { x: Number(el.style.getPropertyValue("--x")), y: Number(el.style.getPropertyValue("--y")) };
+      const x = Math.min(Math.max(0, cur.x + dx), Math.max(0, PAGE_WIDTH - Number(el.style.getPropertyValue("--w"))));
+      const y = Math.max(0, cur.y + dy);
+      el.style.setProperty("--x", String(x));
+      el.style.setProperty("--y", String(y));
+      if (nudge?.timer) clearTimeout(nudge.timer);
+      nudge = {
+        x,
+        y,
+        timer: setTimeout(() => {
+          focusBlock = b.id;
+          void done(() => api.setBlock(v.id, b.id, { x, y }));
+        }, 450),
+      };
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      activeBlock = null;
+      void done(() => api.setBlock(v.id, b.id, null));
+    }
+  });
+  if (focusBlock === b.id) {
+    focusBlock = null;
+    requestAnimationFrame(() => el.focus({ preventScroll: true }));
+  }
   const bar = h(
     "div",
     { class: "jbar" },
@@ -257,7 +360,7 @@ function blockEl(b: Block, v: PageView, ro: boolean, done: (fn: () => Promise<un
       : h("button", { class: "mini", title: "Make it the whole page width", onClick: () => void done(() => api.setBlock(v.id, b.id, { x: 0, w: PAGE_WIDTH, h: Math.round((b.h * PAGE_WIDTH) / Math.max(1, b.w)) })) }, "Fit width"),
     h("button", { class: "mini", title: "Remove this block", onClick: () => void done(() => api.setBlock(v.id, b.id, null)) }, "×"),
   );
-  el.append(grip, corner, bar);
+  el.append(grip, ...handles, bar);
   return el;
 }
 

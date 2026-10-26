@@ -8,7 +8,7 @@ import { api } from "./api.ts";
 import { attempt } from "./common.ts";
 import { notice } from "./dialogs.ts";
 import { h } from "./dom.ts";
-import { DRAG_TYPE } from "./library-panel.ts";
+import { DRAG_TYPE, drop } from "./library-panel.ts";
 import type { PlaceCtx } from "./place.ts";
 import { pinThing } from "./floating-pins.ts";
 import { openWindow } from "./brick-windows.ts";
@@ -74,6 +74,7 @@ export async function codexPanel(ctx: PlaceCtx): Promise<HTMLElement> {
   lastCtx = ctx;
   autoOpen = (await attempt(() => api.settings()))?.autoCodex !== false;
   const sections = (await attempt(() => api.codex())) ?? [];
+  const suggested = await suggestedFor(ctx);
   const head = h(
     "div",
     { class: "codex-head" },
@@ -143,18 +144,21 @@ export async function codexPanel(ctx: PlaceCtx): Promise<HTMLElement> {
     h(
       "div",
       { class: "codex-pills", role: "tablist", "aria-label": "Sections" },
-      sections
+      [...sections]
         .filter((x) => x.entries.length || x.key === s.key)
+        .sort((a, b) => Number(suggested.has(b.key)) - Number(suggested.has(a.key)))
         .map((x) =>
           h(
             "button",
-            { class: `codex-pill${x.key === s.key ? " on" : ""}`, role: "tab", "aria-selected": x.key === s.key ? "true" : "false", title: x.title, ...sectionDrop(x, ctx), onClick: () => (showCodexSection(x.key), void ctx.refresh()) },
+            { class: `codex-pill${x.key === s.key ? " on" : ""}${suggested.has(x.key) ? " suggested" : ""}`, role: "tab", "aria-selected": x.key === s.key ? "true" : "false", title: x.title, ...sectionDrop(x, ctx), onClick: () => (showCodexSection(x.key), void ctx.refresh()) },
+            suggested.has(x.key) ? h("span", { class: "sug-star", title: "Suggested for what you are working on" }, "★") : null,
             h("span", { "aria-hidden": "true" }, x.icon),
             ` ${x.title}`,
           ),
         ),
     ),
     h("div", { class: "codex-view" }, find, sortable ? sort : null, show),
+    pickBar(s, sections, shown, ctx),
     h(
       "div",
       { class: "codex-entries", "data-scroll": `codex-${s.key}` },
@@ -163,6 +167,58 @@ export async function codexPanel(ctx: PlaceCtx): Promise<HTMLElement> {
     ),
     h("p", { class: "codex-hint" }, s.moveTo.length ? "Drag onto your sheet to add it. Drag onto a section above to move it there." : "Drag onto your sheet to add it."),
   );
+}
+
+/** One bar of actions for everything picked with Ctrl-click or Shift-click. */
+function pickBar(s: CodexSection, sections: CodexSection[], visible: CodexEntry[], ctx: PlaceCtx): HTMLElement | null {
+  if (picked.size < 2) return null;
+  const ids = [...picked];
+  const ro = ctx.view.readOnly;
+  const attachable = ids.filter((id) => visible.find((x) => x.id === id)?.attachable);
+  const sheet = ctx.selected;
+  const move = s.moveTo.length && !ro
+    ? (() => {
+        const sel = h("select", { class: "text-input small-select", "aria-label": "Move the picked things to" }, h("option", { value: "" }, "Move to…"), s.moveTo.map((k) => h("option", { value: k }, sections.find((x) => x.key === k)?.title ?? k)));
+        sel.addEventListener("change", () => sel.value && void refile(ids, sel.value as CodexKey, sections, ctx));
+        return sel;
+      })()
+    : null;
+  return h(
+    "div",
+    { class: "pick-bar", role: "toolbar", "aria-label": "Actions for the picked things" },
+    h("b", null, `${ids.length} picked`),
+    h("button", { class: "button plain small-button", disabled: ro || !attachable.length || !sheet, title: ro ? "This is read-only." : !attachable.length ? "None of these can be added to a sheet." : !sheet ? "Open a monster or item in the middle first." : "Add them all to the open sheet", onClick: () => void drop([sheet!], attachable, ctx) }, "Add to open sheet"),
+    h("button", { class: "button plain small-button", title: "Open each in its own window (up to 8 at once)", onClick: () => (picked.clear(), void Promise.all(ids.slice(0, 8).map((id) => openWindow(id))).then(() => ctx.refresh())) }, "Open in windows"),
+    h("button", { class: "button plain small-button", title: "Pin them all to the screen", onClick: async () => { for (const id of ids) await pinThing(id); } }, "Pin"),
+    move,
+    h(
+      "button",
+      {
+        class: "button plain small-button danger-text",
+        disabled: ro,
+        title: ro ? "This is read-only." : "Send them all to the recycle bin (you can undo)",
+        onClick: async () => {
+          let n = 0;
+          for (const id of ids) if (await attempt(() => api.deleteNode(id))) n++;
+          picked.clear();
+          notice(`Moved ${n} things to the recycle bin; anything that used them is flagged.`, "blue", { label: "Undo", run: async () => { for (let i = 0; i < n; i++) await attempt(() => api.undo()); await ctx.refresh(); } });
+          await ctx.refresh();
+        },
+      },
+      "Delete",
+    ),
+    h("button", { class: "button plain small-button", onClick: () => (picked.clear(), void ctx.refresh()) }, "Clear"),
+  );
+}
+
+/** The Codex lists that fit what is open in the middle. A suggestion only: every list stays one click away. */
+async function suggestedFor(ctx: PlaceCtx): Promise<Set<CodexKey>> {
+  if (!ctx.selected) return new Set();
+  const n = await attempt(() => api.node(ctx.selected!));
+  if (!n) return new Set();
+  if (n.kind === "being") return new Set<CodexKey>(["traits", "attacks", "spells", "conditions", "races", "classes"]);
+  if (n.kind === "item") return new Set<CodexKey>(["enchantments", "attacks", "traits", "conditions"]);
+  return new Set();
 }
 
 function entry(e: CodexEntry, s: CodexSection, sections: CodexSection[], visible: CodexEntry[], ctx: PlaceCtx): HTMLElement {

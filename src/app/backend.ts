@@ -292,6 +292,7 @@ const MAX_NAME = 200;
 export const BACKEND_METHODS = [
   "home",
   "pickPicture",
+  "addPictureFile",
   "createSystem",
   "createWorld",
   "systemDependents",
@@ -680,6 +681,16 @@ export class Backend {
     if (!got) return null;
     if (!this.lib.readPictureIndex()[got.id]) this.savePictureInfo(got.id, cleanInfo({ name: got.fileName.replace(/\.[^.]+$/, "") }, "Picture"));
     return got.id;
+  }
+
+  /** A picture dropped onto the screen (its file name and its bytes as base64). Stored once, like a picked one. */
+  addPictureFile(fileName: string, base64: string): Id {
+    if (!PICTURE_TYPES.includes(extname(fileName).toLowerCase())) throw new LibraryError("That isn't a picture the app can show. Use PNG, JPG, GIF or WebP.");
+    const bytes = Buffer.from(base64, "base64");
+    if (bytes.length > MAX_PICTURE_BYTES) throw new LibraryError("That picture is over 25 MB. Try a smaller copy of it.");
+    const id = this.lib.addPicture(bytes, basename(fileName));
+    if (!this.lib.readPictureIndex()[id]) this.savePictureInfo(id, cleanInfo({ name: basename(fileName).replace(/\.[^.]+$/, "") }, "Picture"));
+    return id;
   }
 
   /** Every picture in the library with its name, tags and style (version 3). */

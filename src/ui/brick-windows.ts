@@ -50,6 +50,10 @@ let tray: HTMLElement | null = null;
 let hidden = false;
 let layoutMode: "grid" | "cascade" = "grid";
 let building = 0;
+/** Which world the windows belong to; the open ones are remembered per world. */
+let placeKey: string | null = null;
+let restoring = false;
+const OPEN_KEY = "dmip.openWindows";
 
 // ---------- Remembered positions ----------
 
@@ -205,10 +209,48 @@ export function windowKey(key: string): boolean {
 
 /** Takes every window off the screen (going home). */
 export function clearWindows() {
+  restoring = true;
   for (const w of wins.values()) w.el.remove();
   wins.clear();
   closed.length = 0;
+  placeKey = null;
   sync();
+  restoring = false;
+}
+
+/** Tells the windows which world is showing; the ones left open last time come back (tucked ones tucked). */
+export async function useWindowPlace(key: string) {
+  if (key === placeKey) return;
+  if (placeKey !== null) clearWindows();
+  placeKey = key;
+  let saved: { id: string; min: boolean }[] = [];
+  try {
+    saved = (JSON.parse(localStorage.getItem(OPEN_KEY) ?? "{}") as Record<string, { id: string; min: boolean }[]>)[key] ?? [];
+  } catch {
+    saved = [];
+  }
+  if (!saved.length) return;
+  restoring = true;
+  for (const s of saved.slice(0, 30)) {
+    if (placeKey !== key) break;
+    await openWindow(s.id);
+    if (s.min) tuckWindow(s.id);
+  }
+  restoring = false;
+  sync();
+}
+
+function persistOpen() {
+  if (!placeKey || restoring) return;
+  try {
+    const all = JSON.parse(localStorage.getItem(OPEN_KEY) ?? "{}") as Record<string, { id: string; min: boolean }[]>;
+    all[placeKey] = [...wins.values()].sort((a, b) => a.seq - b.seq).map((w) => ({ id: w.id, min: w.min }));
+    const keys = Object.keys(all);
+    for (const old of keys.slice(0, Math.max(0, keys.length - 50))) delete all[old];
+    localStorage.setItem(OPEN_KEY, JSON.stringify(all));
+  } catch {
+    // Remembering is a convenience only.
+  }
 }
 
 /** Hides the windows while something else owns the screen (the DM's table). */
@@ -235,8 +277,30 @@ function create(id: string, name: string, box: Box): Win {
   const tuck = h("button", { class: "bw-btn icon", title: "Tuck away to the tray at the bottom (Q)", "aria-label": "Tuck away to the tray", onClick: () => tuckWindow(id) }, h("span", { class: "bw-dash", "aria-hidden": "true" }));
   const close = h("button", { class: "bw-btn icon", title: "Close (W). Your changes are already saved.", "aria-label": "Close", onClick: () => closeWindow(id) }, svg(ICONS.close));
   const head = h("div", { class: "bw-head", title: "Drag to move. Double-click to tuck away." }, title, h("span", { class: "grow" }), middle, tuck, close);
-  const grip = h("div", { class: "bw-grip", title: "Drag to resize", "aria-hidden": "true" });
-  el.append(head, body, grip);
+  const edges = (["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const).map((m) => {
+    const edge = h("div", { class: `bw-edge ${m}${m === "se" ? " bw-grip" : ""}`, title: "Drag to resize", "aria-hidden": "true" });
+    drag(edge, w, (dx, dy, start) => {
+      const r = { x: start.x, y: start.y, w: start.w, h: start.h };
+      if (m.includes("e")) r.w = Math.max(MIN_W, start.w + dx);
+      if (m.includes("s")) r.h = Math.max(MIN_H, start.h + dy);
+      if (m.includes("w")) {
+        r.w = Math.max(MIN_W, start.w - dx);
+        r.x = start.x + start.w - r.w;
+      }
+      if (m.includes("n")) {
+        r.h = Math.max(MIN_H, start.h - dy);
+        r.y = start.y + start.h - r.h;
+      }
+      r.x = Math.max(0, r.x);
+      r.y = Math.max(0, r.y);
+      r.w = Math.min(r.w, Math.max(MIN_W, window.innerWidth - r.x));
+      r.h = Math.min(r.h, Math.max(MIN_H, window.innerHeight - TRAY_H - r.y));
+      Object.assign(w, r);
+      place(w);
+    });
+    return edge;
+  });
+  el.append(head, body, ...edges);
 
   el.addEventListener("pointerdown", () => bringToFront(w), true);
   head.addEventListener("dblclick", (e) => {
@@ -246,11 +310,6 @@ function create(id: string, name: string, box: Box): Win {
     const b = clampBox({ ...start, x: start.x + dx, y: start.y + dy });
     w.x = b.x;
     w.y = b.y;
-    place(w);
-  });
-  drag(grip, w, (dx, dy, start) => {
-    w.w = Math.min(Math.max(MIN_W, start.w + dx), Math.max(MIN_W, window.innerWidth - w.x));
-    w.h = Math.min(Math.max(MIN_H, start.h + dy), Math.max(MIN_H, window.innerHeight - TRAY_H - w.y));
     place(w);
   });
   return w;
@@ -324,6 +383,7 @@ export async function refreshWindows() {
 // ---------- The tray and the Arrange button ----------
 
 function sync() {
+  persistOpen();
   if (!layer) return;
   layer.classList.toggle("hidden", hidden);
   for (const w of wins.values()) w.el.classList.toggle("tucked", w.min);

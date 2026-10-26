@@ -19,14 +19,21 @@ export const nav = {
 const logo = svg(LOGO);
 logo.addEventListener("animationend", () => logo.classList.remove("pulse"));
 
+const savedLine = h("span", { class: "saved-line", "aria-live": "polite" }, "");
+let savedTimer: ReturnType<typeof setTimeout> | null = null;
+
 export function pulseLogo() {
+  savedLine.textContent = "Saved just now";
+  savedLine.classList.add("on");
+  if (savedTimer) clearTimeout(savedTimer);
+  savedTimer = setTimeout(() => savedLine.classList.remove("on"), 4000);
   logo.classList.remove("pulse");
   void (logo as unknown as HTMLElement).getBoundingClientRect();
   logo.classList.add("pulse");
 }
 
 export function brand(): HTMLElement {
-  return h("div", { class: "brand", title: "The logo glows each time your work is saved" }, logo, h("span", { class: "brand-name" }, "DM in a Pocket"));
+  return h("div", { class: "brand", title: "The logo glows each time your work is saved" }, logo, h("span", { class: "brand-text" }, h("span", { class: "brand-name" }, "DM in a Pocket"), savedLine));
 }
 
 export function iconButton(icon: string, label: string, onClick: () => void, opts: { disabled?: boolean; title?: string; badge?: number; iconOnly?: boolean; big?: boolean } = {}) {
@@ -53,3 +60,9 @@ export async function attempt<T>(fn: () => Promise<T>): Promise<T | undefined> {
 export function typingIn(e: KeyboardEvent): boolean {
   return (e.target as HTMLElement).matches?.("input, textarea, select") ?? false;
 }
+
+// A greyed-out button with no explanation of its own says so when you point at it.
+document.addEventListener("mouseover", (e) => {
+  const b = (e.target as HTMLElement).closest?.<HTMLButtonElement>("button:disabled");
+  if (b && !b.title) b.title = "Greyed out: it can't be used right now (for example nothing is open to use it on, or this is read-only).";
+});
