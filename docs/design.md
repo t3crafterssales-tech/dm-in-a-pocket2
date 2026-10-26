@@ -1942,3 +1942,51 @@ Every formula in the codex can have its own set of triggers — conditions that 
 **Still open**
 
 - [ ] Free, one-time purchase or subscription for the online extras, if it is ever sold?
+
+## The change list ("the back board") — decided, NOT built yet
+
+Jeff's rule (October 26, 2026): changes are collected here as a list and built together once he is happy with the whole list. Nothing below is code yet. Items come from the full review of the program (the ranked criticisms); we take them one at a time.
+
+### Change 1: Plain words for newcomers (criticism #3, "too hard for a new person") — approved by Jeff, October 26
+
+Use the plain words from the table below on every screen. Jeff's note on "Adventure": he grew up in the 80s, when a "module" was the story (a published adventure), and Foundry VTT calls its add-ons "modules" while a downloaded story is an adventure. So **Adventure** is the right word for the story that goes inside a world, and "Module" is kept only as the Designer word.
+
+| Today | Plain word | Designer word (kept) |
+|---|---|---|
+| Codex | **Library** | Codex |
+| Variant ("Make a variant") | **Linked copy** (follows the original) | Variant |
+| Parent / child | **Original / copies** | Parent / child |
+| Edit parent | **Edit the original** | Edit parent |
+| Template | **Blueprint** | Template |
+| Flags | **Checks** (a "heads-up") | Flags |
+| System | **Game rules** | System |
+| Module | **Adventure** | Module |
+| Snapshot | **Save point** | Snapshot |
+| Category | **Shelf** | Category |
+| Layout | **Workspace** | Layout |
+| Brick | **Brick** (kept; everyone knows building blocks) | Brick |
+
+Unchanged everywhere: World, Rulebook, Encounter, Pin, Recycle bin, Journal, Maps.
+
+How it is meant to work (still to confirm with Jeff where marked):
+- All the words live in one list in the code, so the renaming is done once. Saved files and the internal names do not change, so there is no data-format change.
+- A "Words" setting: Plain or Designer. **(Open: which one is the default for new installs, and whether there is a first-run question "Have you built a game before?". Claude suggests Plain by default plus the question.)**
+- The first time a word appears, a short "What's this?" hover explains it. A glossary page in Help lists every term in both versions.
+- A test checks that no old word is left on screen in Plain mode.
+- Open worries Jeff may overrule: "Library" for Codex clashes a little with the existing picture library; "Shelf" for Category is the least certain choice.
+- About a day of careful work, text only.
+
+### Still to be turned into list items (from the ranked review, in order)
+1. The product has no single clear purpose (the DM's table is about 11% of the code and contradicts "not a virtual tabletop").
+2. Almost nobody has used it, and the screens have no automated tests.
+3. ~~Too hard for a new person~~ (Change 1 above; a Simple mode and a first-game walkthrough are still to be decided).
+4. No Foundry export.
+5. No independent review of reliability and safety (power-cut test on Windows, big-world speed, local-network security, human code review, unsigned installer).
+6. No price or business plan.
+7. Windows only.
+8. Pen-and-paper people are not welcomed (photo to journal page, blank worksheets, `[[` links).
+9. Two very large code files are hard to maintain.
+10. AI honesty and a single "hide all AI" switch.
+11. Missing starter pictures and sounds; map walls, paths and scatter.
+12. Loose ends (version 0.1.0, "Show me" after bulk or AI changes, floating panels stay in the window, Jeff's "one more item").
+13. Accessibility has not been checked.
