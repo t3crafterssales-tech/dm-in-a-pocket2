@@ -2037,6 +2037,20 @@ How it is meant to work (still to confirm with Jeff where marked):
 - **Two problems to solve:** (1) custom attributes versus borrowed monsters: a goblin's Dexterity 14 has nowhere to go in a game with "Agility" and no Dexterity, so pulling a thing in checks it against the game's attributes and offers to map them ("Dexterity to Agility") or to bring it in without the numbers (weapons and gear mostly fit anywhere, monsters do not); (2) the SRD is fantasy only, so a space game finds nothing to pull in until original generic packs exist or the AI drafts things; the "SRD only" scope note will have to loosen later.
 - **Open:** copy-into-game confirmed? Ship the first bundle inside the installer or download later?
 
+### Change 7: The pocket app, a phone reader for the table (PROPOSED, Jeff's idea, November 2)
+
+- **Idea (Jeff):** a true "DM in a Pocket" that runs on a phone. Building worlds on a phone is ruled out (too many windows, too cramped, too clumsy). The phone is for the road and the table: it takes an existing world, with its rules and characters, and works like a wiki of that world.
+- **Android first.** Jeff and his players use Android. No iPhone version is planned for now, which also avoids the Apple developer fee.
+- **What it does:** open a world read-only; search and look up any rule, spell, monster, item, character or lore page, with the links between them and favourites; a pocket initiative counter; timers; a dice roller (Claude's addition); a journal for notes during play.
+- **What it does not do:** no map editor, no editing of rules or characters, no AI, no building of any kind.
+- **Claude's additions:**
+  - Read-only means the phone can never damage a world, so Promise 7 (never lose work) is easy to keep, and a lost phone loses nothing the computer does not still have.
+  - The journal is the only thing the phone writes. It is kept in its own separate file on the phone so it can never overwrite the world, and a later option can copy the notes back to the computer.
+  - The phone keeps a full copy of the world so it works with no signal at the table.
+  - Getting worlds onto the phone, two ways: the shared Dropbox or OneDrive folder from Part 2 (no account needed), or sending the world file by hand. The phone shows "Newer version available, update?" and never swaps the rules silently in the middle of a game.
+  - Shape: either a web app added to the home screen (free, no store) or a real Android app made by wrapping the same screens (installable from a file, or Google Play for a one-time fee of about 25 dollars). A web app is the cheapest first step.
+- **Open (Jeff):** web app first, or a real Android app straight away? Should journal notes be able to come back to the computer? Which table tools beyond initiative, timers and dice? Does a phone-sized layout (one screen at a time, no floating windows) need its own design pass?
+
 ### Still to be turned into list items (from the ranked review, in order)
 1. The product has no single clear purpose (the DM's table is about 11% of the code and contradicts "not a virtual tabletop").
 2. Almost nobody has used it, and the screens have no automated tests.
